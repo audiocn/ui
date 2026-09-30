@@ -85,7 +85,7 @@ const ChannelStripConsole = () => {
   const game = useDemoSignal({ channels: 2, kind: "noise", seed: 3 });
 
   return (
-    <div className="flex h-96 gap-3">
+    <div className="flex h-96 max-w-full gap-3 overflow-x-auto">
       <Strip
         accent="var(--chart-2)"
         icon={<MicrophoneIcon />}

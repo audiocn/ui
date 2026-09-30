@@ -12,7 +12,7 @@ import {
 const sizes = ["sm", "default", "lg"] as const;
 
 const KnobSizes = () => (
-  <div className="flex items-end gap-8">
+  <div className="flex flex-wrap items-end justify-center gap-x-8 gap-y-6">
     {sizes.map((size) => (
       <Knob defaultValue={65} key={size} size={size}>
         <KnobDial>

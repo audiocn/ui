@@ -92,7 +92,9 @@ test("missing docs pages offer a way back to the documentation", async ({
 
 test.describe("every docs page", () => {
   for (const url of pages) {
-    test(`renders ${url}`, async ({ page }) => {
+    test(`renders ${url} and switches its previews to code and back`, async ({
+      page,
+    }) => {
       const errors: string[] = [];
       page.on("pageerror", (error) => errors.push(error.message));
       page.on("console", (message) => {
@@ -104,6 +106,25 @@ test.describe("every docs page", () => {
       expect(response?.status()).toBe(200);
       await expect(page.locator("h1").first()).toBeVisible();
       await page.waitForTimeout(500);
+      // Showing the code unmounts the preview, so its audio teardown runs.
+      const codeTabs = page.getByRole("tab", { exact: true, name: "Code" });
+      const previewTabs = page.getByRole("tab", {
+        exact: true,
+        name: "Preview",
+      });
+      const count = await codeTabs.count();
+      // One preview at a time, in order.
+      const toggleFrom = async (index: number): Promise<void> => {
+        if (index >= count) {
+          return;
+        }
+        await codeTabs.nth(index).click();
+        await previewTabs.nth(index).click();
+        await toggleFrom(index + 1);
+      };
+      await toggleFrom(0);
+      await page.waitForTimeout(500);
+      await expect(page.locator("h1").first()).toBeVisible();
       expect(errors).toEqual([]);
     });
   }
