@@ -19,4 +19,4 @@ const collectPages = (dir: string, prefix = "/docs"): string[] =>
 export const docsPages = collectPages(
   path.join(process.cwd(), "content/docs")
 ).toSorted();
-export const publicPages = ["/", ...docsPages];
+export const publicPages = ["/", "/contributors", ...docsPages];

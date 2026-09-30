@@ -18,6 +18,7 @@ test("the public sitemap includes every concrete page and robots permits indexin
   );
   const expected = [
     siteConfig.url,
+    new URL("/contributors", siteConfig.url).href,
     ...pages.map((page) => new URL(page, siteConfig.url).href),
   ];
   expect(urls.toSorted()).toEqual(expected.toSorted());
