@@ -1,6 +1,6 @@
 # 009 — Landing page: a live component showcase
 
-Status: PLANNED (2026-09-30). Replaces the current split hero (`app/(home)/page.tsx` + `components/docs/hero-demo.tsx`).
+Status: IMPLEMENTED (2026-09-30). Replaced the split hero (`app/(home)/page.tsx` + `components/docs/hero-demo.tsx`). See "Changes made while building" at the end.
 
 The landing page becomes two things: a centred hero that says what audiocn is, and a grid of live, playable components under it. No feature grid, no marketing sections. The components are the pitch.
 
@@ -161,8 +161,25 @@ One centred outline button: "Browse all 20 components →".
 
 ---
 
-## Open decisions
+## Decisions
 
-1. The headline: "Audio UI, mixed and mastered." is the pick.
-2. A "Use my mic" button on the Voice tile, which swaps the demo signal for the visitor's microphone on click. Strongest proof that it is real audio; it adds a permission flow, so it goes in a second pass.
-3. Scribble-strip labels on tiles (recommended) or bare components like 8bitcn.
+1. The headline is "Audio UI, mixed and mastered."
+2. Tiles carry console-style labels that link to their docs.
+3. A "Use my mic" button on the Voice tile, which swaps the demo signal for the visitor's microphone on click, is left for a second pass: it adds a permission flow.
+
+---
+
+## Changes made while building
+
+- **14 tiles, not 12.** With twelve, the wide column ran about 240 px past the narrow ones. A **Faders** tile (three console faders with meters in their tracks) joined the right column, and a **Live waveform** tile (an oscilloscope line over a scrolling level history) closed the left column. All three stacks now end within about 60 px of each other at 1440 px.
+- **Mixer:** four channels (Mic, System, Music, Sounds) plus Master, as in the `system-audio-mixer` block; three left a gap before the master strip. The mixer is named by its card, so it takes `aria-label="Mixer"` instead of a `MixerTitle`.
+- **Waveform:** plays a real demo track, with seeking, instead of static peaks.
+- **Music player:** composed from `AudioPlayer` and `TrackList` in two panes (now playing beside the track list, stacked in narrow cards) rather than rendering the one-column block, which would have nested a card inside the tile's card. It uses a seek bar, so it does not repeat the waveform tile.
+- **Voice:** the chips are Idle, Connecting and Speaking, matching the bar visualizer's idle, loading and live states. The live waveform moved to its own tile.
+- **Channel controls** add a reverb send fader, and link to `channel-toggle`. **Output** shows the volume control inline rather than in a popover, and links to `audio-device-select`.
+- **Compact player** hides its rate button below an 18rem container, where it would wrap the pill.
+- **Placeholders** live beside each tile's lazy import as static `Skeleton` elements, because `shadcn/require-static-classes` cannot read a class passed through a config. Container queries size the music and pad placeholders for their stacked and side-by-side layouts.
+- **Theme swatches** share the navbar picker's store through a `useSiteTheme` hook exported from `components/docs/theme-picker.tsx`.
+- **WebThreads** (React Bits, added on request after the plan): woven threads behind the hero, full width, pinching at the install command just above the waveform divider. Dark mode uses light threads with glow; light mode uses the component's ink rendering over the page's white, because dark threads left a grey veil across the hero. The component is adapted to the repo's lint rules in `components/home/web-threads.tsx`, holds still under reduced motion, pauses off screen, and adds `ogl`. It is site code under React Bits' MIT + Commons Clause licence, not a registry item.
+- **Lint:** `components/home/**` joins the app code override in `oxlint.config.ts`, so tiles may pass colour and CSS variable classes to meters and visualizers.
+- **Tests:** `e2e/showcase.ts` steps down the page until every tile has mounted. The responsive spec checks that no tile escapes its card at every viewport. The site spec checks that every tile loads without console errors, that soloing a mixer channel dims the others, that the swatches retheme the page and the navbar picker, and that the whole showcase runs above 50 fps. Clip lights commit React state when they latch, so the home frame test allows two commits where the console test allows none.
