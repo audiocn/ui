@@ -1,3 +1,4 @@
+import { Analytics } from "@vercel/analytics/next";
 import { RootProvider } from "fumadocs-ui/provider/next";
 import type { Metadata } from "next";
 import { DM_Sans, Geist_Mono, Outfit } from "next/font/google";
@@ -58,6 +59,7 @@ const RootLayout = ({
           </TooltipProvider>
         </RootProvider>
       </ThemeProvider>
+      <Analytics />
     </body>
   </html>
 );

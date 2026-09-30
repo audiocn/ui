@@ -23,6 +23,7 @@
   "dependencies": {
     "@base-ui/react": "^1.8.0",
     "@phosphor-icons/react": "^2.1.10",
+    "@vercel/analytics": "^2.0.1",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.4.0",
     "fumadocs-core": "16.15.17",
