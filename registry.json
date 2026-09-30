@@ -658,6 +658,23 @@
           "type": "registry:ui"
         }
       ]
+    },
+    {
+      "name": "spectrum",
+      "type": "registry:ui",
+      "title": "Spectrum",
+      "description": "A frequency spectrum analyser drawn on canvas as bars, a line or an area, with peak hold, a grid and frequency and level axes.",
+      "registryDependencies": [
+        "@audiocn/core",
+        "@audiocn/use-frame-source",
+        "@audiocn/use-reduced-motion"
+      ],
+      "files": [
+        {
+          "path": "components/ui/spectrum.tsx",
+          "type": "registry:ui"
+        }
+      ]
     }
   ]
 }
