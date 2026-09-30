@@ -7,7 +7,7 @@
       "name": "core",
       "type": "registry:lib",
       "title": "Audio core",
-      "description": "Decibel maths, meter ballistics, zones, fader tapers, band resampling, bar level smoothing, time formatting, the shared frame loop, frame emitters, shared types and the audio theme tokens. Every audiocn component depends on it.",
+      "description": "Decibel maths, meter ballistics, zones, fader tapers, band resampling, bar level smoothing, wave line shapes, time formatting, the shared frame loop, frame emitters, shared types and the audio theme tokens. Every audiocn component depends on it.",
       "files": [
         {
           "path": "lib/audio/types.ts",
@@ -35,6 +35,10 @@
         },
         {
           "path": "lib/audio/bar-levels.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "lib/audio/wave-line.ts",
           "type": "registry:lib"
         },
         {
