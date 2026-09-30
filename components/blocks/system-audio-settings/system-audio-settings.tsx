@@ -101,16 +101,15 @@ export const SystemAudioSettings = ({
     }
   }, [context, gainDb, gainNode]);
 
+  const { start: startCapture, stop: stopCapture } = system;
+
   useEffect(() => {
-    if (enabledProp === undefined) {
-      return;
+    if (enabledProp === true) {
+      startCapture();
+    } else if (enabledProp === false) {
+      stopCapture();
     }
-    if (enabledProp && !active && system.status !== "prompting") {
-      system.start();
-    } else if (!enabledProp && active) {
-      system.stop();
-    }
-  }, [active, enabledProp, system]);
+  }, [enabledProp, startCapture, stopCapture]);
 
   const setEnabled = (next: boolean) => {
     onEnabledChange?.(next);
