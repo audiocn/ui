@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 export type MicrophoneStatus =
   | "idle"
@@ -33,6 +33,13 @@ export interface UseMicrophoneResult {
   stop: () => void;
 }
 
+interface MicrophoneResult {
+  key: string;
+  stream: MediaStream | null;
+  status: MicrophoneStatus;
+  failure: Error | null;
+}
+
 const stopStream = (stream: MediaStream | null) => {
   if (!stream) {
     return;
@@ -42,17 +49,47 @@ const stopStream = (stream: MediaStream | null) => {
   }
 };
 
-const statusForError = (error: unknown): MicrophoneStatus => {
-  if (!(error instanceof DOMException)) {
+const statusForError = (caught: unknown): MicrophoneStatus => {
+  if (!(caught instanceof DOMException)) {
     return "error";
   }
-  if (error.name === "NotAllowedError" || error.name === "SecurityError") {
+  if (caught.name === "NotAllowedError" || caught.name === "SecurityError") {
     return "denied";
   }
-  if (error.name === "NotFoundError" || error.name === "OverconstrainedError") {
+  if (
+    caught.name === "NotFoundError" ||
+    caught.name === "OverconstrainedError"
+  ) {
     return "unavailable";
   }
   return "error";
+};
+
+const canOpenMicrophone = () =>
+  typeof navigator !== "undefined" &&
+  Boolean(navigator.mediaDevices?.getUserMedia);
+
+const buildConstraints = (
+  options: Required<
+    Pick<
+      UseMicrophoneOptions,
+      "autoGainControl" | "echoCancellation" | "noiseSuppression"
+    >
+  > &
+    Pick<UseMicrophoneOptions, "channelCount" | "deviceId">
+): MediaTrackConstraints => {
+  const constraints: MediaTrackConstraints = {
+    autoGainControl: options.autoGainControl,
+    echoCancellation: options.echoCancellation,
+    noiseSuppression: options.noiseSuppression,
+  };
+  if (options.deviceId) {
+    constraints.deviceId = { exact: options.deviceId };
+  }
+  if (options.channelCount) {
+    constraints.channelCount = options.channelCount;
+  }
+  return constraints;
 };
 
 /** Opens a microphone as a `MediaStream`, with browser processing off by default. */
@@ -64,97 +101,103 @@ export const useMicrophone = ({
   autoGainControl = false,
   channelCount,
 }: UseMicrophoneOptions = {}): UseMicrophoneResult => {
-  const [stream, setStream] = useState<MediaStream | null>(null);
-  const [status, setStatus] = useState<MicrophoneStatus>("idle");
-  const [error, setError] = useState<Error | null>(null);
-  const [wanted, setWanted] = useState(enabled);
-  const requestRef = useRef(0);
+  const [manual, setManual] = useState<boolean | null>(null);
+  const [previousEnabled, setPreviousEnabled] = useState(enabled);
+  if (previousEnabled !== enabled) {
+    setPreviousEnabled(enabled);
+    setManual(null);
+  }
+  const wanted = manual ?? enabled;
+  const [result, setResult] = useState<MicrophoneResult | null>(null);
 
-  useEffect(() => {
-    setWanted(enabled);
-  }, [enabled]);
-
-  const start = useCallback(async () => {
-    setWanted(true);
-    await Promise.resolve();
-  }, []);
-
-  const stop = useCallback(() => {
-    setWanted(false);
-  }, []);
-
-  useEffect(() => {
-    if (!wanted) {
-      requestRef.current += 1;
-      setStream(null);
-      setStatus("idle");
-      return;
-    }
-    if (
-      typeof navigator === "undefined" ||
-      !navigator.mediaDevices?.getUserMedia
-    ) {
-      setStatus("unavailable");
-      setError(new Error("This browser cannot open a microphone."));
-      return;
-    }
-
-    requestRef.current += 1;
-    const request = requestRef.current;
-    let acquired: MediaStream | null = null;
-    setStatus("acquiring");
-    setError(null);
-
-    const constraints: MediaTrackConstraints = {
-      autoGainControl,
-      echoCancellation,
-      noiseSuppression,
-    };
-    if (deviceId) {
-      constraints.deviceId = { exact: deviceId };
-    }
-    if (channelCount) {
-      constraints.channelCount = channelCount;
-    }
-
-    navigator.mediaDevices
-      .getUserMedia({ audio: constraints })
-      .then((result) => {
-        if (request !== requestRef.current) {
-          stopStream(result);
-          return;
-        }
-        acquired = result;
-        for (const track of result.getAudioTracks()) {
-          track.addEventListener("ended", () => {
-            if (request === requestRef.current) {
-              setStatus("unavailable");
-              setStream(null);
-            }
-          });
-        }
-        setStream(result);
-        setStatus("active");
-      })
-      .catch((error: unknown) => {
-        if (request !== requestRef.current) {
-          return;
-        }
-        setStatus(statusForError(error));
-        setError(error instanceof Error ? error : new Error(String(error)));
-      });
-
-    return () => {
-      stopStream(acquired);
-    };
-  }, [
+  const constraints = buildConstraints({
     autoGainControl,
     channelCount,
     deviceId,
     echoCancellation,
     noiseSuppression,
-    wanted,
-  ]);
+  });
+  const key = JSON.stringify(constraints);
 
-  return { error, start, status, stop, stream };
+  useEffect(() => {
+    if (!(wanted && canOpenMicrophone())) {
+      return;
+    }
+    let cancelled = false;
+    let acquired: MediaStream | null = null;
+
+    const open = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: JSON.parse(key) as MediaTrackConstraints,
+        });
+        if (cancelled) {
+          stopStream(stream);
+          return;
+        }
+        acquired = stream;
+        const handleEnded = () => {
+          if (!cancelled) {
+            setResult({
+              failure: null,
+              key,
+              status: "unavailable",
+              stream: null,
+            });
+          }
+        };
+        for (const track of stream.getAudioTracks()) {
+          track.addEventListener("ended", handleEnded);
+        }
+        setResult({ failure: null, key, status: "active", stream });
+      } catch (error) {
+        if (!cancelled) {
+          setResult({
+            failure: error instanceof Error ? error : new Error(String(error)),
+            key,
+            status: statusForError(error),
+            stream: null,
+          });
+        }
+      }
+    };
+    open();
+
+    return () => {
+      cancelled = true;
+      stopStream(acquired);
+    };
+  }, [key, wanted]);
+
+  const start = useCallback(async () => {
+    setManual(true);
+    await Promise.resolve();
+  }, []);
+
+  const stop = useCallback(() => {
+    setManual(false);
+  }, []);
+
+  if (!wanted) {
+    return { error: null, start, status: "idle", stop, stream: null };
+  }
+  if (!canOpenMicrophone()) {
+    return {
+      error: new Error("This browser cannot open a microphone."),
+      start,
+      status: "unavailable",
+      stop,
+      stream: null,
+    };
+  }
+  if (result?.key !== key) {
+    return { error: null, start, status: "acquiring", stop, stream: null };
+  }
+  return {
+    error: result.failure,
+    start,
+    status: result.status,
+    stop,
+    stream: result.stream,
+  };
 };

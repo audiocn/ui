@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 
 export type SystemAudioStatus =
   | "idle"
@@ -47,6 +53,12 @@ const stopStream = (stream: MediaStream | null) => {
   }
 };
 
+const subscribeNothing = () => () => {
+  // Display media support does not change during a visit.
+};
+
+const getServerSupport = () => false;
+
 /**
  * Captures system or tab audio through the browser's screen-share picker.
  * The user must tick "share audio"; browsers differ in what they allow.
@@ -55,35 +67,32 @@ export const useSystemAudio = ({
   systemAudio = true,
   preferCurrentTab = false,
 }: UseSystemAudioOptions = {}): UseSystemAudioResult => {
-  const [isSupported, setIsSupported] = useState(false);
+  const isSupported = useSyncExternalStore(
+    subscribeNothing,
+    isDisplayMediaSupported,
+    getServerSupport
+  );
   const [stream, setStream] = useState<MediaStream | null>(null);
-  const [status, setStatus] = useState<SystemAudioStatus>("idle");
-  const [error, setError] = useState<Error | null>(null);
+  const [captureStatus, setCaptureStatus] = useState<SystemAudioStatus>("idle");
+  const [failure, setFailure] = useState<Error | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
-
-  useEffect(() => {
-    const supported = isDisplayMediaSupported();
-    setIsSupported(supported);
-    if (!supported) {
-      setStatus("unsupported");
-    }
-  }, []);
+  const status: SystemAudioStatus = isSupported ? captureStatus : "unsupported";
 
   const stop = useCallback(() => {
     stopStream(streamRef.current);
     streamRef.current = null;
     setStream(null);
-    setStatus((previous) => (previous === "unsupported" ? previous : "idle"));
+    setCaptureStatus("idle");
   }, []);
 
   const start = useCallback(async () => {
     if (!isDisplayMediaSupported()) {
-      setStatus("unsupported");
+      setCaptureStatus("unsupported");
       return;
     }
     stopStream(streamRef.current);
-    setStatus("prompting");
-    setError(null);
+    setCaptureStatus("prompting");
+    setFailure(null);
 
     const options: DisplayMediaOptions = {
       audio: {
@@ -104,7 +113,7 @@ export const useSystemAudio = ({
       }
       const audioTracks = display.getAudioTracks();
       if (audioTracks.length === 0) {
-        setStatus("no-audio");
+        setCaptureStatus("no-audio");
         return;
       }
       const audio = new MediaStream(audioTracks);
@@ -113,18 +122,18 @@ export const useSystemAudio = ({
           if (streamRef.current === audio) {
             streamRef.current = null;
             setStream(null);
-            setStatus("ended");
+            setCaptureStatus("ended");
           }
         });
       }
       streamRef.current = audio;
       setStream(audio);
-      setStatus("active");
+      setCaptureStatus("active");
     } catch (error) {
       const denied =
         error instanceof DOMException && error.name === "NotAllowedError";
-      setStatus(denied ? "denied" : "idle");
-      setError(error instanceof Error ? error : new Error(String(error)));
+      setCaptureStatus(denied ? "denied" : "idle");
+      setFailure(error instanceof Error ? error : new Error(String(error)));
     }
   }, [preferCurrentTab, systemAudio]);
 
@@ -135,5 +144,5 @@ export const useSystemAudio = ({
     []
   );
 
-  return { error, isSupported, start, status, stop, stream };
+  return { error: failure, isSupported, start, status, stop, stream };
 };

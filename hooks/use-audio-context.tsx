@@ -5,7 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
-  useState,
+  useSyncExternalStore,
 } from "react";
 import type { ReactNode } from "react";
 
@@ -44,6 +44,14 @@ export const AudioContextProvider = ({
 
 const GESTURE_EVENTS = ["pointerdown", "keydown", "touchend"] as const;
 
+const noop = () => {
+  // Nothing to clean up on the server.
+};
+
+const getServerContext = () => null;
+
+const getServerStatus = (): AudioContextStatus => "suspended";
+
 export interface UseAudioContextResult {
   context: AudioContext | null;
   status: AudioContextStatus;
@@ -57,42 +65,55 @@ export interface UseAudioContextResult {
  */
 export const useAudioContext = (): UseAudioContextResult => {
   const provided = useContext(ProvidedContext);
-  const [context, setContext] = useState<AudioContext | null>(provided);
-  const [status, setStatus] = useState<AudioContextStatus>(
-    provided?.state ?? "suspended"
+
+  const context = useSyncExternalStore(
+    () => noop,
+    () => provided ?? getSharedAudioContext(),
+    getServerContext
+  );
+
+  const subscribeStatus = useCallback(
+    (onChange: () => void) => {
+      if (!context) {
+        return noop;
+      }
+      context.addEventListener("statechange", onChange);
+      return () => {
+        context.removeEventListener("statechange", onChange);
+      };
+    },
+    [context]
+  );
+
+  const status = useSyncExternalStore(
+    subscribeStatus,
+    (): AudioContextStatus => context?.state ?? "unsupported",
+    getServerStatus
   );
 
   useEffect(() => {
-    const next = provided ?? getSharedAudioContext();
-    setContext(next);
-    if (!next) {
-      setStatus("unsupported");
+    if (!context) {
       return;
     }
-    const update = () => {
-      setStatus(next.state);
-    };
-    update();
-    next.addEventListener("statechange", update);
-
-    const resumeOnGesture = () => {
-      if (next.state === "suspended") {
-        next.resume().catch(() => {
-          // The browser can still refuse; the next gesture tries again.
-        });
+    const resumeOnGesture = async () => {
+      if (context.state !== "suspended") {
+        return;
+      }
+      try {
+        await context.resume();
+      } catch {
+        // The browser can still refuse; the next gesture tries again.
       }
     };
     for (const event of GESTURE_EVENTS) {
       document.addEventListener(event, resumeOnGesture, { passive: true });
     }
-
     return () => {
-      next.removeEventListener("statechange", update);
       for (const event of GESTURE_EVENTS) {
         document.removeEventListener(event, resumeOnGesture);
       }
     };
-  }, [provided]);
+  }, [context]);
 
   const resume = useCallback(async () => {
     if (context && context.state === "suspended") {
