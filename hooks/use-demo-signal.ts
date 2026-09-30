@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo } from "react";
 
 import { clamp, dbToGain, dbToLevel, gainToDb } from "@/lib/audio/decibels";
 import { subscribeFrame } from "@/lib/audio/frame-loop";
@@ -325,7 +325,7 @@ export const createDemoSignal = (
 
 /** A synthetic signal for previews, prototypes and tests. */
 export const useDemoSignal = (options: DemoSignalOptions = {}): DemoSignal => {
-  const [signal] = useState(() => createDemoSignal(options));
+  const signal = useMemo(() => createDemoSignal(), []);
   const {
     bands,
     channels,

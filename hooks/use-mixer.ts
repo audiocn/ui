@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useReducer,
+  useRef,
+} from "react";
 
 import { clamp } from "@/lib/audio/decibels";
 
@@ -179,38 +186,49 @@ export interface Mixer {
 }
 
 /** State for a mixer: gain, mute, solo, pan and monitor per channel, plus a master. */
-export const useMixer = ({
-  channels: initialChannels,
-  master: initialMaster,
-  state: controlledState,
-  onStateChange,
-  persistKey,
-}: UseMixerOptions = {}): Mixer => {
-  const initialRef = useRef(createState(initialChannels, initialMaster));
-  const [internalState, internalDispatch] = useReducer(
-    mixerReducer,
-    initialRef.current
-  );
-  const state = controlledState ?? internalState;
-  const stateRef = useRef(state);
-  stateRef.current = state;
-  const onChangeRef = useRef(onStateChange);
-  onChangeRef.current = onStateChange;
-  const controlled = controlledState !== undefined;
+const initStore = (options: UseMixerOptions) => {
+  const initial = createState(options.channels, options.master);
+  return { current: initial, initial };
+};
 
-  const dispatch = useCallback(
-    (action: MixerAction) => {
-      const next = mixerReducer(stateRef.current, action);
+const storeReducer = (
+  store: { current: MixerState; initial: MixerState },
+  next: MixerState
+) => (next === store.current ? store : { ...store, current: next });
+
+export const useMixer = (options: UseMixerOptions = {}): Mixer => {
+  const { state: controlledState, onStateChange, persistKey } = options;
+  const [store, replace] = useReducer(storeReducer, options, initStore);
+  const { initial } = store;
+  const state = controlledState ?? store.current;
+  const controlled = controlledState !== undefined;
+  const stateRef = useRef(state);
+  const onChangeRef = useRef(onStateChange);
+
+  useLayoutEffect(() => {
+    stateRef.current = state;
+    onChangeRef.current = onStateChange;
+  });
+
+  const commit = useCallback(
+    (next: MixerState) => {
       if (next === stateRef.current) {
         return;
       }
       stateRef.current = next;
       if (!controlled) {
-        internalDispatch({ state: next, type: "replace" });
+        replace(next);
       }
       onChangeRef.current?.(next);
     },
     [controlled]
+  );
+
+  const dispatch = useCallback(
+    (action: MixerAction) => {
+      commit(mixerReducer(stateRef.current, action));
+    },
+    [commit]
   );
 
   useEffect(() => {
@@ -219,7 +237,7 @@ export const useMixer = ({
     }
     const persisted = readPersisted(persistKey);
     if (persisted) {
-      internalDispatch({ state: persisted, type: "replace" });
+      replace(persisted);
     }
   }, [controlled, persistKey]);
 
@@ -228,11 +246,11 @@ export const useMixer = ({
       return;
     }
     try {
-      window.localStorage.setItem(persistKey, JSON.stringify(internalState));
+      window.localStorage.setItem(persistKey, JSON.stringify(store.current));
     } catch {
       // Storage can be full or blocked; the mixer keeps working without it.
     }
-  }, [controlled, internalState, persistKey]);
+  }, [controlled, persistKey, store]);
 
   return useMemo<Mixer>(() => {
     const anySolo = state.channels.some((channel) => channel.solo);
@@ -247,7 +265,7 @@ export const useMixer = ({
       },
       master: state.master,
       removeChannel: (id) => dispatch({ id, type: "remove" }),
-      reset: () => dispatch({ state: initialRef.current, type: "replace" }),
+      reset: () => commit(initial),
       setGain: (id, gainDb) =>
         dispatch({ id, patch: { gainDb }, type: "channel" }),
       setMasterGain: (gainDb) =>
@@ -258,14 +276,14 @@ export const useMixer = ({
       setMuted: (id, muted) =>
         dispatch({ id, patch: { muted }, type: "channel" }),
       setPan: (id, pan) => dispatch({ id, patch: { pan }, type: "channel" }),
-      setSolo: (id, solo, options = {}) =>
+      setSolo: (id, solo, soloOptions = {}) =>
         dispatch({
-          exclusive: options.exclusive ?? false,
+          exclusive: soloOptions.exclusive ?? false,
           id,
           solo,
           type: "solo",
         }),
       state,
     };
-  }, [dispatch, state]);
+  }, [commit, dispatch, initial, state]);
 };

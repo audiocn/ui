@@ -34,7 +34,7 @@ const pickChannel = (frame: MeterFrame, channel: number | "max") => {
   if (channel !== "max") {
     return frame.channels[channel];
   }
-  let loudest = frame.channels[0];
+  let [loudest] = frame.channels;
   for (const level of frame.channels) {
     if (!loudest || level.peakDb > loudest.peakDb) {
       loudest = level;

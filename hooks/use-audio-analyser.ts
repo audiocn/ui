@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo } from "react";
 
 import { useAudioContext } from "@/hooks/use-audio-context";
 import { bandsFromSpectrum, logBandEdges } from "@/lib/audio/bands";
@@ -264,10 +264,13 @@ export const useAudioAnalyser = (
   }: AudioAnalyserOptions = {}
 ): AudioAnalyser => {
   const { context, status: contextStatus } = useAudioContext();
-  const [relays] = useState(() => ({
-    meter: createFrameRelay<MeterFrame>(),
-    visual: createFrameRelay<VisualFrame>(),
-  }));
+  const relays = useMemo(
+    () => ({
+      meter: createFrameRelay<MeterFrame>(),
+      visual: createFrameRelay<VisualFrame>(),
+    }),
+    []
+  );
 
   useEffect(() => {
     if (!(context && input && enabled)) {

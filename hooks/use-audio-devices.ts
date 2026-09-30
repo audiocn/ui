@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 
 export type AudioDeviceKind = "audioinput" | "audiooutput";
 
@@ -38,46 +38,74 @@ const hasMediaDevices = () =>
   typeof navigator !== "undefined" &&
   Boolean(navigator.mediaDevices?.enumerateDevices);
 
-const toError = (error: unknown) =>
-  error instanceof Error ? error : new Error(String(error));
+const toError = (caught: unknown) =>
+  caught instanceof Error ? caught : new Error(String(caught));
+
+const subscribeNothing = () => () => {
+  // Media device support does not change during a visit.
+};
+
+const getServerSupport = () => false;
+
+const listDevices = async (kind: AudioDeviceKind) => {
+  const all = await navigator.mediaDevices.enumerateDevices();
+  const matching = all.filter((device) => device.kind === kind);
+  return {
+    devices: matching.map((device, index) => ({
+      groupId: device.groupId,
+      id: device.deviceId,
+      isDefault: device.deviceId === DEFAULT_DEVICE_ID,
+      kind,
+      label: device.label || fallbackLabel(kind, index),
+    })),
+    labelled: matching.some((device) => device.label !== ""),
+  };
+};
+
+const queryMicrophonePermission =
+  async (): Promise<PermissionStatus | null> => {
+    try {
+      return (
+        (await navigator.permissions?.query({
+          name: "microphone" as PermissionName,
+        })) ?? null
+      );
+    } catch {
+      // Some browsers cannot query microphone permission; labels tell us instead.
+      return null;
+    }
+  };
 
 /** Lists audio devices and keeps the list current as devices come and go. */
 export const useAudioDevices = ({
   kind = "audioinput",
 }: UseAudioDevicesOptions = {}): UseAudioDevicesResult => {
+  const supported = useSyncExternalStore(
+    subscribeNothing,
+    hasMediaDevices,
+    getServerSupport
+  );
   const [devices, setDevices] = useState<AudioDeviceInfo[]>([]);
-  const [permission, setPermission] = useState<AudioPermission>("prompt");
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
+  const [permissionState, setPermissionState] =
+    useState<AudioPermission>("prompt");
+  const [loaded, setLoaded] = useState(false);
+  const [failure, setFailure] = useState<Error | null>(null);
 
   const refresh = useCallback(async () => {
     if (!hasMediaDevices()) {
-      setPermission("unsupported");
-      setIsLoading(false);
       return;
     }
     try {
-      const all = await navigator.mediaDevices.enumerateDevices();
-      const matching = all.filter((device) => device.kind === kind);
-      const labelled = matching.some((device) => device.label !== "");
-      if (labelled) {
-        setPermission("granted");
+      const result = await listDevices(kind);
+      if (result.labelled) {
+        setPermissionState("granted");
       }
-      setDevices(
-        matching.map((device, index) => ({
-          groupId: device.groupId,
-          id: device.deviceId,
-          isDefault: device.deviceId === DEFAULT_DEVICE_ID,
-          kind,
-          label: device.label || fallbackLabel(kind, index),
-        }))
-      );
-      setError(null);
+      setDevices(result.devices);
+      setFailure(null);
     } catch (error) {
-      setError(toError(error));
-    } finally {
-      setIsLoading(false);
+      setFailure(toError(error));
     }
+    setLoaded(true);
   }, [kind]);
 
   const requestPermission = useCallback(async () => {
@@ -89,53 +117,59 @@ export const useAudioDevices = ({
       for (const track of stream.getTracks()) {
         track.stop();
       }
-      setPermission("granted");
+      setPermissionState("granted");
       await refresh();
       return true;
     } catch (error) {
       const denied =
         error instanceof DOMException && error.name === "NotAllowedError";
-      setPermission(denied ? "denied" : "prompt");
-      setError(toError(error));
+      setPermissionState(denied ? "denied" : "prompt");
+      setFailure(toError(error));
       return false;
     }
   }, [refresh]);
 
   useEffect(() => {
     if (!hasMediaDevices()) {
-      setPermission("unsupported");
-      setIsLoading(false);
       return;
     }
-    refresh();
+    let status: PermissionStatus | null = null;
+    let disposed = false;
     const onChange = () => {
       refresh();
     };
-    navigator.mediaDevices.addEventListener("devicechange", onChange);
-
-    let status: PermissionStatus | null = null;
     const onPermissionChange = () => {
       if (status) {
-        setPermission(status.state);
+        setPermissionState(status.state);
         refresh();
       }
     };
-    navigator.permissions
-      ?.query({ name: "microphone" as PermissionName })
-      .then((result) => {
-        status = result;
-        setPermission(result.state);
-        result.addEventListener("change", onPermissionChange);
-      })
-      .catch(() => {
-        // Some browsers cannot query microphone permission; labels tell us instead.
-      });
+    const watch = async () => {
+      await refresh();
+      const result = await queryMicrophonePermission();
+      if (!result || disposed) {
+        return;
+      }
+      status = result;
+      setPermissionState(result.state);
+      result.addEventListener("change", onPermissionChange);
+    };
+    navigator.mediaDevices.addEventListener("devicechange", onChange);
+    watch();
 
     return () => {
+      disposed = true;
       navigator.mediaDevices.removeEventListener("devicechange", onChange);
       status?.removeEventListener("change", onPermissionChange);
     };
   }, [refresh]);
 
-  return { devices, error, isLoading, permission, refresh, requestPermission };
+  return {
+    devices,
+    error: failure,
+    isLoading: supported && !loaded,
+    permission: supported ? permissionState : "unsupported",
+    refresh,
+    requestPermission,
+  };
 };
