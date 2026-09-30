@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -27,4 +28,6 @@ ${entries}
 `;
 
 await writeFile(outFile, content);
+// Format like the rest of the repo so regenerating leaves no diff.
+execFileSync(path.join(root, "node_modules/.bin/oxfmt"), [outFile]);
 console.log(`example registry: ${files.length} examples`);
