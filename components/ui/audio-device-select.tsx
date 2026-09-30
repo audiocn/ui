@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { createContext, useContext, useMemo, useState } from "react";
 import type { ComponentProps, ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -61,108 +54,6 @@ const useAudioDeviceSelect = (part: string) => {
     throw new Error(`${part} must be used inside AudioDeviceSelect.`);
   }
   return context;
-};
-
-export interface AudioDeviceSelectProps {
-  devices: AudioDevice[];
-  /** The selected device id. `null` is no selection, or "None" with `allowNone`. */
-  value?: string | null;
-  defaultValue?: string | null;
-  onValueChange?: (id: string | null) => void;
-  /** Adds a "None" item. Default false. */
-  allowNone?: boolean;
-  /** Default "None". */
-  noneLabel?: string;
-  /** Shows "Finding devices…". Default false. */
-  loading?: boolean;
-  /** Microphone permission. Default `granted`. */
-  permission?: "granted" | "prompt" | "denied";
-  onRequestPermission?: () => void;
-  disabled?: boolean;
-  children?: ReactNode;
-}
-
-export const AudioDeviceSelect = ({
-  devices,
-  value: valueProp,
-  defaultValue = null,
-  onValueChange,
-  allowNone = false,
-  noneLabel = "None",
-  loading = false,
-  permission = "granted",
-  onRequestPermission,
-  disabled,
-  children,
-}: AudioDeviceSelectProps) => {
-  const [uncontrolled, setUncontrolled] = useState<string | null>(defaultValue);
-  const value = valueProp === undefined ? uncontrolled : valueProp;
-  const labelsRef = useRef(new Map<string, string>());
-
-  useEffect(() => {
-    for (const device of devices) {
-      labelsRef.current.set(device.id, device.label);
-    }
-  }, [devices]);
-
-  const missing =
-    value !== null &&
-    !loading &&
-    !devices.some((device) => device.id === value);
-
-  const items = useMemo<DeviceItem[]>(() => {
-    const list: DeviceItem[] = [];
-    if (allowNone) {
-      list.push({ label: noneLabel, none: true, value: NONE_VALUE });
-    }
-    for (const device of devices) {
-      list.push({ device, label: device.label, value: device.id });
-    }
-    if (missing && value !== null) {
-      const remembered = labelsRef.current.get(value) ?? "Unknown device";
-      list.push({
-        label: `${remembered} (disconnected)`,
-        missing: true,
-        value,
-      });
-    }
-    return list;
-  }, [allowNone, devices, missing, noneLabel, value]);
-
-  let selected: string | null = value;
-  if (value === null && allowNone) {
-    selected = NONE_VALUE;
-  }
-
-  const contextValue = useMemo<AudioDeviceSelectContextValue>(
-    () => ({ items, loading, missing, onRequestPermission, permission }),
-    [items, loading, missing, onRequestPermission, permission]
-  );
-
-  return (
-    <AudioDeviceSelectContext.Provider value={contextValue}>
-      <Select<string | null>
-        disabled={disabled}
-        onValueChange={(next) => {
-          const id = next === NONE_VALUE ? null : next;
-          if (valueProp === undefined) {
-            setUncontrolled(id);
-          }
-          onValueChange?.(id);
-        }}
-        value={selected}
-      >
-        {children ?? (
-          <>
-            <AudioDeviceSelectTrigger>
-              <AudioDeviceSelectValue />
-            </AudioDeviceSelectTrigger>
-            <AudioDeviceSelectContent />
-          </>
-        )}
-      </Select>
-    </AudioDeviceSelectContext.Provider>
-  );
 };
 
 export const AudioDeviceSelectTrigger = ({
@@ -366,3 +257,108 @@ export const AudioDeviceSelectPreview = ({
     {...props}
   />
 );
+
+export interface AudioDeviceSelectProps {
+  devices: AudioDevice[];
+  /** The selected device id. `null` is no selection, or "None" with `allowNone`. */
+  value?: string | null;
+  defaultValue?: string | null;
+  onValueChange?: (id: string | null) => void;
+  /** Adds a "None" item. Default false. */
+  allowNone?: boolean;
+  /** Default "None". */
+  noneLabel?: string;
+  /** Shows "Finding devices…". Default false. */
+  loading?: boolean;
+  /** Microphone permission. Default `granted`. */
+  permission?: "granted" | "prompt" | "denied";
+  onRequestPermission?: () => void;
+  disabled?: boolean;
+  children?: ReactNode;
+}
+
+export const AudioDeviceSelect = ({
+  devices,
+  value: valueProp,
+  defaultValue = null,
+  onValueChange,
+  allowNone = false,
+  noneLabel = "None",
+  loading = false,
+  permission = "granted",
+  onRequestPermission,
+  disabled,
+  children,
+}: AudioDeviceSelectProps) => {
+  const [uncontrolled, setUncontrolled] = useState<string | null>(defaultValue);
+  const value = valueProp === undefined ? uncontrolled : valueProp;
+  const [knownLabels, setKnownLabels] = useState<Record<string, string>>({});
+  if (devices.some((device) => knownLabels[device.id] !== device.label)) {
+    setKnownLabels((previous) => {
+      const next = { ...previous };
+      for (const device of devices) {
+        next[device.id] = device.label;
+      }
+      return next;
+    });
+  }
+
+  const missing =
+    value !== null &&
+    !loading &&
+    !devices.some((device) => device.id === value);
+
+  const items = useMemo<DeviceItem[]>(() => {
+    const list: DeviceItem[] = [];
+    if (allowNone) {
+      list.push({ label: noneLabel, none: true, value: NONE_VALUE });
+    }
+    for (const device of devices) {
+      list.push({ device, label: device.label, value: device.id });
+    }
+    if (missing && value !== null) {
+      const remembered = knownLabels[value] ?? "Unknown device";
+      list.push({
+        label: `${remembered} (disconnected)`,
+        missing: true,
+        value,
+      });
+    }
+    return list;
+  }, [allowNone, devices, knownLabels, missing, noneLabel, value]);
+
+  let selected: string | null = value;
+  if (value === null && allowNone) {
+    selected = NONE_VALUE;
+  }
+
+  const contextValue = useMemo<AudioDeviceSelectContextValue>(
+    () => ({ items, loading, missing, onRequestPermission, permission }),
+    [items, loading, missing, onRequestPermission, permission]
+  );
+
+  return (
+    <AudioDeviceSelectContext.Provider value={contextValue}>
+      <Select<string | null>
+        disabled={disabled}
+        onValueChange={(next) => {
+          const id = next === NONE_VALUE ? null : next;
+          if (valueProp === undefined) {
+            setUncontrolled(id);
+          }
+          onValueChange?.(id);
+        }}
+        value={selected}
+      >
+        {children ?? (
+          <>
+            <AudioDeviceSelectTrigger>
+              <AudioDeviceSelectValue />
+            </AudioDeviceSelectTrigger>
+            <AudioDeviceSelectContent />
+          </>
+        )}
+      </Select>
+    </AudioDeviceSelectContext.Provider>
+  );
+};

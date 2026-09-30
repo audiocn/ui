@@ -7,6 +7,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -52,6 +53,37 @@ const isTyping = (target: EventTarget | null) =>
   (target.isContentEditable ||
     ["INPUT", "SELECT", "TEXTAREA"].includes(target.tagName));
 
+const moveFocus = (event: KeyboardEvent<HTMLDivElement>) => {
+  const pads = [
+    ...event.currentTarget.querySelectorAll<HTMLElement>(
+      "[data-slot='sound-pad']"
+    ),
+  ];
+  const index = pads.indexOf(event.target as HTMLElement);
+  if (index === -1) {
+    return;
+  }
+  const perRow = Math.max(
+    1,
+    pads.filter((pad) => pad.offsetTop === pads[0]?.offsetTop).length
+  );
+  const moves: Record<string, number> = {
+    ArrowDown: perRow,
+    ArrowLeft: -1,
+    ArrowRight: 1,
+    ArrowUp: -perRow,
+  };
+  const offset = moves[event.key];
+  if (offset === undefined) {
+    return;
+  }
+  const next = pads[clamp(index + offset, 0, pads.length - 1)];
+  if (next) {
+    event.preventDefault();
+    next.focus();
+  }
+};
+
 export interface SoundPadGridProps extends ComponentProps<"div"> {
   /** Default 4. Also settable with a class. */
   columns?: number;
@@ -66,7 +98,6 @@ export const SoundPadGrid = ({
   hotkeys = false,
   hotkeyScope = "focus",
   className,
-  style,
   onKeyDown,
   onKeyUp,
   ...props
@@ -132,37 +163,6 @@ export const SoundPadGrid = ({
     };
   }, [handleDown, handleUp, hotkeyScope, hotkeys]);
 
-  const moveFocus = (event: KeyboardEvent<HTMLDivElement>) => {
-    const pads = [
-      ...event.currentTarget.querySelectorAll<HTMLElement>(
-        "[data-slot='sound-pad']"
-      ),
-    ];
-    const index = pads.indexOf(event.target as HTMLElement);
-    if (index === -1) {
-      return;
-    }
-    const perRow = Math.max(
-      1,
-      pads.filter((pad) => pad.offsetTop === pads[0]?.offsetTop).length
-    );
-    const moves: Record<string, number> = {
-      ArrowDown: perRow,
-      ArrowLeft: -1,
-      ArrowRight: 1,
-      ArrowUp: -perRow,
-    };
-    const offset = moves[event.key];
-    if (offset === undefined) {
-      return;
-    }
-    const next = pads[clamp(index + offset, 0, pads.length - 1)];
-    if (next) {
-      event.preventDefault();
-      next.focus();
-    }
-  };
-
   const contextValue = useMemo(
     () => ({ hotkeys, register }),
     [hotkeys, register]
@@ -178,16 +178,15 @@ export const SoundPadGrid = ({
           if (event.defaultPrevented) {
             return;
           }
-          if (
+          const hotkeyPressed =
             hotkeyScope === "focus" &&
             !event.metaKey &&
             !event.ctrlKey &&
-            !event.altKey
-          ) {
-            if (handleDown(event.key, event.repeat, event.target)) {
-              event.preventDefault();
-              return;
-            }
+            !event.altKey &&
+            handleDown(event.key, event.repeat, event.target);
+          if (hotkeyPressed) {
+            event.preventDefault();
+            return;
           }
           moveFocus(event);
         }}
@@ -201,7 +200,6 @@ export const SoundPadGrid = ({
         style={
           {
             "--pad-columns": `repeat(${columns}, minmax(0, 1fr))`,
-            ...style,
           } as CSSProperties
         }
         {...props}
@@ -259,7 +257,6 @@ export const SoundPad = ({
   size = "default",
   disabled,
   className,
-  style,
   onPointerDown,
   onPointerUp,
   onPointerLeave,
@@ -272,7 +269,9 @@ export const SoundPad = ({
   const grid = useContext(SoundPadGridContext);
   const [pressed, setPressed] = useState(false);
   const latest = useRef({ mode, onStop, onTrigger, playing });
-  latest.current = { mode, onStop, onTrigger, playing };
+  useLayoutEffect(() => {
+    latest.current = { mode, onStop, onTrigger, playing };
+  });
   const inactive = disabled || loading;
 
   const press = useCallback(() => {
@@ -360,10 +359,7 @@ export const SoundPad = ({
           release();
         }}
         style={
-          {
-            ...(accent ? { "--pad-accent": accent } : {}),
-            ...style,
-          } as CSSProperties
+          accent ? ({ "--pad-accent": accent } as CSSProperties) : undefined
         }
         type="button"
         {...props}

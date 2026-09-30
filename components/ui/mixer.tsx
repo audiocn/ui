@@ -1,14 +1,6 @@
 "use client";
 
-import {
-  Children,
-  createContext,
-  useContext,
-  useEffect,
-  useId,
-  useMemo,
-  useState,
-} from "react";
+import { createContext, useContext, useId, useMemo } from "react";
 import type { ComponentProps, KeyboardEvent } from "react";
 
 import { AudioConfigProvider } from "@/hooks/use-audio-config";
@@ -23,8 +15,6 @@ const STRIP_SELECTOR = "[data-slot='channel-strip']";
 interface MixerContextValue {
   orientation: Orientation;
   titleId: string;
-  empty: boolean;
-  setEmpty: (empty: boolean) => void;
 }
 
 const MixerContext = createContext<MixerContextValue | null>(null);
@@ -71,10 +61,9 @@ export const Mixer = ({
   ...props
 }: MixerProps) => {
   const titleId = useId();
-  const [empty, setEmpty] = useState(false);
   const contextValue = useMemo<MixerContextValue>(
-    () => ({ empty, orientation, setEmpty, titleId }),
-    [empty, orientation, titleId]
+    () => ({ orientation, titleId }),
+    [orientation, titleId]
   );
   const stripOrientation: Orientation =
     orientation === "horizontal" ? "horizontal" : "vertical";
@@ -101,7 +90,6 @@ export const Mixer = ({
               : "grid-cols-[minmax(0,1fr)_auto_auto] grid-rows-[auto_minmax(0,1fr)] [grid-template-areas:'header_header_header'_'channels_separator_master']",
             className
           )}
-          data-empty={empty ? "" : undefined}
           data-orientation={orientation}
           data-size={size}
           data-slot="mixer"
@@ -126,7 +114,11 @@ export const MixerHeader = ({ className, ...props }: ComponentProps<"div">) => (
   />
 );
 
-export const MixerTitle = ({ className, ...props }: ComponentProps<"h2">) => {
+export const MixerTitle = ({
+  className,
+  children,
+  ...props
+}: ComponentProps<"h2">) => {
   const { titleId } = useMixerPart("MixerTitle");
   return (
     <h2
@@ -134,7 +126,9 @@ export const MixerTitle = ({ className, ...props }: ComponentProps<"h2">) => {
       data-slot="mixer-title"
       id={titleId}
       {...props}
-    />
+    >
+      {children}
+    </h2>
   );
 };
 
@@ -191,12 +185,7 @@ export const MixerChannels = ({
   onKeyDownCapture,
   ...props
 }: MixerChannelsProps) => {
-  const { orientation, setEmpty } = useMixerPart("MixerChannels");
-  const count = Children.count(children);
-
-  useEffect(() => {
-    setEmpty(count === 0);
-  }, [count, setEmpty]);
+  const { orientation } = useMixerPart("MixerChannels");
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     onKeyDownCapture?.(event);
@@ -226,7 +215,7 @@ export const MixerChannels = ({
           (orientation === "horizontal"
             ? "overflow-y-auto"
             : "overflow-x-auto"),
-        count === 0 && "hidden",
+        "empty:hidden",
         className
       )}
       data-slot="mixer-channels"
@@ -272,15 +261,13 @@ export const MixerMaster = ({ className, ...props }: ComponentProps<"div">) => {
   );
 };
 
+/** Shown when `MixerChannels` renders nothing. */
 export const MixerEmpty = ({ className, ...props }: ComponentProps<"div">) => {
-  const { empty } = useMixerPart("MixerEmpty");
-  if (!empty) {
-    return null;
-  }
+  useMixerPart("MixerEmpty");
   return (
     <div
       className={cn(
-        "text-muted-foreground flex min-h-24 items-center justify-center rounded-xl border border-dashed p-6 text-center text-sm [grid-area:channels]",
+        "text-muted-foreground hidden min-h-24 items-center justify-center rounded-xl border border-dashed p-6 text-center text-sm [grid-area:channels] group-has-[[data-slot=mixer-channels]:empty]/mixer:flex",
         className
       )}
       data-slot="mixer-empty"

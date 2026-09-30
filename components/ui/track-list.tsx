@@ -50,16 +50,14 @@ const moveFocus = (event: KeyboardEvent<HTMLUListElement>) => {
     return;
   }
   const index = items.indexOf(current);
-  let next: HTMLElement | undefined;
-  if (event.key === "ArrowDown") {
-    next = items[index + 1];
-  } else if (event.key === "ArrowUp") {
-    next = items[index - 1];
-  } else if (event.key === "Home") {
-    next = items[0];
-  } else if (event.key === "End") {
-    next = items.at(-1);
-  }
+  const targets: Record<string, number> = {
+    ArrowDown: index + 1,
+    ArrowUp: index - 1,
+    End: items.length - 1,
+    Home: 0,
+  };
+  const targetIndex = targets[event.key];
+  const next = targetIndex === undefined ? undefined : items[targetIndex];
   if (next) {
     event.preventDefault();
     next.focus();
@@ -174,14 +172,9 @@ export const TrackListItemIndex = ({
           className="flex h-3 items-end gap-px"
           role="img"
         >
-          <span className="h-full w-0.5 origin-bottom animate-[track-eq_0.9s_ease-in-out_infinite] rounded-full bg-current motion-reduce:animate-none" />
-          <span className="h-full w-0.5 origin-bottom animate-[track-eq_0.7s_ease-in-out_infinite_0.2s] rounded-full bg-current motion-reduce:animate-none" />
-          <span className="h-full w-0.5 origin-bottom animate-[track-eq_1.1s_ease-in-out_infinite_0.1s] rounded-full bg-current motion-reduce:animate-none" />
-          <style>
-            {
-              "@keyframes track-eq{0%,100%{transform:scaleY(.3)}50%{transform:scaleY(1)}}"
-            }
-          </style>
+          <span className="h-3 w-0.5 animate-pulse rounded-full bg-current motion-reduce:animate-none" />
+          <span className="h-2 w-0.5 animate-pulse rounded-full bg-current [animation-delay:200ms] motion-reduce:animate-none" />
+          <span className="h-2.5 w-0.5 animate-pulse rounded-full bg-current [animation-delay:400ms] motion-reduce:animate-none" />
         </span>
       ) : (
         children

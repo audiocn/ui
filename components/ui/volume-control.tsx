@@ -76,6 +76,145 @@ const levelFor = (volume: number, muted: boolean): VolumeLevel => {
   return "high";
 };
 
+export type VolumeControlMuteProps = useRender.ComponentProps<"button">;
+
+export const VolumeControlMute = ({
+  render,
+  className,
+  children,
+  ...props
+}: VolumeControlMuteProps) => {
+  const { disabled, level, muted, toggleMuted } =
+    useVolumeControl("VolumeControlMute");
+  const label = muted ? "Unmute" : "Mute";
+
+  return useRender({
+    defaultTagName: "button",
+    props: mergeProps<"button">(
+      {
+        "aria-label": label,
+        "aria-pressed": muted,
+        children: children ?? <span className="text-xs">{label}</span>,
+        className: cn(
+          "text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring/30 inline-flex size-7 shrink-0 items-center justify-center rounded-lg transition-colors outline-none focus-visible:ring-3 disabled:pointer-events-none [&_svg:not([class*='size-'])]:size-4",
+          !children && "w-auto px-2",
+          className
+        ),
+        disabled,
+        onClick: toggleMuted,
+        type: "button",
+      },
+      props
+    ),
+    render,
+    state: { level, muted, slot: "volume-control-mute" },
+  });
+};
+
+export type VolumeControlSliderProps = Omit<
+  SliderPrimitive.Root.Props<number>,
+  | "value"
+  | "defaultValue"
+  | "onValueChange"
+  | "onValueCommitted"
+  | "min"
+  | "max"
+  | "step"
+  | "orientation"
+>;
+
+export const VolumeControlSlider = ({
+  className,
+  ...props
+}: VolumeControlSliderProps) => {
+  const {
+    commit,
+    disabled,
+    muted,
+    orientation,
+    position,
+    setPosition,
+    step,
+    volume,
+  } = useVolumeControl("VolumeControlSlider");
+  const horizontal = orientation === "horizontal";
+  const shown = muted ? 0 : position;
+
+  return (
+    <SliderPrimitive.Root
+      className={cn(
+        "relative flex touch-none items-center select-none",
+        horizontal ? "w-full min-w-20" : "h-24 flex-col",
+        className
+      )}
+      data-slot="volume-control-slider"
+      disabled={disabled}
+      max={1}
+      min={0}
+      onValueChange={(next) => setPosition(next)}
+      onValueCommitted={commit}
+      orientation={orientation}
+      step={step}
+      value={shown}
+      {...props}
+    >
+      <SliderPrimitive.Control
+        className={cn(
+          "relative flex items-center",
+          horizontal
+            ? "h-(--volume-thumb-size) w-full px-[calc(var(--volume-thumb-size)/2)]"
+            : "h-full w-(--volume-thumb-size) flex-col py-[calc(var(--volume-thumb-size)/2)]"
+        )}
+      >
+        <SliderPrimitive.Track
+          className={cn(
+            "bg-input/90 relative grow rounded-full",
+            horizontal
+              ? "h-(--volume-track-size) w-full"
+              : "h-full w-(--volume-track-size)"
+          )}
+          data-slot="volume-control-track"
+        >
+          <SliderPrimitive.Indicator
+            className={cn(
+              "bg-primary rounded-full",
+              horizontal ? "h-full" : "w-full"
+            )}
+            data-slot="volume-control-range"
+          />
+          <SliderPrimitive.Thumb
+            aria-label="Volume"
+            className="bg-background ring-foreground/15 hover:ring-ring/30 focus-visible:ring-ring/40 block size-(--volume-thumb-size) shrink-0 rounded-full shadow-sm ring-1 outline-hidden transition-[box-shadow] hover:ring-4 focus-visible:ring-4"
+            data-slot="volume-control-thumb"
+            getAriaValueText={() =>
+              muted ? "Muted" : `${Math.round(volume * PERCENT)}%`
+            }
+          />
+        </SliderPrimitive.Track>
+      </SliderPrimitive.Control>
+    </SliderPrimitive.Root>
+  );
+};
+
+export const VolumeControlValue = ({
+  className,
+  ...props
+}: ComponentProps<"span">) => {
+  const { muted, position } = useVolumeControl("VolumeControlValue");
+  return (
+    <span
+      className={cn(
+        "text-muted-foreground w-9 text-end font-mono text-xs tabular-nums",
+        className
+      )}
+      data-slot="volume-control-value"
+      {...props}
+    >
+      {muted ? "0%" : `${Math.round(position * PERCENT)}%`}
+    </span>
+  );
+};
+
 export interface VolumeControlProps extends Omit<
   ComponentProps<"div">,
   "defaultValue" | "onChange"
@@ -218,144 +357,5 @@ export const VolumeControl = ({
         )}
       </div>
     </VolumeControlContext.Provider>
-  );
-};
-
-export type VolumeControlMuteProps = useRender.ComponentProps<"button">;
-
-export const VolumeControlMute = ({
-  render,
-  className,
-  children,
-  ...props
-}: VolumeControlMuteProps) => {
-  const { disabled, level, muted, toggleMuted } =
-    useVolumeControl("VolumeControlMute");
-  const label = muted ? "Unmute" : "Mute";
-
-  return useRender({
-    defaultTagName: "button",
-    props: mergeProps<"button">(
-      {
-        "aria-label": label,
-        "aria-pressed": muted,
-        children: children ?? <span className="text-xs">{label}</span>,
-        className: cn(
-          "text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring/30 inline-flex size-7 shrink-0 items-center justify-center rounded-lg transition-colors outline-none focus-visible:ring-3 disabled:pointer-events-none [&_svg:not([class*='size-'])]:size-4",
-          !children && "w-auto px-2",
-          className
-        ),
-        disabled,
-        onClick: toggleMuted,
-        type: "button",
-      },
-      props
-    ),
-    render,
-    state: { level, muted, slot: "volume-control-mute" },
-  });
-};
-
-export type VolumeControlSliderProps = Omit<
-  SliderPrimitive.Root.Props<number>,
-  | "value"
-  | "defaultValue"
-  | "onValueChange"
-  | "onValueCommitted"
-  | "min"
-  | "max"
-  | "step"
-  | "orientation"
->;
-
-export const VolumeControlSlider = ({
-  className,
-  ...props
-}: VolumeControlSliderProps) => {
-  const {
-    commit,
-    disabled,
-    muted,
-    orientation,
-    position,
-    setPosition,
-    step,
-    volume,
-  } = useVolumeControl("VolumeControlSlider");
-  const horizontal = orientation === "horizontal";
-  const shown = muted ? 0 : position;
-
-  return (
-    <SliderPrimitive.Root
-      className={cn(
-        "relative flex touch-none items-center select-none",
-        horizontal ? "w-full min-w-20" : "h-24 flex-col",
-        className
-      )}
-      data-slot="volume-control-slider"
-      disabled={disabled}
-      max={1}
-      min={0}
-      onValueChange={(next) => setPosition(next)}
-      onValueCommitted={commit}
-      orientation={orientation}
-      step={step}
-      value={shown}
-      {...props}
-    >
-      <SliderPrimitive.Control
-        className={cn(
-          "relative flex items-center",
-          horizontal
-            ? "h-(--volume-thumb-size) w-full px-[calc(var(--volume-thumb-size)/2)]"
-            : "h-full w-(--volume-thumb-size) flex-col py-[calc(var(--volume-thumb-size)/2)]"
-        )}
-      >
-        <SliderPrimitive.Track
-          className={cn(
-            "bg-input/90 relative grow rounded-full",
-            horizontal
-              ? "h-(--volume-track-size) w-full"
-              : "h-full w-(--volume-track-size)"
-          )}
-          data-slot="volume-control-track"
-        >
-          <SliderPrimitive.Indicator
-            className={cn(
-              "bg-primary rounded-full",
-              horizontal ? "h-full" : "w-full"
-            )}
-            data-slot="volume-control-range"
-          />
-          <SliderPrimitive.Thumb
-            aria-label="Volume"
-            className="bg-background ring-foreground/15 hover:ring-ring/30 focus-visible:ring-ring/40 block size-(--volume-thumb-size) shrink-0 rounded-full shadow-sm ring-1 outline-hidden transition-[box-shadow] hover:ring-4 focus-visible:ring-4"
-            data-slot="volume-control-thumb"
-            getAriaValueText={() =>
-              muted ? "Muted" : `${Math.round(volume * PERCENT)}%`
-            }
-          />
-        </SliderPrimitive.Track>
-      </SliderPrimitive.Control>
-    </SliderPrimitive.Root>
-  );
-};
-
-export const VolumeControlValue = ({
-  className,
-  ...props
-}: ComponentProps<"span">) => {
-  const { muted, position } = useVolumeControl("VolumeControlValue");
-  return (
-    <span
-      className={cn(
-        "text-muted-foreground w-9 text-end font-mono text-xs tabular-nums",
-        className
-      )}
-      data-slot="volume-control-value"
-      {...props}
-    >
-      {muted ? "0%" : `${Math.round(position * PERCENT)}%`}
-    </span>
   );
 };
