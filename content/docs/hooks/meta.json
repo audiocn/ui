@@ -1,0 +1,20 @@
+{
+  "title": "Hooks",
+  "pages": [
+    "use-demo-signal",
+    "use-frame-source",
+    "use-level",
+    "use-clip-hold",
+    "use-reduced-motion",
+    "use-audio-context",
+    "use-audio-analyser",
+    "use-audio-devices",
+    "use-microphone",
+    "use-system-audio",
+    "use-mixer",
+    "use-web-audio-mixer",
+    "use-audio-player",
+    "use-sound",
+    "use-waveform-data"
+  ]
+}

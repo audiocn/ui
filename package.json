@@ -4,8 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "next dev",
-    "build": "pnpm registry:build && next build",
+    "dev": "pnpm examples:build && next dev",
+    "build": "pnpm examples:build && pnpm registry:build && next build",
     "start": "next start",
     "postinstall": "fumadocs-mdx",
     "registry:build": "shadcn build",
@@ -13,7 +13,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "check": "ultracite check",
-    "fix": "ultracite fix"
+    "fix": "ultracite fix",
+    "examples:build": "node scripts/build-examples.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",

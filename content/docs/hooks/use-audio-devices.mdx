@@ -1,0 +1,44 @@
+---
+title: useAudioDevices
+description: The list of audio input or output devices, with permission state and live updates.
+---
+
+```npm
+npx shadcn@latest add @audiocn/use-audio-devices
+```
+
+## Usage
+
+```tsx
+const { devices, permission, requestPermission } = useAudioDevices();
+
+if (permission === "prompt") {
+  return <Button onClick={requestPermission}>Allow microphone access</Button>;
+}
+
+return (
+  <AudioDeviceSelect devices={devices} value={deviceId} onValueChange={setDeviceId} />
+);
+```
+
+Browsers hide device names until the page has microphone access. Until then
+devices are labelled "Microphone 1", "Microphone 2" and so on.
+
+## Options
+
+<PropsTable
+  rows={[["kind", '"audioinput" | "audiooutput"', '"audioinput"', "Which devices to list."]]}
+/>
+
+## Returns
+
+<PropsTable
+  rows={[
+    ["devices", "AudioDeviceInfo[]", null, "{ id, label, kind, groupId, isDefault }. Updates when devices are plugged in or removed."],
+    ["permission", '"granted" | "prompt" | "denied" | "unsupported"', null, "Microphone permission."],
+    ["isLoading", "boolean", null, "True until the first list arrives."],
+    ["error", "Error | null", null, "The last error."],
+    ["refresh", "() => Promise<void>", null, "List devices again."],
+    ["requestPermission", "() => Promise<boolean>", null, "Ask for microphone access so labels become readable."],
+  ]}
+/>

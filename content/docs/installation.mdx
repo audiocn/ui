@@ -1,0 +1,89 @@
+---
+title: Installation
+description: Add the audiocn registry to a shadcn/ui project and install components with the shadcn CLI.
+---
+
+audiocn is a [shadcn registry](https://ui.shadcn.com/docs/registry). You add components with the same `shadcn` CLI you already use, and the code lands in your project.
+
+## Requirements
+
+- React 19 and Tailwind CSS v4.
+- A project set up with shadcn/ui. audiocn components use the standard shadcn tokens (`background`, `muted`, `primary`, `ring`…) and the `cn` helper from `@/lib/utils`.
+- Components are built on [Base UI](https://base-ui.com). The CLI installs `@base-ui/react` for you, so they also work in projects whose other shadcn components use Radix.
+
+<Steps>
+
+<Step>
+
+### Set up shadcn/ui
+
+Skip this if your project already has a `components.json`.
+
+```npm
+npx shadcn@latest init
+```
+
+</Step>
+
+<Step>
+
+### Add the registry
+
+Add the `@audiocn` namespace to `components.json`:
+
+```json title="components.json"
+{
+  "registries": {
+    "@audiocn": "https://audiocn.dev/r/{name}.json"
+  }
+}
+```
+
+</Step>
+
+<Step>
+
+### Add a component
+
+```npm
+npx shadcn@latest add @audiocn/level-meter
+```
+
+The CLI copies the component and everything it depends on: the audio core (`lib/audio`), the audio theme tokens, and any hooks it uses.
+
+</Step>
+
+<Step>
+
+### Use it
+
+```tsx
+import { LevelMeter } from "@/components/ui/level-meter";
+
+export const MicLevel = ({ peakDb }: { peakDb: number }) => (
+  <LevelMeter aria-label="Microphone level" peakDb={peakDb} />
+);
+```
+
+</Step>
+
+</Steps>
+
+## What gets installed
+
+| Path | What it is |
+| --- | --- |
+| `components/ui/*` | The components, one file each |
+| `hooks/use-*.ts` | Hooks: frame sources, Web Audio, mixer state |
+| `lib/audio/*.ts` | The audio core: decibels, ballistics, tapers, types |
+| `app/globals.css` | Six audio tokens: `--meter-ok`, `--meter-warn`, `--meter-clip`, `--channel-mute`, `--channel-solo`, `--channel-monitor` |
+
+The paths follow the aliases in your `components.json`, so they adapt to projects with a `src` folder or custom aliases.
+
+## Install everything
+
+Every block pulls in the components it uses. The full mixer installs most of the library in one step:
+
+```npm
+npx shadcn@latest add @audiocn/system-audio-mixer
+```

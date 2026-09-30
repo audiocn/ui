@@ -1,0 +1,45 @@
+---
+title: useAudioContext
+description: One shared AudioContext that resumes on the first user gesture, plus a provider to supply your own.
+---
+
+Browsers only let audio start after the user interacts with the page. Every
+audiocn Web Audio hook shares one `AudioContext`, and this hook resumes it on
+the first click, tap or key press.
+
+```npm
+npx shadcn@latest add @audiocn/use-audio-context
+```
+
+## Usage
+
+```tsx
+const { context, status, resume } = useAudioContext();
+
+if (status === "suspended") {
+  return <Button onClick={resume}>Enable audio</Button>;
+}
+```
+
+## Your own context
+
+Wrap your app in `AudioContextProvider` to make every hook use a context you
+created, for example one with a specific sample rate.
+
+```tsx
+const context = new AudioContext({ sampleRate: 48_000 });
+
+<AudioContextProvider context={context}>
+  <App />
+</AudioContextProvider>;
+```
+
+## Returns
+
+<PropsTable
+  rows={[
+    ["context", "AudioContext | null", null, "Null during server rendering and in browsers without Web Audio."],
+    ["status", '"suspended" | "running" | "closed" | "unsupported"', null, "The context state."],
+    ["resume", "() => Promise<void>", null, "Resume a suspended context. Call it from a user gesture."],
+  ]}
+/>

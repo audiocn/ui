@@ -1,0 +1,52 @@
+---
+title: useSystemAudio
+description: Capture system or tab audio through the browser's screen-share picker.
+---
+
+```npm
+npx shadcn@latest add @audiocn/use-system-audio
+```
+
+## Usage
+
+```tsx
+const system = useSystemAudio();
+const analyser = useAudioAnalyser(system.stream, { channels: "stereo" });
+
+<Button disabled={!system.isSupported} onClick={system.start}>
+  Capture system audio
+</Button>;
+```
+
+The browser shows its screen-share picker. The user must choose a screen, window
+or tab and tick the option to share audio. The video track is dropped
+immediately; only audio is kept.
+
+<Callout type="warn" title="Browser support varies">
+  What can be captured depends on the browser and operating system. Chromium
+  browsers can share tab audio everywhere and whole-system audio on some
+  platforms. Other browsers may offer no audio at all. Always handle the
+  `no-audio` and `unsupported` states.
+</Callout>
+
+## Options
+
+<PropsTable
+  rows={[
+    ["systemAudio", "boolean", "true", "Ask for the whole system's audio where the browser allows it."],
+    ["preferCurrentTab", "boolean", "false", "Offer the current tab first in the picker."],
+  ]}
+/>
+
+## Returns
+
+<PropsTable
+  rows={[
+    ["isSupported", "boolean", null, "The browser can capture display media at all."],
+    ["stream", "MediaStream | null", null, "The captured audio."],
+    ["status", '"idle" | "prompting" | "active" | "no-audio" | "denied" | "ended" | "unsupported"', null, "no-audio means the user shared without audio; ended means they stopped sharing."],
+    ["error", "Error | null", null, "The last error."],
+    ["start", "() => Promise<void>", null, "Open the picker. Call it from a user gesture."],
+    ["stop", "() => void", null, "Stop capturing."],
+  ]}
+/>

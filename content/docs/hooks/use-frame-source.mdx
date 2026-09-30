@@ -1,0 +1,52 @@
+---
+title: useFrameSource
+description: Subscribe a callback to a frame source, with a stable callback and automatic cleanup.
+---
+
+Every audiocn meter and visualizer uses this hook for its `source` prop. Use it
+to build your own components on any frame source.
+
+```npm
+npx shadcn@latest add @audiocn/use-frame-source
+```
+
+## Usage
+
+```tsx
+import { useRef } from "react";
+
+import { useFrameSource } from "@/hooks/use-frame-source";
+import { dbToLevel } from "@/lib/audio/decibels";
+import type { FrameSource, MeterFrame } from "@/lib/audio/types";
+
+export const TinyMeter = ({ source }: { source: FrameSource<MeterFrame> }) => {
+  const barRef = useRef<HTMLDivElement>(null);
+
+  useFrameSource(source, (frame) => {
+    const level = dbToLevel(frame.channels[0]?.peakDb ?? -Infinity);
+    barRef.current?.style.setProperty("--level", String(level));
+  });
+
+  return (
+    <div className="h-2 w-40 rounded-full bg-muted">
+      <div
+        className="h-full origin-left scale-x-(--level) rounded-full bg-primary"
+        ref={barRef}
+      />
+    </div>
+  );
+};
+```
+
+The callback runs outside React rendering, so it can update the DOM on every
+frame without re-rendering.
+
+## API
+
+<PropsTable
+  rows={[
+    ["source", "FrameSource<T> | null | undefined", null, "The source to subscribe to. Changing it resubscribes."],
+    ["onFrame", "(frame: T) => void", null, "Called for every frame. May change on every render."],
+    ["options.enabled", "boolean", "true", "Pause the subscription without unmounting."],
+  ]}
+/>

@@ -1,0 +1,46 @@
+---
+title: useMicrophone
+description: Open a microphone as a MediaStream, with browser processing off by default.
+---
+
+```npm
+npx shadcn@latest add @audiocn/use-microphone
+```
+
+## Usage
+
+```tsx
+const microphone = useMicrophone({ deviceId });
+const analyser = useAudioAnalyser(microphone.stream);
+
+<Button onClick={microphone.start}>Start</Button>;
+```
+
+Echo cancellation, noise suppression and automatic gain control are off by
+default. Browsers turn them on for calls, but they change the level a meter
+shows. Turn them on when you want call-style audio.
+
+## Options
+
+<PropsTable
+  rows={[
+    ["deviceId", "string | null", null, "The device to open. Omit for the system default. Changing it reopens the stream."],
+    ["enabled", "boolean", "false", "Open the microphone as soon as possible."],
+    ["echoCancellation", "boolean", "false", "Browser echo cancellation."],
+    ["noiseSuppression", "boolean", "false", "Browser noise suppression."],
+    ["autoGainControl", "boolean", "false", "Browser automatic gain control."],
+    ["channelCount", "number", null, "Requested channel count."],
+  ]}
+/>
+
+## Returns
+
+<PropsTable
+  rows={[
+    ["stream", "MediaStream | null", null, "The open stream."],
+    ["status", '"idle" | "acquiring" | "active" | "denied" | "unavailable" | "error"', null, "unavailable also covers a device that was unplugged."],
+    ["error", "Error | null", null, "The last error."],
+    ["start", "() => Promise<void>", null, "Open the microphone."],
+    ["stop", "() => void", null, "Close it and release the device."],
+  ]}
+/>

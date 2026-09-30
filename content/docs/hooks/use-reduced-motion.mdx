@@ -1,0 +1,17 @@
+---
+title: useReducedMotion
+description: True when the user asked the system to reduce motion.
+---
+
+Meters and visualizers use this to show a static level instead of animating.
+
+```npm
+npx shadcn@latest add @audiocn/use-reduced-motion
+```
+
+```tsx
+const reducedMotion = useReducedMotion();
+```
+
+It returns `false` during server rendering and updates when the setting
+changes.
