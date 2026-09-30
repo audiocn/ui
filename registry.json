@@ -2,5 +2,76 @@
   "$schema": "https://ui.shadcn.com/schema/registry.json",
   "name": "audiocn",
   "homepage": "https://audiocn.dev",
-  "items": []
+  "items": [
+    {
+      "name": "core",
+      "type": "registry:lib",
+      "title": "Audio core",
+      "description": "Decibel maths, meter ballistics, zones, fader tapers, band resampling, time formatting, the shared frame loop, frame emitters, shared types and the audio theme tokens. Every audiocn component depends on it.",
+      "files": [
+        {
+          "path": "lib/audio/types.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "lib/audio/decibels.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "lib/audio/ballistics.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "lib/audio/zones.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "lib/audio/taper.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "lib/audio/bands.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "lib/audio/time.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "lib/audio/frame-loop.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "lib/audio/frame-source.ts",
+          "type": "registry:lib"
+        }
+      ],
+      "cssVars": {
+        "theme": {
+          "color-meter-ok": "var(--meter-ok)",
+          "color-meter-warn": "var(--meter-warn)",
+          "color-meter-clip": "var(--meter-clip)",
+          "color-channel-mute": "var(--channel-mute)",
+          "color-channel-solo": "var(--channel-solo)",
+          "color-channel-monitor": "var(--channel-monitor)"
+        },
+        "light": {
+          "meter-ok": "oklch(0.696 0.17 162.48)",
+          "meter-warn": "oklch(0.795 0.184 86.047)",
+          "meter-clip": "var(--destructive)",
+          "channel-mute": "var(--destructive)",
+          "channel-solo": "oklch(0.795 0.184 86.047)",
+          "channel-monitor": "oklch(0.623 0.214 259.815)"
+        },
+        "dark": {
+          "meter-ok": "oklch(0.765 0.177 163.223)",
+          "meter-warn": "oklch(0.852 0.199 91.936)",
+          "meter-clip": "var(--destructive)",
+          "channel-mute": "var(--destructive)",
+          "channel-solo": "oklch(0.852 0.199 91.936)",
+          "channel-monitor": "oklch(0.707 0.165 254.624)"
+        }
+      }
+    }
+  ]
 }
