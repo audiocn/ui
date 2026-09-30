@@ -9,7 +9,12 @@ import {
   useRef,
   useState,
 } from "react";
-import type { ComponentProps, KeyboardEvent, PointerEvent } from "react";
+import type {
+  ComponentProps,
+  CSSProperties,
+  KeyboardEvent,
+  PointerEvent,
+} from "react";
 
 import { useFrameSource } from "@/hooks/use-frame-source";
 import { resampleLevels } from "@/lib/audio/bands";
@@ -46,240 +51,24 @@ const useWaveform = (part: string) => {
   return context;
 };
 
-export interface WaveformProps extends Omit<
-  ComponentProps<"div">,
-  "onSeeked" | "defaultValue"
-> {
-  /** Peaks, 0..1, from `useWaveformData`. */
-  peaks: ArrayLike<number> | null;
-  /** Length in seconds. */
-  duration: number;
-  /** Playhead position in seconds. */
-  currentTime?: number;
-  defaultCurrentTime?: number;
-  /** A smooth playhead with no React renders. */
-  time?: FrameSource<number> | null;
-  /** Fires while seeking. */
-  onSeek?: (time: number) => void;
-  /** Fires when the pointer is released or after keyboard seeking. */
-  onSeekCommitted?: (time: number) => void;
-  /** Seconds per arrow key. Default 5. */
-  step?: number;
-  /** Seconds per Shift+arrow. Default 15. */
-  largeStep?: number;
-  /** Default `bars`. */
-  variant?: "bars" | "line" | "mirror";
-  /** Bar width in pixels. Default 2. */
-  barWidth?: number;
-  /** Gap in pixels. Default 1. */
-  barGap?: number;
-  /** Corner radius in pixels. Default 1. */
-  barRadius?: number;
-  /** When false, the waveform is display only. Default true. */
-  interactive?: boolean;
-  loading?: boolean;
-  disabled?: boolean;
-}
-
-export const Waveform = ({
-  peaks,
-  duration,
-  currentTime,
-  defaultCurrentTime = 0,
-  time,
-  onSeek,
-  onSeekCommitted,
-  step = 5,
-  largeStep = 15,
-  variant = "bars",
-  barWidth = 2,
-  barGap = 1,
-  barRadius = 1,
-  interactive = true,
-  loading = false,
-  disabled = false,
-  className,
-  children,
-  ...props
-}: WaveformProps) => {
-  const [internalTime, setInternalTime] = useState(defaultCurrentTime);
-  const shownTime = currentTime ?? internalTime;
-  const rootRef = useRef<HTMLDivElement>(null);
-  const progressRef = useRef(0);
-  const hoverRef = useRef<number | null>(null);
-  const [hoverListeners] = useState(() => new Set<() => void>());
-  const [dragging, setDragging] = useState(false);
-  const latestTimeRef = useRef(shownTime);
-
-  const timeToPosition = useCallback(
-    (value: number) => (duration > 0 ? clamp(value / duration, 0, 1) : 0),
-    [duration]
-  );
-
-  const writeProgress = useCallback(
-    (value: number) => {
-      latestTimeRef.current = value;
-      progressRef.current = timeToPosition(value);
-      rootRef.current?.style.setProperty(
-        "--waveform-position",
-        progressRef.current.toFixed(5)
-      );
-    },
-    [timeToPosition]
-  );
-
-  useEffect(() => {
-    writeProgress(shownTime);
-  }, [shownTime, writeProgress]);
-
-  useFrameSource(time, writeProgress);
-
-  const seekTo = (value: number, commit: boolean) => {
-    const next = clamp(value, 0, duration);
-    writeProgress(next);
-    if (currentTime === undefined) {
-      setInternalTime(next);
-    }
-    onSeek?.(next);
-    if (commit) {
-      onSeekCommitted?.(next);
-    }
+const seekTarget = (
+  key: string,
+  current: number,
+  amount: number,
+  duration: number
+): number | null => {
+  const targets: Record<string, number> = {
+    ArrowDown: current - amount,
+    ArrowLeft: current - amount,
+    ArrowRight: current + amount,
+    ArrowUp: current + amount,
+    End: duration,
+    Home: 0,
   };
-
-  const timeAtPointer = (event: PointerEvent<HTMLDivElement>) => {
-    const rect = event.currentTarget.getBoundingClientRect();
-    const position = clamp((event.clientX - rect.left) / rect.width, 0, 1);
-    return position * duration;
-  };
-
-  const notifyHover = () => {
-    for (const listener of hoverListeners) {
-      listener();
-    }
-  };
-
-  const active = interactive && !disabled && !loading && duration > 0;
-
-  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (!active) {
-      return;
-    }
-    const amount = event.shiftKey ? largeStep : step;
-    const { current } = latestTimeRef;
-    let next: number | null = null;
-    if (event.key === "ArrowRight" || event.key === "ArrowUp") {
-      next = current + amount;
-    } else if (event.key === "ArrowLeft" || event.key === "ArrowDown") {
-      next = current - amount;
-    } else if (event.key === "Home") {
-      next = 0;
-    } else if (event.key === "End") {
-      next = duration;
-    }
-    if (next !== null) {
-      event.preventDefault();
-      seekTo(next, true);
-    }
-  };
-
-  const contextValue = useMemo<WaveformContextValue>(
-    () => ({
-      barGap,
-      barRadius,
-      barWidth,
-      duration,
-      hoverRef,
-      loading,
-      peaks,
-      progressRef,
-      subscribeHover: (listener) => {
-        hoverListeners.add(listener);
-        return () => {
-          hoverListeners.delete(listener);
-        };
-      },
-      timeToPosition,
-      variant,
-    }),
-    [
-      barGap,
-      barRadius,
-      barWidth,
-      duration,
-      hoverListeners,
-      loading,
-      peaks,
-      timeToPosition,
-      variant,
-    ]
-  );
-
-  const interactiveProps = active
-    ? {
-        "aria-valuemax": Math.round(duration),
-        "aria-valuemin": 0,
-        "aria-valuenow": Math.round(shownTime),
-        "aria-valuetext": `${formatTime(shownTime)} of ${formatTime(duration)}`,
-        onKeyDown: handleKeyDown,
-        onPointerDown: (event: PointerEvent<HTMLDivElement>) => {
-          if (event.button !== 0) {
-            return;
-          }
-          event.currentTarget.setPointerCapture(event.pointerId);
-          setDragging(true);
-          seekTo(timeAtPointer(event), false);
-        },
-        onPointerLeave: () => {
-          hoverRef.current = null;
-          notifyHover();
-        },
-        onPointerMove: (event: PointerEvent<HTMLDivElement>) => {
-          const at = timeAtPointer(event);
-          hoverRef.current = at;
-          notifyHover();
-          if (dragging) {
-            seekTo(at, false);
-          }
-        },
-        onPointerUp: (event: PointerEvent<HTMLDivElement>) => {
-          if (!dragging) {
-            return;
-          }
-          setDragging(false);
-          seekTo(timeAtPointer(event), true);
-        },
-        role: "slider",
-        tabIndex: 0,
-      }
-    : {};
-
-  return (
-    <WaveformContext.Provider value={contextValue}>
-      <div
-        className={cn(
-          "group/waveform focus-visible:ring-ring/30 relative h-20 w-full touch-none rounded-lg outline-none select-none [--waveform-cursor:var(--foreground)] [--waveform-position:0] [--waveform-progress:var(--primary)] [--waveform:var(--muted-foreground)] focus-visible:ring-3 data-disabled:opacity-50",
-          active && "cursor-pointer",
-          className
-        )}
-        data-disabled={disabled ? "" : undefined}
-        data-dragging={dragging ? "" : undefined}
-        data-loading={loading ? "" : undefined}
-        data-slot="waveform"
-        data-variant={variant}
-        ref={rootRef}
-        {...interactiveProps}
-        {...props}
-      >
-        {children ?? (
-          <>
-            <WaveformCanvas />
-            <WaveformCursor />
-          </>
-        )}
-      </div>
-    </WaveformContext.Provider>
-  );
+  return targets[key] ?? null;
 };
+
+const defaultHoverFormat = (value: number) => formatTime(value);
 
 const drawRoundedBar = (
   context: CanvasRenderingContext2D,
@@ -318,8 +107,7 @@ export const WaveformCanvas = ({
     if (!(canvas && context)) {
       return;
     }
-    let width = 0;
-    let height = 0;
+    const size = { height: 0, width: 0 };
     let ratio = 1;
     let colors = { played: "", unplayed: "" };
     let framesSinceColor = COLOR_REFRESH_FRAMES;
@@ -329,13 +117,13 @@ export const WaveformCanvas = ({
     const resize = () => {
       const rect = canvas.getBoundingClientRect();
       ratio = window.devicePixelRatio || 1;
-      width = rect.width;
-      height = rect.height;
-      canvas.width = Math.max(1, Math.round(width * ratio));
-      canvas.height = Math.max(1, Math.round(height * ratio));
+      size.width = rect.width;
+      size.height = rect.height;
+      canvas.width = Math.max(1, Math.round(size.width * ratio));
+      canvas.height = Math.max(1, Math.round(size.height * ratio));
       const count = Math.max(
         1,
-        Math.floor((width + barGap) / (barWidth + barGap))
+        Math.floor((size.width + barGap) / (barWidth + barGap))
       );
       levels = new Float32Array(count);
       if (peaks && peaks.length > 0) {
@@ -350,12 +138,12 @@ export const WaveformCanvas = ({
     const drawPass = (color: string, clipWidth: number) => {
       context.save();
       context.beginPath();
-      context.rect(0, 0, clipWidth, height);
+      context.rect(0, 0, clipWidth, size.height);
       context.clip();
       context.fillStyle = color;
       context.strokeStyle = color;
       const pitch = barWidth + barGap;
-      const middle = height / 2;
+      const middle = size.height / 2;
       if (variant === "line") {
         context.lineWidth = 1.5;
         context.beginPath();
@@ -377,9 +165,11 @@ export const WaveformCanvas = ({
       } else {
         for (let index = 0; index < levels.length; index += 1) {
           const level = levels[index] ?? 0;
-          const barHeight = Math.max(2, level * height);
+          const barHeight = Math.max(2, level * size.height);
           const y =
-            variant === "mirror" ? middle - barHeight / 2 : height - barHeight;
+            variant === "mirror"
+              ? middle - barHeight / 2
+              : size.height - barHeight;
           drawRoundedBar(
             context,
             index * pitch,
@@ -412,17 +202,17 @@ export const WaveformCanvas = ({
         }
       }
       const progress = progressRef.current;
-      if (progress === lastProgress || width === 0) {
+      if (progress === lastProgress || size.width === 0) {
         return;
       }
       lastProgress = progress;
       context.setTransform(ratio, 0, 0, ratio, 0, 0);
-      context.clearRect(0, 0, width, height);
+      context.clearRect(0, 0, size.width, size.height);
       if (loading || !peaks) {
         return;
       }
-      drawPass(colors.unplayed, width);
-      drawPass(colors.played, progress * width);
+      drawPass(colors.unplayed, size.width);
+      drawPass(colors.played, progress * size.width);
     };
 
     const unsubscribe = subscribeFrame(draw);
@@ -472,7 +262,7 @@ export interface WaveformHoverProps extends ComponentProps<"div"> {
 }
 
 export const WaveformHover = ({
-  format = (value) => formatTime(value),
+  format = defaultHoverFormat,
   className,
   ...props
 }: WaveformHoverProps) => {
@@ -496,11 +286,15 @@ export const WaveformHover = ({
     <div
       aria-hidden
       className={cn(
-        "bg-foreground/40 pointer-events-none absolute inset-y-0 w-px",
+        "bg-foreground/40 pointer-events-none absolute inset-y-0 left-(--waveform-hover) w-px",
         className
       )}
       data-slot="waveform-hover"
-      style={{ left: `${timeToPosition(hover) * 100}%` }}
+      style={
+        {
+          "--waveform-hover": `${timeToPosition(hover) * 100}%`,
+        } as CSSProperties
+      }
       {...props}
     >
       <span className="bg-foreground text-background absolute -top-6 left-1/2 -translate-x-1/2 rounded-md px-1.5 py-0.5 font-mono text-[0.625rem] whitespace-nowrap tabular-nums">
@@ -629,7 +423,7 @@ export const WaveformRegion = ({
   return (
     <div
       className={cn(
-        "bg-primary/15 ring-primary/40 absolute inset-y-0 rounded-sm ring-1",
+        "bg-primary/15 ring-primary/40 absolute inset-y-0 left-(--region-start) w-(--region-size) rounded-sm ring-1",
         draggable && "cursor-grab active:cursor-grabbing",
         className
       )}
@@ -641,7 +435,12 @@ export const WaveformRegion = ({
       onPointerMove={move}
       onPointerUp={finish}
       ref={regionRef}
-      style={{ left: `${left}%`, width: `${width}%` }}
+      style={
+        {
+          "--region-size": `${width}%`,
+          "--region-start": `${left}%`,
+        } as CSSProperties
+      }
       {...props}
     >
       {children}
@@ -693,11 +492,15 @@ export const WaveformMarker = ({
   return (
     <div
       className={cn(
-        "bg-meter-warn pointer-events-none absolute inset-y-0 w-px",
+        "bg-meter-warn pointer-events-none absolute inset-y-0 left-(--marker-position) w-px",
         className
       )}
       data-slot="waveform-marker"
-      style={{ left: `${timeToPosition(time) * 100}%` }}
+      style={
+        {
+          "--marker-position": `${timeToPosition(time) * 100}%`,
+        } as CSSProperties
+      }
       {...props}
     >
       {children ? (
@@ -706,5 +509,276 @@ export const WaveformMarker = ({
         </span>
       ) : null}
     </div>
+  );
+};
+
+export interface WaveformProps extends Omit<
+  ComponentProps<"div">,
+  "onSeeked" | "defaultValue"
+> {
+  /** Peaks, 0..1, from `useWaveformData`. */
+  peaks: ArrayLike<number> | null;
+  /** Length in seconds. */
+  duration: number;
+  /** Playhead position in seconds. */
+  currentTime?: number;
+  defaultCurrentTime?: number;
+  /** A smooth playhead with no React renders. */
+  time?: FrameSource<number> | null;
+  /** Fires while seeking. */
+  onSeek?: (time: number) => void;
+  /** Fires when the pointer is released or after keyboard seeking. */
+  onSeekCommitted?: (time: number) => void;
+  /** Seconds per arrow key. Default 5. */
+  step?: number;
+  /** Seconds per Shift+arrow. Default 15. */
+  largeStep?: number;
+  /** Default `bars`. */
+  variant?: "bars" | "line" | "mirror";
+  /** Bar width in pixels. Default 2. */
+  barWidth?: number;
+  /** Gap in pixels. Default 1. */
+  barGap?: number;
+  /** Corner radius in pixels. Default 1. */
+  barRadius?: number;
+  /** When false, the waveform is display only. Default true. */
+  interactive?: boolean;
+  loading?: boolean;
+  disabled?: boolean;
+}
+
+const isInteractive = (
+  interactive: boolean,
+  disabled: boolean,
+  loading: boolean,
+  duration: number
+) => interactive && !disabled && !loading && duration > 0;
+
+const createHoverChannel = () => {
+  const listeners = new Set<() => void>();
+  return {
+    notify: () => {
+      for (const listener of listeners) {
+        listener();
+      }
+    },
+    subscribe: (listener: () => void) => {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+  };
+};
+
+interface PointerOptions {
+  hoverRef: { current: number | null };
+  notify: () => void;
+  seekTo: (time: number, commit: boolean) => void;
+  timeAtPointer: (event: PointerEvent<HTMLDivElement>) => number;
+}
+
+/** Pointer seeking and hover tracking for the waveform root. */
+const useWaveformPointer = ({
+  hoverRef,
+  notify,
+  seekTo,
+  timeAtPointer,
+}: PointerOptions) => {
+  const [dragging, setDragging] = useState(false);
+  return {
+    dragging,
+    handlers: {
+      onPointerDown: (event: PointerEvent<HTMLDivElement>) => {
+        if (event.button !== 0) {
+          return;
+        }
+        event.currentTarget.setPointerCapture(event.pointerId);
+        setDragging(true);
+        seekTo(timeAtPointer(event), false);
+      },
+      onPointerLeave: () => {
+        hoverRef.current = null;
+        notify();
+      },
+      onPointerMove: (event: PointerEvent<HTMLDivElement>) => {
+        const at = timeAtPointer(event);
+        hoverRef.current = at;
+        notify();
+        if (dragging) {
+          seekTo(at, false);
+        }
+      },
+      onPointerUp: (event: PointerEvent<HTMLDivElement>) => {
+        if (!dragging) {
+          return;
+        }
+        setDragging(false);
+        seekTo(timeAtPointer(event), true);
+      },
+    },
+  };
+};
+
+export const Waveform = ({
+  peaks,
+  duration,
+  currentTime,
+  defaultCurrentTime = 0,
+  time,
+  onSeek,
+  onSeekCommitted,
+  step = 5,
+  largeStep = 15,
+  variant = "bars",
+  barWidth = 2,
+  barGap = 1,
+  barRadius = 1,
+  interactive = true,
+  loading = false,
+  disabled = false,
+  className,
+  children,
+  ...props
+}: WaveformProps) => {
+  const [internalTime, setInternalTime] = useState(defaultCurrentTime);
+  const shownTime = currentTime ?? internalTime;
+  const rootRef = useRef<HTMLDivElement>(null);
+  const progressRef = useRef(0);
+  const hoverRef = useRef<number | null>(null);
+  const hover = useMemo(() => createHoverChannel(), []);
+  const latestTimeRef = useRef(shownTime);
+
+  const timeToPosition = useCallback(
+    (value: number) => (duration > 0 ? clamp(value / duration, 0, 1) : 0),
+    [duration]
+  );
+
+  const writeProgress = useCallback(
+    (value: number) => {
+      latestTimeRef.current = value;
+      progressRef.current = timeToPosition(value);
+      rootRef.current?.style.setProperty(
+        "--waveform-position",
+        progressRef.current.toFixed(5)
+      );
+    },
+    [timeToPosition]
+  );
+
+  useEffect(() => {
+    writeProgress(shownTime);
+  }, [shownTime, writeProgress]);
+
+  useFrameSource(time, writeProgress);
+
+  const seekTo = (value: number, commit: boolean) => {
+    const next = clamp(value, 0, duration);
+    writeProgress(next);
+    if (currentTime === undefined) {
+      setInternalTime(next);
+    }
+    onSeek?.(next);
+    if (commit) {
+      onSeekCommitted?.(next);
+    }
+  };
+
+  const timeAtPointer = (event: PointerEvent<HTMLDivElement>) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const position = clamp((event.clientX - rect.left) / rect.width, 0, 1);
+    return position * duration;
+  };
+
+  const active = isInteractive(interactive, disabled, loading, duration);
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (!active) {
+      return;
+    }
+    const next = seekTarget(
+      event.key,
+      latestTimeRef.current,
+      event.shiftKey ? largeStep : step,
+      duration
+    );
+    if (next !== null) {
+      event.preventDefault();
+      seekTo(next, true);
+    }
+  };
+
+  const contextValue = useMemo<WaveformContextValue>(
+    () => ({
+      barGap,
+      barRadius,
+      barWidth,
+      duration,
+      hoverRef,
+      loading,
+      peaks,
+      progressRef,
+      subscribeHover: hover.subscribe,
+      timeToPosition,
+      variant,
+    }),
+    [
+      barGap,
+      barRadius,
+      barWidth,
+      duration,
+      hover,
+      loading,
+      peaks,
+      timeToPosition,
+      variant,
+    ]
+  );
+
+  const pointer = useWaveformPointer({
+    hoverRef,
+    notify: hover.notify,
+    seekTo,
+    timeAtPointer,
+  });
+
+  const interactiveProps = active
+    ? {
+        "aria-valuemax": Math.round(duration),
+        "aria-valuemin": 0,
+        "aria-valuenow": Math.round(shownTime),
+        "aria-valuetext": `${formatTime(shownTime)} of ${formatTime(duration)}`,
+        onKeyDown: handleKeyDown,
+        ...pointer.handlers,
+        role: "slider",
+        tabIndex: 0,
+      }
+    : {};
+
+  return (
+    <WaveformContext.Provider value={contextValue}>
+      <div
+        className={cn(
+          "group/waveform focus-visible:ring-ring/30 relative h-20 w-full touch-none rounded-lg outline-none select-none [--waveform-cursor:var(--foreground)] [--waveform-position:0] [--waveform-progress:var(--primary)] [--waveform:var(--muted-foreground)] focus-visible:ring-3 data-disabled:opacity-50",
+          active && "cursor-pointer",
+          className
+        )}
+        data-disabled={disabled ? "" : undefined}
+        data-dragging={pointer.dragging ? "" : undefined}
+        data-loading={loading ? "" : undefined}
+        data-slot="waveform"
+        data-variant={variant}
+        ref={rootRef}
+        {...interactiveProps}
+        {...props}
+      >
+        {children ?? (
+          <>
+            <WaveformCanvas />
+            <WaveformCursor />
+          </>
+        )}
+      </div>
+    </WaveformContext.Provider>
   );
 };
