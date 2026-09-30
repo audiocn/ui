@@ -3,7 +3,6 @@ import Link from "next/link";
 
 import { CopyCommand } from "@/components/home/copy-command";
 import { HeroThreads } from "@/components/home/hero-threads";
-import { HeroWaveform } from "@/components/home/hero-waveform";
 import { ShowcaseGrid } from "@/components/home/showcase-grid";
 import { ThemeSwatches } from "@/components/home/theme-swatches";
 import { Button } from "@/components/ui/button";
@@ -58,10 +57,7 @@ const Page = () => (
           command={`npx shadcn@latest add ${siteConfig.registryNamespace}/mixer`}
         />
       </section>
-      <div className="my-12 lg:my-16">
-        <HeroWaveform />
-      </div>
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mt-24 mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between lg:mt-32">
         <p className="text-muted-foreground text-sm">
           Everything here is live. Drag a fader, turn a knob, hit a pad.
         </p>
