@@ -40,3 +40,7 @@ next-env.d.ts
 
 # built registry
 /public/r
+
+# playwright
+/test-results/
+/playwright-report/
