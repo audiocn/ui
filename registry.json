@@ -468,6 +468,39 @@
           "type": "registry:ui"
         }
       ]
+    },
+    {
+      "name": "use-mixer",
+      "type": "registry:hook",
+      "title": "useMixer",
+      "description": "Mixer state with no audio attached: gain, mute, solo, pan and monitor per channel, a master, persistence and a controlled mode.",
+      "registryDependencies": [
+        "@audiocn/core"
+      ],
+      "files": [
+        {
+          "path": "hooks/use-mixer.ts",
+          "type": "registry:hook"
+        }
+      ]
+    },
+    {
+      "name": "use-web-audio-mixer",
+      "type": "registry:hook",
+      "title": "useWebAudioMixer",
+      "description": "Binds mixer state to a Web Audio graph: per-channel gain, ducking, pan and monitor sends, a limited master bus, post-fader meters and a mixed output stream.",
+      "registryDependencies": [
+        "@audiocn/core",
+        "@audiocn/use-mixer",
+        "@audiocn/use-audio-context",
+        "@audiocn/use-audio-analyser"
+      ],
+      "files": [
+        {
+          "path": "hooks/use-web-audio-mixer.ts",
+          "type": "registry:hook"
+        }
+      ]
     }
   ]
 }
