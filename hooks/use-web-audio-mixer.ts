@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useSyncExternalStore,
+} from "react";
 
 import { createAnalyserTap, createInputNode } from "@/hooks/use-audio-analyser";
 import type {
@@ -10,7 +16,7 @@ import type {
 } from "@/hooks/use-audio-analyser";
 import { useAudioContext } from "@/hooks/use-audio-context";
 import { isChannelAudible } from "@/hooks/use-mixer";
-import type { Mixer } from "@/hooks/use-mixer";
+import type { Mixer, MixerState } from "@/hooks/use-mixer";
 import { dbToGain } from "@/lib/audio/decibels";
 import { createFrameRelay } from "@/lib/audio/frame-source";
 import type { FrameRelay } from "@/lib/audio/frame-source";
@@ -18,6 +24,7 @@ import type { FrameSource, MeterFrame, VisualFrame } from "@/lib/audio/types";
 
 const RAMP_SECONDS = 0.005;
 const MS_PER_SECOND = 1000;
+const TIME_CONSTANTS_PER_RAMP = 3;
 
 export interface DuckingOptions {
   /** The channel whose level triggers ducking, usually the microphone. */
@@ -72,7 +79,6 @@ interface Core {
   context: AudioContext;
   masterGain: GainNode;
   monitorGain: GainNode;
-  limiter: DynamicsCompressorNode | null;
   output: MediaStreamAudioDestinationNode;
   tap: AnalyserTap;
   dispose: () => void;
@@ -87,6 +93,18 @@ interface Strip {
   tap: AnalyserTap;
   dispose: () => void;
 }
+
+interface Snapshot {
+  context: AudioContext | null;
+  destination: AudioNode | null;
+  output: MediaStream | null;
+}
+
+const EMPTY_SNAPSHOT: Snapshot = {
+  context: null,
+  destination: null,
+  output: null,
+};
 
 const objectIds = new WeakMap<object, number>();
 let nextObjectId = 1;
@@ -104,6 +122,16 @@ const ramp = (param: AudioParam, value: number, context: BaseAudioContext) => {
   param.setTargetAtTime(value, context.currentTime, RAMP_SECONDS);
 };
 
+const createLimiter = (context: AudioContext) => {
+  const limiter = context.createDynamicsCompressor();
+  limiter.threshold.value = -1;
+  limiter.knee.value = 0;
+  limiter.ratio.value = 20;
+  limiter.attack.value = 0.001;
+  limiter.release.value = 0.05;
+  return limiter;
+};
+
 const buildCore = (
   context: AudioContext,
   limiterEnabled: boolean,
@@ -111,15 +139,9 @@ const buildCore = (
 ): Core => {
   const masterGain = context.createGain();
   const output = context.createMediaStreamDestination();
-  let limiter: DynamicsCompressorNode | null = null;
+  const limiter = limiterEnabled ? createLimiter(context) : null;
   let last: AudioNode = masterGain;
-  if (limiterEnabled) {
-    limiter = context.createDynamicsCompressor();
-    limiter.threshold.value = -1;
-    limiter.knee.value = 0;
-    limiter.ratio.value = 20;
-    limiter.attack.value = 0.001;
-    limiter.release.value = 0.05;
+  if (limiter) {
     masterGain.connect(limiter);
     last = limiter;
   }
@@ -139,7 +161,6 @@ const buildCore = (
       limiter?.disconnect();
       monitorGain.disconnect();
     },
-    limiter,
     masterGain,
     monitorGain,
     output,
@@ -202,17 +223,194 @@ const buildStrip = (
   };
 };
 
-const relaysFor = (map: Map<string, Relays>, id: string): Relays => {
-  let relays = map.get(id);
-  if (!relays) {
-    relays = {
-      meter: createFrameRelay<MeterFrame>(),
-      visual: createFrameRelay<VisualFrame>(),
-    };
-    map.set(id, relays);
+const loudestPeak = (frame: MeterFrame) => {
+  let loudest = Number.NEGATIVE_INFINITY;
+  for (const level of frame.channels) {
+    loudest = Math.max(loudest, level.peakDb);
   }
-  return relays;
+  return loudest;
 };
+
+/**
+ * Owns the Web Audio graph outside React. The hook drives it from effects and
+ * reads its snapshot with `useSyncExternalStore`.
+ */
+const createMixerGraph = () => {
+  const relays = new Map<string, Relays>();
+  const strips = new Map<string, Strip>();
+  const master: Relays = {
+    meter: createFrameRelay<MeterFrame>(),
+    visual: createFrameRelay<VisualFrame>(),
+  };
+  const listeners = new Set<() => void>();
+  let core: Core | null = null;
+  let analyser: AnalyserTapOptions = {};
+  let state: MixerState | null = null;
+  let lastInputs: Record<string, AnalyserInput | undefined> = {};
+  let snapshot: Snapshot = EMPTY_SNAPSHOT;
+
+  const notify = () => {
+    snapshot = core
+      ? {
+          context: core.context,
+          destination: core.masterGain,
+          output: core.output.stream,
+        }
+      : EMPTY_SNAPSHOT;
+    for (const listener of listeners) {
+      listener();
+    }
+  };
+
+  const relaysFor = (id: string): Relays => {
+    let entry = relays.get(id);
+    if (!entry) {
+      entry = {
+        meter: createFrameRelay<MeterFrame>(),
+        visual: createFrameRelay<VisualFrame>(),
+      };
+      relays.set(id, entry);
+    }
+    return entry;
+  };
+
+  const removeStrip = (id: string) => {
+    strips.get(id)?.dispose();
+    strips.delete(id);
+    const entry = relays.get(id);
+    entry?.meter.setSource(null);
+    entry?.visual.setSource(null);
+  };
+
+  const apply = () => {
+    if (!(core && state)) {
+      return;
+    }
+    for (const channel of state.channels) {
+      const strip = strips.get(channel.id);
+      if (strip) {
+        const audible = isChannelAudible(state, channel.id);
+        ramp(
+          strip.gain.gain,
+          audible ? dbToGain(channel.gainDb) : 0,
+          core.context
+        );
+        ramp(strip.panner.pan, channel.pan, core.context);
+        ramp(strip.monitorSend.gain, channel.monitor ? 1 : 0, core.context);
+      }
+    }
+    const level = state.master.muted ? 0 : dbToGain(state.master.gainDb);
+    ramp(core.masterGain.gain, level, core.context);
+    ramp(core.monitorGain.gain, level, core.context);
+  };
+
+  const reconcile = (inputs: Record<string, AnalyserInput | undefined>) => {
+    lastInputs = inputs;
+    if (!core) {
+      return;
+    }
+    for (const [id, strip] of strips) {
+      if (inputs[id] !== strip.input) {
+        removeStrip(id);
+      }
+    }
+    for (const [id, input] of Object.entries(inputs)) {
+      if (input && !strips.has(id)) {
+        const strip = buildStrip(core, input, analyser);
+        strips.set(id, strip);
+        const entry = relaysFor(id);
+        entry.meter.setSource(strip.tap.meter);
+        entry.visual.setSource(strip.tap.visual);
+      }
+    }
+    apply();
+  };
+
+  const duck = (rules: DuckingOptions[]) => {
+    const unsubscribers = rules.map((rule) => {
+      const {
+        amountDb = -12,
+        attackMs = 50,
+        releaseMs = 400,
+        targets,
+        thresholdDb = -35,
+        trigger,
+      } = rule;
+      let ducked = false;
+      return relaysFor(trigger).meter.subscribe((frame) => {
+        const active = loudestPeak(frame) >= thresholdDb;
+        if (active === ducked || !core) {
+          return;
+        }
+        ducked = active;
+        const timeConstant =
+          (active ? attackMs : releaseMs) /
+          MS_PER_SECOND /
+          TIME_CONSTANTS_PER_RAMP;
+        for (const target of targets) {
+          strips
+            .get(target)
+            ?.duck.gain.setTargetAtTime(
+              active ? dbToGain(amountDb) : 1,
+              core.context.currentTime,
+              timeConstant
+            );
+        }
+      });
+    });
+    return () => {
+      for (const unsubscribe of unsubscribers) {
+        unsubscribe();
+      }
+      if (core) {
+        for (const strip of strips.values()) {
+          ramp(strip.duck.gain, 1, core.context);
+        }
+      }
+    };
+  };
+
+  return {
+    apply: (next: MixerState) => {
+      state = next;
+      apply();
+    },
+    duck,
+    getSnapshot: () => snapshot,
+    master,
+    reconcile,
+    relaysFor,
+    start: (
+      context: AudioContext,
+      options: { limiter: boolean; analyser: AnalyserTapOptions }
+    ) => {
+      ({ analyser } = options);
+      core = buildCore(context, options.limiter, analyser);
+      master.meter.setSource(core.tap.meter);
+      master.visual.setSource(core.tap.visual);
+      reconcile(lastInputs);
+      notify();
+    },
+    stop: () => {
+      for (const id of strips.keys()) {
+        removeStrip(id);
+      }
+      master.meter.setSource(null);
+      master.visual.setSource(null);
+      core?.dispose();
+      core = null;
+      notify();
+    },
+    subscribe: (listener: () => void) => {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+  };
+};
+
+const getServerSnapshot = () => EMPTY_SNAPSHOT;
 
 /**
  * Builds a Web Audio graph from mixer state: a gain, ducking stage and panner
@@ -225,24 +423,21 @@ export const useWebAudioMixer = (
     inputs,
     ducking,
     limiter = true,
-    analyser = {},
+    analyser,
     enabled = true,
   }: WebAudioMixerOptions
 ): WebAudioMixerGraph => {
   const { context } = useAudioContext();
-  const relaysRef = useRef(new Map<string, Relays>());
-  const [masterRelays] = useState<Relays>(() => ({
-    meter: createFrameRelay<MeterFrame>(),
-    visual: createFrameRelay<VisualFrame>(),
-  }));
-  const [core, setCore] = useState<Core | null>(null);
-  const stripsRef = useRef(new Map<string, Strip>());
-  const [stripsVersion, setStripsVersion] = useState(0);
-  const analyserKey = JSON.stringify(analyser);
-
+  const graph = useMemo(() => createMixerGraph(), []);
+  const snapshot = useSyncExternalStore(
+    graph.subscribe,
+    graph.getSnapshot,
+    getServerSnapshot
+  );
+  const analyserKey = JSON.stringify(analyser ?? {});
+  const duckingKey = JSON.stringify(ducking ?? []);
   const channelIds = mixer.channels.map((channel) => channel.id);
   const idsKey = channelIds.join("|");
-
   const inputsKey = channelIds
     .map((id) => {
       const input = inputs[id];
@@ -251,181 +446,60 @@ export const useWebAudioMixer = (
     .join("|");
 
   const inputsRef = useRef(inputs);
-  inputsRef.current = inputs;
+  useLayoutEffect(() => {
+    inputsRef.current = inputs;
+  });
 
   useEffect(() => {
     if (!(context && enabled)) {
       return;
     }
-    const built = buildCore(
-      context,
+    graph.start(context, {
+      analyser: JSON.parse(analyserKey) as AnalyserTapOptions,
       limiter,
-      JSON.parse(analyserKey) as AnalyserTapOptions
-    );
-    masterRelays.meter.setSource(built.tap.meter);
-    masterRelays.visual.setSource(built.tap.visual);
-    setCore(built);
-    const strips = stripsRef.current;
+    });
     return () => {
-      for (const [id, strip] of strips) {
-        strip.dispose();
-        const relays = relaysRef.current.get(id);
-        relays?.meter.setSource(null);
-        relays?.visual.setSource(null);
-      }
-      strips.clear();
-      masterRelays.meter.setSource(null);
-      masterRelays.visual.setSource(null);
-      built.dispose();
-      setCore(null);
+      graph.stop();
     };
-  }, [analyserKey, context, enabled, limiter, masterRelays]);
+  }, [analyserKey, context, enabled, graph, limiter]);
 
   useEffect(() => {
-    if (!core) {
-      return;
-    }
-    const strips = stripsRef.current;
-    const wanted = new Set(idsKey === "" ? [] : idsKey.split("|"));
-    let changed = false;
-
-    for (const [id, strip] of strips) {
-      const input = inputsRef.current[id];
-      if (!wanted.has(id) || input !== strip.input) {
-        strip.dispose();
-        strips.delete(id);
-        const relays = relaysRef.current.get(id);
-        relays?.meter.setSource(null);
-        relays?.visual.setSource(null);
-        changed = true;
+    const wanted: Record<string, AnalyserInput | undefined> = {};
+    for (const entry of inputsKey.split("|")) {
+      const [id] = entry.split(":");
+      if (id) {
+        wanted[id] = inputsRef.current[id];
       }
     }
-    for (const id of wanted) {
-      const input = inputsRef.current[id];
-      if (input && !strips.has(id)) {
-        const strip = buildStrip(
-          core,
-          input,
-          JSON.parse(analyserKey) as AnalyserTapOptions
-        );
-        strips.set(id, strip);
-        const relays = relaysFor(relaysRef.current, id);
-        relays.meter.setSource(strip.tap.meter);
-        relays.visual.setSource(strip.tap.visual);
-        changed = true;
-      }
-    }
-    if (changed) {
-      setStripsVersion((version) => version + 1);
-    }
-  }, [analyserKey, core, idsKey, inputsKey]);
+    graph.reconcile(wanted);
+  }, [graph, inputsKey]);
 
   useEffect(() => {
-    if (!core) {
-      return;
-    }
-    const { state } = mixer;
-    for (const channel of state.channels) {
-      const strip = stripsRef.current.get(channel.id);
-      if (!strip) {
-        continue;
-      }
-      const audible = isChannelAudible(state, channel.id);
-      ramp(
-        strip.gain.gain,
-        audible ? dbToGain(channel.gainDb) : 0,
-        core.context
-      );
-      ramp(strip.panner.pan, channel.pan, core.context);
-      ramp(strip.monitorSend.gain, channel.monitor ? 1 : 0, core.context);
-    }
-    const masterLevel = state.master.muted ? 0 : dbToGain(state.master.gainDb);
-    ramp(core.masterGain.gain, masterLevel, core.context);
-    ramp(core.monitorGain.gain, masterLevel, core.context);
-  }, [core, mixer, stripsVersion]);
-
-  const duckingKey = JSON.stringify(ducking ?? null);
+    graph.apply(mixer.state);
+  }, [graph, mixer.state]);
 
   useEffect(() => {
-    if (!core) {
-      return;
-    }
-    const rules =
-      (JSON.parse(duckingKey) as DuckingOptions | DuckingOptions[] | null) ??
-      [];
-    const list = Array.isArray(rules) ? rules : [rules];
-    const unsubscribers: (() => void)[] = [];
-
-    for (const rule of list) {
-      const {
-        trigger,
-        targets,
-        thresholdDb = -35,
-        amountDb = -12,
-        attackMs = 50,
-        releaseMs = 400,
-      } = rule;
-      const relays = relaysRef.current.get(trigger);
-      if (!relays) {
-        continue;
-      }
-      let ducked = false;
-      unsubscribers.push(
-        relays.meter.subscribe((frame) => {
-          let loudest = Number.NEGATIVE_INFINITY;
-          for (const level of frame.channels) {
-            loudest = Math.max(loudest, level.peakDb);
-          }
-          const active = loudest >= thresholdDb;
-          if (active === ducked) {
-            return;
-          }
-          ducked = active;
-          const timeConstant =
-            (active ? attackMs : releaseMs) / MS_PER_SECOND / 3;
-          for (const target of targets) {
-            const strip = stripsRef.current.get(target);
-            strip?.duck.gain.setTargetAtTime(
-              active ? dbToGain(amountDb) : 1,
-              core.context.currentTime,
-              timeConstant
-            );
-          }
-        })
-      );
-    }
-
-    return () => {
-      for (const unsubscribe of unsubscribers) {
-        unsubscribe();
-      }
-      for (const strip of stripsRef.current.values()) {
-        strip.duck.gain.setTargetAtTime(
-          1,
-          core.context.currentTime,
-          RAMP_SECONDS
-        );
-      }
-    };
-  }, [core, duckingKey, stripsVersion]);
+    const parsed = JSON.parse(duckingKey) as DuckingOptions | DuckingOptions[];
+    return graph.duck(Array.isArray(parsed) ? parsed : [parsed]);
+  }, [duckingKey, graph]);
 
   const sources = useMemo(() => {
     const meters: Record<string, FrameSource<MeterFrame>> = {};
     const visuals: Record<string, FrameSource<VisualFrame>> = {};
     for (const id of idsKey === "" ? [] : idsKey.split("|")) {
-      const relays = relaysFor(relaysRef.current, id);
+      const relays = graph.relaysFor(id);
       meters[id] = relays.meter;
       visuals[id] = relays.visual;
     }
     return { meters, visuals };
-  }, [idsKey]);
+  }, [graph, idsKey]);
 
   return {
-    context: core?.context ?? null,
-    destination: core?.masterGain ?? null,
-    master: masterRelays,
+    context: snapshot.context,
+    destination: snapshot.destination,
+    master: graph.master,
     meters: sources.meters,
-    output: core?.output.stream ?? null,
+    output: snapshot.output,
     visuals: sources.visuals,
   };
 };

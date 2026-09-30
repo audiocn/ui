@@ -1,9 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 
 import { clamp } from "@/lib/audio/decibels";
 import { subscribeFrame } from "@/lib/audio/frame-loop";
+import { createFrameEmitter } from "@/lib/audio/frame-source";
 import type { FrameSource } from "@/lib/audio/types";
 
 export type AudioPlayerStatus =
@@ -59,6 +68,17 @@ export interface AudioPlayerController {
   time: FrameSource<number>;
 }
 
+interface PlaybackState {
+  status: AudioPlayerStatus;
+  currentTime: number;
+  duration: number;
+  buffered: number;
+  volume: number;
+  muted: boolean;
+  playbackRate: number;
+  failure: MediaError | null;
+}
+
 const bufferedEnd = (element: HTMLAudioElement) => {
   const { buffered } = element;
   return buffered.length > 0 ? buffered.end(buffered.length - 1) : 0;
@@ -66,6 +86,122 @@ const bufferedEnd = (element: HTMLAudioElement) => {
 
 const safeDuration = (element: HTMLAudioElement) =>
   Number.isFinite(element.duration) ? element.duration : 0;
+
+/** One audio element per player, created on the client on first read. */
+const createElementStore = () => {
+  let element: HTMLAudioElement | null = null;
+  return {
+    get: () => {
+      if (!element && typeof Audio !== "undefined") {
+        element = new Audio();
+      }
+      return element;
+    },
+    subscribe: () => () => {
+      // The element never changes.
+    },
+  };
+};
+
+const getServerElement = () => null;
+
+type Callbacks = Pick<
+  UseAudioPlayerOptions,
+  "onEnded" | "onError" | "onPause" | "onPlay"
+>;
+
+/** Mirrors the element's events into React state. */
+const usePlaybackState = (
+  element: HTMLAudioElement | null,
+  callbacks: Callbacks,
+  initial: Pick<PlaybackState, "muted" | "playbackRate" | "volume">
+) => {
+  const [state, setState] = useState<PlaybackState>({
+    buffered: 0,
+    currentTime: 0,
+    duration: 0,
+    failure: null,
+    status: "idle",
+    ...initial,
+  });
+  const callbacksRef = useRef(callbacks);
+  useLayoutEffect(() => {
+    callbacksRef.current = callbacks;
+  });
+
+  useEffect(() => {
+    if (!element) {
+      return;
+    }
+    const patch = (next: Partial<PlaybackState>) => {
+      setState((previous) => ({ ...previous, ...next }));
+    };
+    const sync = () => {
+      patch({
+        buffered: bufferedEnd(element),
+        currentTime: element.currentTime,
+        duration: safeDuration(element),
+      });
+    };
+    const handlers: Record<string, () => void> = {
+      canplay: () => {
+        setState((previous) =>
+          previous.status === "loading"
+            ? { ...previous, status: "ready" }
+            : previous
+        );
+      },
+      durationchange: sync,
+      emptied: () => patch({ buffered: 0, currentTime: 0, duration: 0 }),
+      ended: () => {
+        patch({ status: "ended" });
+        callbacksRef.current.onEnded?.();
+      },
+      error: () => {
+        patch({ failure: element.error, status: "error" });
+        callbacksRef.current.onError?.(element.error);
+      },
+      loadedmetadata: sync,
+      loadstart: () => patch({ failure: null, status: "loading" }),
+      pause: () => {
+        setState((previous) =>
+          previous.status === "ended"
+            ? previous
+            : { ...previous, status: "paused" }
+        );
+        callbacksRef.current.onPause?.();
+      },
+      playing: () => {
+        patch({ status: "playing" });
+        callbacksRef.current.onPlay?.();
+      },
+      progress: () => patch({ buffered: bufferedEnd(element) }),
+      ratechange: () => patch({ playbackRate: element.playbackRate }),
+      seeked: sync,
+      timeupdate: () => patch({ currentTime: element.currentTime }),
+      volumechange: () =>
+        patch({ muted: element.muted, volume: element.volume }),
+    };
+    for (const [event, handler] of Object.entries(handlers)) {
+      element.addEventListener(event, handler);
+    }
+    return () => {
+      for (const [event, handler] of Object.entries(handlers)) {
+        element.removeEventListener(event, handler);
+      }
+    };
+  }, [element]);
+
+  return state;
+};
+
+const tryPlay = async (audio: HTMLAudioElement) => {
+  try {
+    await audio.play();
+  } catch {
+    // Playback was refused, for example before any user gesture.
+  }
+};
 
 /** Playback state for an audio element the hook owns. */
 export const useAudioPlayer = ({
@@ -82,234 +218,161 @@ export const useAudioPlayer = ({
   onEnded,
   onError,
 }: UseAudioPlayerOptions = {}): AudioPlayerController => {
-  const [element, setElement] = useState<HTMLAudioElement | null>(null);
-  const [status, setStatus] = useState<AudioPlayerStatus>("idle");
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const [buffered, setBuffered] = useState(0);
-  const [state, setState] = useState({ loop, muted, playbackRate, volume });
-  const [error, setError] = useState<MediaError | null>(null);
-  const callbacksRef = useRef({ onEnded, onError, onPause, onPlay });
-  callbacksRef.current = { onEnded, onError, onPause, onPlay };
-  const [timeSubscribers] = useState(() => new Set<(time: number) => void>());
+  const store = useMemo(() => createElementStore(), []);
+  const element = useSyncExternalStore(
+    store.subscribe,
+    store.get,
+    getServerElement
+  );
+  const state = usePlaybackState(
+    element,
+    { onEnded, onError, onPause, onPlay },
+    { muted, playbackRate, volume }
+  );
+  const [loopOverride, setLoopOverride] = useState<boolean | null>(null);
+  const time = useMemo(() => createFrameEmitter<number>(), []);
 
   useEffect(() => {
-    const audio = new Audio();
-    setElement(audio);
+    const audio = store.get();
     return () => {
-      audio.pause();
-      audio.removeAttribute("src");
-      audio.load();
+      audio?.pause();
     };
-  }, []);
+  }, [store]);
 
   useEffect(() => {
-    if (!element) {
-      return;
-    }
-    const sync = () => {
-      setCurrentTime(element.currentTime);
-      setDuration(safeDuration(element));
-      setBuffered(bufferedEnd(element));
-    };
-    const handlers: Record<string, () => void> = {
-      canplay: () => {
-        setStatus((previous) => (previous === "loading" ? "ready" : previous));
-      },
-      durationchange: sync,
-      ended: () => {
-        setStatus("ended");
-        callbacksRef.current.onEnded?.();
-      },
-      error: () => {
-        setStatus("error");
-        setError(element.error);
-        callbacksRef.current.onError?.(element.error);
-      },
-      loadedmetadata: sync,
-      loadstart: () => {
-        setStatus("loading");
-        setError(null);
-      },
-      pause: () => {
-        setStatus((previous) => (previous === "ended" ? previous : "paused"));
-        callbacksRef.current.onPause?.();
-      },
-      playing: () => {
-        setStatus("playing");
-        callbacksRef.current.onPlay?.();
-      },
-      progress: () => {
-        setBuffered(bufferedEnd(element));
-      },
-      ratechange: () => {
-        setState((previous) => ({
-          ...previous,
-          playbackRate: element.playbackRate,
-        }));
-      },
-      seeked: sync,
-      timeupdate: () => {
-        setCurrentTime(element.currentTime);
-      },
-      volumechange: () => {
-        setState((previous) => ({
-          ...previous,
-          muted: element.muted,
-          volume: element.volume,
-        }));
-      },
-    };
-    for (const [event, handler] of Object.entries(handlers)) {
-      element.addEventListener(event, handler);
-    }
-    return () => {
-      for (const [event, handler] of Object.entries(handlers)) {
-        element.removeEventListener(event, handler);
-      }
-    };
-  }, [element]);
-
-  useEffect(() => {
-    if (!element) {
+    const audio = store.get();
+    if (!audio) {
       return;
     }
     if (crossOrigin) {
-      element.crossOrigin = crossOrigin;
+      audio.crossOrigin = crossOrigin;
     }
-    element.preload = preload;
-    if (src) {
-      element.src = src;
-      element.load();
-      if (autoPlay) {
-        element.play().catch(() => {
-          // Autoplay was blocked; the user can press play.
-        });
-      }
-    } else {
-      element.removeAttribute("src");
-      setStatus("idle");
+    audio.preload = preload;
+    if (!src) {
+      audio.removeAttribute("src");
+      return;
     }
-    setCurrentTime(0);
-  }, [autoPlay, crossOrigin, element, preload, src]);
+    audio.src = src;
+    audio.load();
+    if (autoPlay) {
+      tryPlay(audio);
+    }
+  }, [autoPlay, crossOrigin, preload, src, store]);
 
   useEffect(() => {
-    if (element) {
-      element.volume = clamp(volume, 0, 1);
-      element.muted = muted;
-      element.loop = loop;
-      element.playbackRate = playbackRate;
-      setState({ loop, muted, playbackRate, volume });
+    const audio = store.get();
+    if (audio) {
+      audio.volume = clamp(volume, 0, 1);
+      audio.muted = muted;
+      audio.playbackRate = playbackRate;
     }
-  }, [element, loop, muted, playbackRate, volume]);
+  }, [muted, playbackRate, store, volume]);
 
+  const effectiveLoop = loopOverride ?? loop;
+
+  useEffect(() => {
+    const audio = store.get();
+    if (audio) {
+      audio.loop = effectiveLoop;
+    }
+  }, [effectiveLoop, store]);
+
+  const status: AudioPlayerStatus = src ? state.status : "idle";
   const playing = status === "playing";
 
   useEffect(() => {
-    if (!(element && playing)) {
+    const audio = store.get();
+    if (!(audio && playing)) {
       return;
     }
     return subscribeFrame(() => {
-      const time = element.currentTime;
-      for (const subscriber of timeSubscribers) {
-        subscriber(time);
-      }
+      time.emit(audio.currentTime);
     });
-  }, [element, playing, timeSubscribers]);
-
-  const time = useMemo<FrameSource<number>>(
-    () => ({
-      subscribe: (listener) => {
-        timeSubscribers.add(listener);
-        if (element) {
-          listener(element.currentTime);
-        }
-        return () => {
-          timeSubscribers.delete(listener);
-        };
-      },
-    }),
-    [element, timeSubscribers]
-  );
+  }, [playing, store, time]);
 
   const play = useCallback(async () => {
-    if (!element) {
+    const audio = store.get();
+    if (!audio) {
       return;
     }
-    if (element.ended) {
-      element.currentTime = 0;
+    if (audio.ended) {
+      audio.currentTime = 0;
     }
-    try {
-      await element.play();
-    } catch {
-      setStatus((previous) => (previous === "error" ? previous : "paused"));
-    }
-  }, [element]);
+    await tryPlay(audio);
+  }, [store]);
 
   const pause = useCallback(() => {
-    element?.pause();
-  }, [element]);
+    store.get()?.pause();
+  }, [store]);
 
   const toggle = useCallback(async () => {
-    if (element?.paused) {
+    if (store.get()?.paused) {
       await play();
     } else {
       pause();
     }
-  }, [element, pause, play]);
+  }, [pause, play, store]);
 
   const seek = useCallback(
     (seconds: number) => {
-      if (!element) {
+      const audio = store.get();
+      if (!audio) {
         return;
       }
-      const target = clamp(seconds, 0, safeDuration(element) || seconds);
-      element.currentTime = target;
-      setCurrentTime(target);
-      for (const subscriber of timeSubscribers) {
-        subscriber(target);
-      }
-      if (status === "ended") {
-        setStatus("paused");
+      const target = clamp(seconds, 0, safeDuration(audio) || seconds);
+      audio.currentTime = target;
+      time.emit(target);
+    },
+    [store, time]
+  );
+
+  const setVolume = useCallback(
+    (next: number) => {
+      const audio = store.get();
+      if (audio) {
+        audio.volume = clamp(next, 0, 1);
       }
     },
-    [element, status, timeSubscribers]
+    [store]
+  );
+
+  const setMuted = useCallback(
+    (next: boolean) => {
+      const audio = store.get();
+      if (audio) {
+        audio.muted = next;
+      }
+    },
+    [store]
+  );
+
+  const setPlaybackRate = useCallback(
+    (next: number) => {
+      const audio = store.get();
+      if (audio) {
+        audio.playbackRate = next;
+      }
+    },
+    [store]
   );
 
   return {
-    buffered,
-    currentTime,
-    duration,
+    buffered: state.buffered,
+    currentTime: src ? state.currentTime : 0,
+    duration: state.duration,
     element,
-    error,
-    loop: state.loop,
+    error: state.failure,
+    loop: effectiveLoop,
     muted: state.muted,
     pause,
     play,
     playbackRate: state.playbackRate,
     playing,
     seek,
-    setLoop: (next) => {
-      if (element) {
-        element.loop = next;
-      }
-      setState((previous) => ({ ...previous, loop: next }));
-    },
-    setMuted: (next) => {
-      if (element) {
-        element.muted = next;
-      }
-    },
-    setPlaybackRate: (next) => {
-      if (element) {
-        element.playbackRate = next;
-      }
-    },
-    setVolume: (next) => {
-      if (element) {
-        element.volume = clamp(next, 0, 1);
-      }
-    },
+    setLoop: setLoopOverride,
+    setMuted,
+    setPlaybackRate,
+    setVolume,
     status,
     time,
     toggle,
