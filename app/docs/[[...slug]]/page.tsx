@@ -48,6 +48,7 @@ export const generateMetadata = async ({
   }
 
   return {
+    alternates: { canonical: page.url },
     description: page.data.description,
     title: page.data.title,
   };

@@ -3,6 +3,8 @@ import path from "node:path";
 
 import { expect, test } from "@playwright/test";
 
+import { siteConfig } from "../lib/site";
+
 const DOCS_DIR = path.join(process.cwd(), "content/docs");
 
 const collectPages = (dir: string, prefix = "/docs"): string[] =>
@@ -19,6 +21,36 @@ const collectPages = (dir: string, prefix = "/docs"): string[] =>
   });
 
 const pages = collectPages(DOCS_DIR);
+
+test("the public sitemap includes every concrete page and robots permits indexing", async ({
+  request,
+}) => {
+  const response = await request.get("/sitemap.xml");
+  expect(response.status()).toBe(200);
+  const xml = await response.text();
+  const urls = [...xml.matchAll(/<loc>(?<url>[^<]+)<\/loc>/gu)].map(
+    (match) => match.groups?.url
+  );
+  const expected = [
+    siteConfig.url,
+    ...pages.map((page) => new URL(page, siteConfig.url).href),
+  ];
+  expect(urls.toSorted()).toEqual(expected.toSorted());
+  const robots = await request.get("/robots.txt");
+  expect(robots.status()).toBe(200);
+  expect(await robots.text()).toContain(
+    `Sitemap: ${siteConfig.url}/sitemap.xml`
+  );
+  expect(await robots.text()).toContain("Allow: /");
+});
+
+test("docs pages keep their own canonical URL", async ({ page }) => {
+  await page.goto("/docs/components/level-meter");
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+    "href",
+    `${siteConfig.url}/docs/components/level-meter`
+  );
+});
 
 test("missing docs pages offer a way back to the documentation", async ({
   page,

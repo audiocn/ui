@@ -21,6 +21,7 @@ const fontMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  alternates: { canonical: "/" },
   description: siteConfig.description,
   metadataBase: new URL(siteConfig.url),
   title: {
