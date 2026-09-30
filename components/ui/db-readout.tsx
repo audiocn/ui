@@ -76,6 +76,7 @@ export const DbReadout = ({
   zones = DEFAULT_ZONES,
   format,
   className,
+  style,
   ...props
 }: DbReadoutProps) => {
   const elementRef = useRef<HTMLSpanElement>(null);
@@ -144,7 +145,7 @@ export const DbReadout = ({
       data-slot="db-readout"
       data-zone={zoneForDb(initialDb, zones)}
       ref={elementRef}
-      style={{ "--db-readout-width": `${widest}ch` } as CSSProperties}
+      style={{ "--db-readout-width": `${widest}ch`, ...style } as CSSProperties}
       {...props}
     >
       {render(initialDb)}

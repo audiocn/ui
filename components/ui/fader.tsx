@@ -119,8 +119,8 @@ export const FaderTrack = ({
       className={cn(
         "relative flex min-h-0 min-w-0 items-center",
         horizontal
-          ? "h-(--fader-thumb-size) w-full px-[calc(var(--fader-thumb-size)/2)]"
-          : "h-full w-(--fader-thumb-size) flex-col py-[calc(var(--fader-thumb-size)/2)]"
+          ? "h-(--fader-thumb-size) w-full px-[calc(var(--fader-thumb-size)/2)] before:absolute before:inset-x-0 before:-inset-y-1.5 pointer-coarse:before:-inset-y-3"
+          : "h-full w-(--fader-thumb-size) flex-col py-[calc(var(--fader-thumb-size)/2)] before:absolute before:-inset-x-1.5 before:inset-y-0 pointer-coarse:before:-inset-x-3"
       )}
       data-slot="fader-control"
       {...props}
@@ -141,7 +141,11 @@ export const FaderTrack = ({
   );
 };
 
-export const FaderRange = ({ className, ...props }: ComponentProps<"div">) => {
+export const FaderRange = ({
+  className,
+  style,
+  ...props
+}: ComponentProps<"div">) => {
   const { orientation, originPosition, position } = useFader("FaderRange");
   const start = Math.min(originPosition, position) * 100;
   const end = Math.max(originPosition, position) * 100;
@@ -160,6 +164,7 @@ export const FaderRange = ({ className, ...props }: ComponentProps<"div">) => {
         {
           "--fader-range-size": `${end - start}%`,
           "--fader-range-start": `${start}%`,
+          ...style,
         } as CSSProperties
       }
       {...props}

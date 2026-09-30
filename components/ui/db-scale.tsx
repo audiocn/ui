@@ -66,6 +66,7 @@ export const DbScaleTick = ({
   major = true,
   className,
   children,
+  style,
   ...props
 }: DbScaleTickProps) => {
   const { format, labels, orientation, side, taper } = useDbScale();
@@ -86,7 +87,9 @@ export const DbScaleTick = ({
       )}
       data-major={major ? "" : undefined}
       data-slot="db-scale-tick"
-      style={{ "--tick-position": `${position * 100}%` } as CSSProperties}
+      style={
+        { "--tick-position": `${position * 100}%`, ...style } as CSSProperties
+      }
       {...props}
     >
       <span

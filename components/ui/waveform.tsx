@@ -264,6 +264,7 @@ export interface WaveformHoverProps extends ComponentProps<"div"> {
 export const WaveformHover = ({
   format = defaultHoverFormat,
   className,
+  style,
   ...props
 }: WaveformHoverProps) => {
   const { hoverRef, subscribeHover, timeToPosition } =
@@ -293,6 +294,7 @@ export const WaveformHover = ({
       style={
         {
           "--waveform-hover": `${timeToPosition(hover) * 100}%`,
+          ...style,
         } as CSSProperties
       }
       {...props}
@@ -340,6 +342,7 @@ export const WaveformRegion = ({
   minLength = 0.1,
   className,
   children,
+  style,
   ...props
 }: WaveformRegionProps) => {
   const { duration, timeToPosition } = useWaveform("WaveformRegion");
@@ -418,7 +421,7 @@ export const WaveformRegion = ({
   const left = timeToPosition(start) * 100;
   const width = (timeToPosition(end) - timeToPosition(start)) * 100;
   const handleClass =
-    "absolute inset-y-0 w-2 cursor-ew-resize rounded-sm bg-primary/60 outline-none focus-visible:bg-primary focus-visible:ring-3 focus-visible:ring-ring/30";
+    "absolute inset-y-0 w-2 cursor-ew-resize rounded-sm bg-primary/60 after:absolute after:inset-y-0 after:-inset-x-1.5 pointer-coarse:after:-inset-x-3 outline-none focus-visible:bg-primary focus-visible:ring-3 focus-visible:ring-ring/30";
 
   return (
     <div
@@ -439,6 +442,7 @@ export const WaveformRegion = ({
         {
           "--region-size": `${width}%`,
           "--region-start": `${left}%`,
+          ...style,
         } as CSSProperties
       }
       {...props}
@@ -486,6 +490,7 @@ export const WaveformMarker = ({
   time,
   className,
   children,
+  style,
   ...props
 }: WaveformMarkerProps) => {
   const { timeToPosition } = useWaveform("WaveformMarker");
@@ -499,6 +504,7 @@ export const WaveformMarker = ({
       style={
         {
           "--marker-position": `${timeToPosition(time) * 100}%`,
+          ...style,
         } as CSSProperties
       }
       {...props}

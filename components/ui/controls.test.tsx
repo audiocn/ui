@@ -1,10 +1,11 @@
 import { fireEvent, render, screen } from "@testing-library/react";
+import type { CSSProperties } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { AudioDeviceSelect } from "@/components/ui/audio-device-select";
 import { MuteToggle } from "@/components/ui/channel-toggle";
 import { Fader } from "@/components/ui/fader";
-import { Knob } from "@/components/ui/knob";
+import { Knob, KnobDial } from "@/components/ui/knob";
 import { formatPan, PanControl } from "@/components/ui/pan-control";
 import {
   ParameterSlider,
@@ -96,6 +97,17 @@ describe("Knob", () => {
     expect(onValueChange).toHaveBeenLastCalledWith(60, expect.anything());
     fireEvent.doubleClick(dial);
     expect(onValueChange).toHaveBeenLastCalledWith(50, expect.anything());
+  });
+
+  it("keeps its angle when given a style", () => {
+    render(
+      <Knob aria-label="Gain" defaultValue={50}>
+        <KnobDial style={{ "--from-test": "1" } as CSSProperties} />
+      </Knob>
+    );
+    const dial = screen.getByRole("slider");
+    expect(dial.style.getPropertyValue("--knob-angle")).not.toBe("");
+    expect(dial.style.getPropertyValue("--from-test")).toBe("1");
   });
 });
 

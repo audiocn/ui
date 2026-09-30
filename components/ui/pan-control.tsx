@@ -124,7 +124,7 @@ export const PanControl = ({
       value={value}
       {...props}
     >
-      <SliderPrimitive.Control className="relative flex h-(--pan-thumb-size) w-full items-center px-[calc(var(--pan-thumb-size)/2)]">
+      <SliderPrimitive.Control className="relative flex h-(--pan-thumb-size) w-full items-center px-[calc(var(--pan-thumb-size)/2)] before:absolute before:inset-x-0 before:-inset-y-1.5 pointer-coarse:before:-inset-y-3">
         <SliderPrimitive.Track
           className="bg-input/90 relative h-(--pan-track-size) w-full grow rounded-full"
           data-slot="pan-control-track"

@@ -550,7 +550,7 @@ export const ParameterSliderControl = ({
       value={position}
       {...props}
     >
-      <SliderPrimitive.Control className="relative flex h-4 w-full items-center px-2">
+      <SliderPrimitive.Control className="relative flex h-4 w-full items-center px-2 before:absolute before:inset-x-0 before:-inset-y-1.5 pointer-coarse:before:-inset-y-3">
         <SliderPrimitive.Track
           className="bg-input/90 relative h-1 w-full grow rounded-full"
           data-slot="parameter-slider-track"

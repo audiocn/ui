@@ -162,8 +162,8 @@ export const VolumeControlSlider = ({
         className={cn(
           "relative flex items-center",
           horizontal
-            ? "h-(--volume-thumb-size) w-full px-[calc(var(--volume-thumb-size)/2)]"
-            : "h-full w-(--volume-thumb-size) flex-col py-[calc(var(--volume-thumb-size)/2)]"
+            ? "h-(--volume-thumb-size) w-full px-[calc(var(--volume-thumb-size)/2)] before:absolute before:inset-x-0 before:-inset-y-1.5 pointer-coarse:before:-inset-y-3"
+            : "h-full w-(--volume-thumb-size) flex-col py-[calc(var(--volume-thumb-size)/2)] before:absolute before:-inset-x-1.5 before:inset-y-0 pointer-coarse:before:-inset-x-3"
         )}
       >
         <SliderPrimitive.Track

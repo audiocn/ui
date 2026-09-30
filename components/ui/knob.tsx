@@ -311,8 +311,10 @@ export const KnobDial = ({
       ref={dialRef}
       role="slider"
       style={
-        style ??
-        ({ "--knob-angle": `${angleFor(position, arc)}deg` } as CSSProperties)
+        {
+          "--knob-angle": `${angleFor(position, arc)}deg`,
+          ...style,
+        } as CSSProperties
       }
       tabIndex={disabled ? -1 : 0}
       {...props}
