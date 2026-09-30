@@ -178,6 +178,19 @@ describe("TrackList", () => {
 });
 
 describe("SoundPad", () => {
+  it("moves focus with arrow keys even when a trigger replaces the pad's slot", () => {
+    render(
+      <SoundPadGrid aria-label="Pads">
+        <SoundPad data-slot="context-menu-trigger">One</SoundPad>
+        <SoundPad data-slot="context-menu-trigger">Two</SoundPad>
+      </SoundPadGrid>
+    );
+    const first = screen.getByRole("button", { name: "One" });
+    first.focus();
+    fireEvent.keyDown(first, { key: "ArrowRight" });
+    expect(screen.getByRole("button", { name: "Two" })).toHaveFocus();
+  });
+
   it("keeps its accent when a trigger passes its own style", () => {
     render(
       <SoundPad accent="red" style={{ "--from-test": "1" } as CSSProperties}>

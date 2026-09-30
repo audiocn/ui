@@ -54,10 +54,9 @@ const isTyping = (target: EventTarget | null) =>
     ["INPUT", "SELECT", "TEXTAREA"].includes(target.tagName));
 
 const moveFocus = (event: KeyboardEvent<HTMLDivElement>) => {
+  // data-sound-pad, not data-slot: a trigger rendering the pad replaces its slot.
   const pads = [
-    ...event.currentTarget.querySelectorAll<HTMLElement>(
-      "[data-slot='sound-pad']"
-    ),
+    ...event.currentTarget.querySelectorAll<HTMLElement>("[data-sound-pad]"),
   ];
   const index = pads.indexOf(event.target as HTMLElement);
   if (index === -1) {
@@ -327,6 +326,7 @@ export const SoundPad = ({
         data-playing={playing ? "" : undefined}
         data-pressed={pressed ? "" : undefined}
         data-slot="sound-pad"
+        data-sound-pad=""
         disabled={inactive}
         onClick={(event) => {
           onClick?.(event);
