@@ -5,8 +5,9 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
+    "brand:build": "node scripts/build-brand-icons.mjs",
     "dev": "pnpm examples:build && next dev",
-    "build": "pnpm examples:build && pnpm registry:build && next build",
+    "build": "pnpm brand:build && pnpm examples:build && pnpm registry:build && next build",
     "start": "next start",
     "postinstall": "fumadocs-mdx",
     "registry:build": "shadcn build",

@@ -1,3 +1,5 @@
+<img src="public/brand/logo.png" alt="audiocn knob logo" width="96" height="96" />
+
 # audiocn
 
 Audio components for React, built the shadcn way: level meters, visualizers, faders, channel strips, a complete mixer, players and sound pads.

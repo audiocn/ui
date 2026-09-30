@@ -1,5 +1,6 @@
 import type { BaseLayoutProps } from "fumadocs-ui/layouts/shared";
 
+import { BrandLogo } from "@/components/brand-logo";
 import { GitHubStarsLink } from "@/components/docs/github-stars-link";
 import { ThemePicker } from "@/components/docs/theme-picker";
 import { siteConfig } from "@/lib/site";
@@ -14,7 +15,8 @@ export const baseOptions = (): BaseLayoutProps => ({
   ],
   nav: {
     title: (
-      <span className="font-heading font-semibold tracking-tight">
+      <span className="font-heading inline-flex items-center gap-1 font-semibold tracking-tight">
+        <BrandLogo />
         {siteConfig.name}
       </span>
     ),
