@@ -140,6 +140,7 @@ test("level meters move with the demo signal", async ({ page }) => {
 test("faders respond to the keyboard", async ({ page }) => {
   await page.goto("/docs/components/fader");
   const slider = page.getByRole("slider").first();
+  await expect(slider).toHaveAccessibleName(/.+/u);
   await slider.focus();
   const before = await slider.getAttribute("aria-valuetext");
   await page.keyboard.press("Shift+ArrowUp");

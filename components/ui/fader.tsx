@@ -54,6 +54,8 @@ export interface FaderChangeDetails {
 }
 
 interface FaderContextValue {
+  ariaLabel?: string;
+  ariaLabelledBy?: string;
   value: number;
   position: number;
   originPosition: number;
@@ -217,6 +219,8 @@ export const FaderThumb = ({
   ...props
 }: FaderThumbProps) => {
   const {
+    ariaLabel,
+    ariaLabelledBy,
     change,
     commit,
     format,
@@ -229,6 +233,8 @@ export const FaderThumb = ({
 
   return (
     <SliderPrimitive.Thumb
+      aria-label={ariaLabel}
+      aria-labelledby={ariaLabelledBy}
       className={cn(thumbVariants({ orientation, variant }), className)}
       data-slot="fader-thumb"
       getAriaValueText={() => format(value)}
@@ -747,6 +753,8 @@ const useControlSettings = (props: {
 };
 
 export const Fader = ({
+  "aria-label": ariaLabel,
+  "aria-labelledby": ariaLabelledBy,
   value: valueProp,
   defaultValue,
   onValueChange,
@@ -828,6 +836,8 @@ export const Fader = ({
 
   const contextValue = useMemo<FaderContextValue>(
     () => ({
+      ariaLabel,
+      ariaLabelledBy,
       change,
       commit,
       disabled,
@@ -845,6 +855,8 @@ export const Fader = ({
       variant,
     }),
     [
+      ariaLabel,
+      ariaLabelledBy,
       change,
       commit,
       disabled,
