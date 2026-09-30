@@ -1,6 +1,7 @@
 {
   "title": "Components",
   "pages": [
+    "index",
     "---Meters and visualizers---",
     "level-meter",
     "db-scale",
