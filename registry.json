@@ -209,6 +209,73 @@
           "type": "registry:hook"
         }
       ]
+    },
+    {
+      "name": "use-audio-config",
+      "type": "registry:hook",
+      "title": "useAudioConfig",
+      "description": "The context a mixer or channel strip uses to pass orientation, size, range, zones and ballistics down to the components inside it.",
+      "registryDependencies": [
+        "@audiocn/core"
+      ],
+      "files": [
+        {
+          "path": "hooks/use-audio-config.tsx",
+          "type": "registry:hook"
+        }
+      ]
+    },
+    {
+      "name": "db-scale",
+      "type": "registry:ui",
+      "title": "dB Scale",
+      "description": "Tick marks and labels for a decibel range, shared by meters and faders.",
+      "registryDependencies": [
+        "@audiocn/core",
+        "@audiocn/use-audio-config"
+      ],
+      "files": [
+        {
+          "path": "components/ui/db-scale.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "db-readout",
+      "type": "registry:ui",
+      "title": "dB Readout",
+      "description": "A numeric level label that updates at a readable rate, with a reserved width so the layout never shifts.",
+      "registryDependencies": [
+        "@audiocn/core",
+        "@audiocn/use-frame-source"
+      ],
+      "files": [
+        {
+          "path": "components/ui/db-readout.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "clip-indicator",
+      "type": "registry:ui",
+      "title": "Clip Indicator",
+      "description": "A clip light that holds after the signal clips, with an optional count and click to reset.",
+      "dependencies": [
+        "@base-ui/react"
+      ],
+      "registryDependencies": [
+        "@audiocn/core",
+        "@audiocn/use-clip-hold",
+        "@audiocn/use-frame-source"
+      ],
+      "files": [
+        {
+          "path": "components/ui/clip-indicator.tsx",
+          "type": "registry:ui"
+        }
+      ]
     }
   ]
 }
