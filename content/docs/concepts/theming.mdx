@@ -20,7 +20,9 @@ Six tokens cover meanings shadcn has no token for. The CLI adds them to your CSS
 | `--channel-solo`    | amber                | Pressed solo toggle      |
 | `--channel-monitor` | blue                 | Pressed monitor toggle   |
 
-They are also Tailwind colours: `bg-meter-ok`, `text-channel-solo` and so on. Change them the same way as any shadcn token:
+Each accent also has a `-foreground` token for text: `--meter-ok-foreground`, `--meter-warn-foreground`, `--meter-clip-foreground`, `--channel-mute-foreground`, `--channel-solo-foreground`, and `--channel-monitor-foreground`. In light mode these are darker than the meter accents; in dark mode they follow the accent. This keeps small labels readable without dimming the meters.
+
+They are also Tailwind colours: `bg-meter-ok`, `text-channel-solo-foreground` and so on. Change them the same way as any shadcn token:
 
 ```css title="app/globals.css"
 :root {
@@ -49,7 +51,7 @@ State is exposed as data attributes, so you can style it with Tailwind:
 
 ```tsx
 <ChannelStrip className="data-muted:opacity-60 data-solo:ring-2 data-solo:ring-channel-solo" />
-<DbReadout className="data-[zone=clip]:text-meter-clip" />
+<DbReadout className="data-[zone=clip]:text-meter-clip-foreground" />
 ```
 
 Each component page lists its variables and attributes.

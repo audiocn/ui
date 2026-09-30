@@ -1,5 +1,6 @@
 import { ServerCodeBlock } from "fumadocs-ui/components/codeblock.rsc";
 
+import { codeThemes } from "@/lib/docs/code-themes";
 import { readSource } from "@/lib/docs/read-source";
 
 interface ComponentSourceProps {
@@ -20,6 +21,7 @@ export const ComponentSource = async ({
         code={code}
         codeblock={{ title: title ?? path }}
         lang={lang}
+        themes={codeThemes}
       />
     </div>
   );
