@@ -12,6 +12,14 @@ interface Tile {
 }
 
 const TILES = {
+  eq: {
+    Component: lazy(() => import("@/components/home/tiles/eq-tile")),
+    placeholder: <Skeleton className="h-46 w-full" />,
+  },
+  knobs: {
+    Component: lazy(() => import("@/components/home/tiles/knobs-tile")),
+    placeholder: <Skeleton className="h-23 w-full" />,
+  },
   mixer: {
     Component: lazy(() => import("@/components/home/tiles/mixer-tile")),
     placeholder: <Skeleton className="h-75 w-full" />,
@@ -23,6 +31,14 @@ const TILES = {
   "sound-pads": {
     Component: lazy(() => import("@/components/home/tiles/sound-pads-tile")),
     placeholder: <Skeleton className="h-76 w-full @sm:h-50" />,
+  },
+  spectrum: {
+    Component: lazy(() => import("@/components/home/tiles/spectrum-tile")),
+    placeholder: <Skeleton className="h-32 w-full" />,
+  },
+  voice: {
+    Component: lazy(() => import("@/components/home/tiles/voice-tile")),
+    placeholder: <Skeleton className="h-40 w-full" />,
   },
   waveform: {
     Component: lazy(() => import("@/components/home/tiles/waveform-tile")),
