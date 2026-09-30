@@ -18,7 +18,7 @@ const LevelRow = ({
   const { peakDb, rmsDb, zone } = useLevel(source, { intervalMs: 100 });
 
   return (
-    <div className="grid grid-cols-[8rem_1fr_1fr_4rem] items-center gap-3 font-mono text-sm tabular-nums">
+    <div className="grid grid-cols-1 items-center gap-1 font-mono text-sm tabular-nums sm:grid-cols-[8rem_1fr_1fr_4rem] sm:gap-3">
       <span className="text-muted-foreground font-sans">{label}</span>
       <span>peak {formatDb(peakDb, { floorDb: -90 })}</span>
       <span>
@@ -39,7 +39,7 @@ const FrameSourceDemo = () => {
     <div className="flex w-full max-w-xl flex-col gap-4">
       <LevelRow label="Demo signal" source={demo.meter} />
       <LevelRow label="Microphone" source={analyser.meter} />
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <Button
           onClick={listening ? microphone.stop : microphone.start}
           size="sm"
