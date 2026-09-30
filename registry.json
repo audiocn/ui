@@ -335,6 +335,27 @@
           "type": "registry:ui"
         }
       ]
+    },
+    {
+      "name": "fader",
+      "type": "registry:ui",
+      "title": "Fader",
+      "description": "A volume fader in decibels: linear or console taper, detents, a scale, reset, an editable value, silence at the bottom, horizontal or vertical.",
+      "dependencies": [
+        "@base-ui/react",
+        "class-variance-authority"
+      ],
+      "registryDependencies": [
+        "@audiocn/core",
+        "@audiocn/use-audio-config",
+        "@audiocn/db-scale"
+      ],
+      "files": [
+        {
+          "path": "components/ui/fader.tsx",
+          "type": "registry:ui"
+        }
+      ]
     }
   ]
 }
