@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   AudioPlayer,
+  AudioPlayerArtwork,
   AudioPlayerPlay,
   AudioPlayerTime,
 } from "@/components/ui/audio-player";
@@ -274,6 +275,18 @@ describe("SoundPad", () => {
 });
 
 describe("AudioPlayer", () => {
+  it("distinguishes meaningful artwork from decorative artwork", () => {
+    const { rerender } = render(
+      <AudioPlayerArtwork alt="Night Drive album cover" src="/cover.png" />
+    );
+    expect(
+      screen.getByRole("img", { name: "Night Drive album cover" })
+    ).toBeInTheDocument();
+    rerender(<AudioPlayerArtwork src="/cover.png" />);
+    expect(screen.queryByRole("img")).not.toBeInTheDocument();
+    expect(screen.getByRole("presentation")).toHaveAttribute("alt", "");
+  });
+
   it("renders parts bound to an external player", () => {
     const player = controller();
     render(

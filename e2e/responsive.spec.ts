@@ -1,21 +1,9 @@
-import { readdirSync } from "node:fs";
-import path from "node:path";
-
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
 
-const DOCS_DIR = path.join(process.cwd(), "content/docs");
-const MDX = /\.mdx$/u;
+import { publicPages } from "./routes";
 
-const pagesIn = (section: string) =>
-  readdirSync(path.join(DOCS_DIR, section))
-    .filter((file) => MDX.test(file))
-    .map((file) => file.replace(MDX, ""))
-    .map((slug) =>
-      slug === "index" ? `/docs/${section}` : `/docs/${section}/${slug}`
-    );
-
-const PAGES = ["/", ...pagesIn("components"), ...pagesIn("blocks")];
+const PAGES = publicPages;
 
 const PHONE = { height: 667, width: 375 };
 const VIEWPORTS = [

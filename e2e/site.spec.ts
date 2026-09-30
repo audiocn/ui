@@ -1,26 +1,9 @@
-import { readdirSync, statSync } from "node:fs";
-import path from "node:path";
-
 import { expect, test } from "@playwright/test";
 
 import { siteConfig } from "../lib/site";
+import { docsPages } from "./routes";
 
-const DOCS_DIR = path.join(process.cwd(), "content/docs");
-
-const collectPages = (dir: string, prefix = "/docs"): string[] =>
-  readdirSync(dir).flatMap((entry) => {
-    const full = path.join(dir, entry);
-    if (statSync(full).isDirectory()) {
-      return collectPages(full, `${prefix}/${entry}`);
-    }
-    if (!entry.endsWith(".mdx")) {
-      return [];
-    }
-    const slug = entry.replace(/\.mdx$/u, "");
-    return [slug === "index" ? prefix : `${prefix}/${slug}`];
-  });
-
-const pages = collectPages(DOCS_DIR);
+const pages = docsPages;
 
 test("the public sitemap includes every concrete page and robots permits indexing", async ({
   request,
