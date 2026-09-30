@@ -300,6 +300,41 @@
           "type": "registry:ui"
         }
       ]
+    },
+    {
+      "name": "bar-visualizer",
+      "type": "registry:ui",
+      "title": "Bar Visualizer",
+      "description": "A row of bars driven by frequency bands, with idle, loading and mirrored modes. Bars paint without re-rendering React.",
+      "registryDependencies": [
+        "@audiocn/core",
+        "@audiocn/use-audio-config",
+        "@audiocn/use-frame-source",
+        "@audiocn/use-reduced-motion"
+      ],
+      "files": [
+        {
+          "path": "components/ui/bar-visualizer.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "live-waveform",
+      "type": "registry:ui",
+      "title": "Live Waveform",
+      "description": "A canvas waveform of a live signal: scrolling level history or the current frame, as bars, a mirrored shape or a line.",
+      "registryDependencies": [
+        "@audiocn/core",
+        "@audiocn/use-frame-source",
+        "@audiocn/use-reduced-motion"
+      ],
+      "files": [
+        {
+          "path": "components/ui/live-waveform.tsx",
+          "type": "registry:ui"
+        }
+      ]
     }
   ]
 }
