@@ -8,7 +8,11 @@ import {
   useSyncExternalStore,
 } from "react";
 
-import { createAnalyserTap, createInputNode } from "@/hooks/use-audio-analyser";
+import {
+  createAnalyserTap,
+  createInputNode,
+  disconnectFrom,
+} from "@/hooks/use-audio-analyser";
 import type {
   AnalyserInput,
   AnalyserTap,
@@ -177,11 +181,7 @@ const buildStrip = (
   const { node, owned } = createInputNode(context, input);
   const takesOverElement = input instanceof HTMLMediaElement;
   if (takesOverElement) {
-    try {
-      node.disconnect(context.destination);
-    } catch {
-      // Already routed elsewhere.
-    }
+    disconnectFrom(node, context.destination);
   }
   const gain = context.createGain();
   const duck = context.createGain();
@@ -202,7 +202,8 @@ const buildStrip = (
   return {
     dispose: () => {
       tap.dispose();
-      node.disconnect(gain);
+      // The input's owner may have disconnected it already.
+      disconnectFrom(node, gain);
       gain.disconnect();
       duck.disconnect();
       panner.disconnect();

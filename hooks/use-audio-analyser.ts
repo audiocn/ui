@@ -89,6 +89,18 @@ export const createInputNode = (
 };
 
 /**
+ * Disconnects one connection, if it still exists. A node you don't own may
+ * already have been disconnected by its owner, and Web Audio throws then.
+ */
+export const disconnectFrom = (node: AudioNode, destination: AudioNode) => {
+  try {
+    node.disconnect(destination);
+  } catch {
+    // Already disconnected.
+  }
+};
+
+/**
  * Taps an audio node with analysers and exposes meter and visual frame
  * sources. Analysis runs only while something is subscribed.
  */
@@ -230,9 +242,9 @@ export const createAnalyserTap = (
   const dispose = () => {
     disposed = true;
     updateLoop();
-    node.disconnect(mix);
+    disconnectFrom(node, mix);
     if (splitter) {
-      node.disconnect(splitter);
+      disconnectFrom(node, splitter);
       splitter.disconnect();
     }
   };
