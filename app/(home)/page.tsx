@@ -1,41 +1,53 @@
+import { ArrowRightIcon } from "@phosphor-icons/react/ssr";
 import Link from "next/link";
 
-import { HeroDemoLoader } from "@/components/docs/hero-demo-loader";
+import { CopyCommand } from "@/components/home/copy-command";
+import { HeroWaveform } from "@/components/home/hero-waveform";
+import { ShowcaseGrid } from "@/components/home/showcase-grid";
 import { Button } from "@/components/ui/button";
 import { siteConfig } from "@/lib/site";
 
 const Page = () => (
-  <main className="mx-auto flex w-full max-w-6xl flex-col px-4 py-16 sm:px-6 lg:py-24">
-    <section className="grid grid-cols-[minmax(0,1fr)] items-center gap-12 lg:grid-cols-[minmax(0,1fr)_28rem]">
-      <div className="flex min-w-0 flex-col items-start gap-6">
-        <span className="text-muted-foreground rounded-full border px-3 py-1 text-xs">
-          Audio components for shadcn/ui
-        </span>
-        <h1 className="font-heading text-4xl font-semibold tracking-tight sm:text-5xl">
-          Meters, faders and a complete mixer, built the shadcn way.
-        </h1>
-        <p className="text-muted-foreground max-w-xl text-lg">
-          {siteConfig.description}
-        </p>
-        <div className="flex flex-wrap gap-3">
-          <Button render={<Link href="/docs" />} nativeButton={false} size="lg">
-            Get started
-          </Button>
-          <Button
-            render={<Link href="/docs/blocks/system-audio-mixer" />}
-            nativeButton={false}
-            size="lg"
-            variant="outline"
-          >
-            See the mixer
-          </Button>
-        </div>
-        <code className="bg-muted max-w-full overflow-x-auto rounded-lg px-3 py-2 font-mono text-xs whitespace-nowrap sm:text-sm">
-          npx shadcn@latest add @audiocn/level-meter
-        </code>
+  <main className="mx-auto flex w-full max-w-7xl flex-col px-4 pt-16 pb-24 sm:px-6 lg:pt-24">
+    <section className="flex flex-col items-center gap-6 text-center">
+      <Link
+        className="text-muted-foreground hover:text-foreground hover:bg-muted/60 focus-visible:ring-ring/50 group/pill flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition-colors outline-none focus-visible:ring-3"
+        href="/docs/components"
+      >
+        Audio components for shadcn/ui
+        <ArrowRightIcon
+          aria-hidden
+          className="size-3 transition-transform group-hover/pill:translate-x-0.5"
+        />
+      </Link>
+      <h1 className="font-heading max-w-4xl text-4xl font-semibold tracking-tight text-balance sm:text-6xl lg:text-7xl">
+        Audio UI, mixed and mastered.
+      </h1>
+      <p className="text-muted-foreground max-w-2xl text-base text-balance sm:text-lg">
+        Meters, faders, knobs, visualizers and a complete mixer for React. Built
+        the shadcn way, so you own every line.
+      </p>
+      <div className="flex flex-wrap justify-center gap-3">
+        <Button render={<Link href="/docs" />} nativeButton={false} size="lg">
+          Get started
+        </Button>
+        <Button
+          render={<Link href="/docs/components" />}
+          nativeButton={false}
+          size="lg"
+          variant="outline"
+        >
+          Browse components
+        </Button>
       </div>
-      <HeroDemoLoader />
+      <CopyCommand
+        command={`npx shadcn@latest add ${siteConfig.registryNamespace}/mixer`}
+      />
     </section>
+    <div className="my-12 lg:my-16">
+      <HeroWaveform />
+    </div>
+    <ShowcaseGrid />
   </main>
 );
 

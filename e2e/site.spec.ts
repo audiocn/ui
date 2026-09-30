@@ -115,7 +115,10 @@ test.describe("every docs page", () => {
 
 test("the home page shows a live mixer", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("heading", { level: 1 })).toContainText("mixer");
+  await expect(page.getByRole("heading", { level: 1 })).toContainText(
+    "mixed and mastered"
+  );
+  await page.getByRole("article", { name: "Mixer" }).scrollIntoViewIfNeeded();
   const meter = page.getByRole("meter", { name: "Microphone level" });
   await expect(meter).toBeVisible();
   await expect
