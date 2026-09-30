@@ -1,33 +1,23 @@
 "use client";
 
-import { useTheme } from "next-themes";
-
 import { WebThreads } from "@/components/home/web-threads";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 
-const DARK_THREADS = {
-  color1: "#ffffff",
-  color2: "#666666",
-  color3: "#ffffff",
-};
-
-// Light mode paints the threads as ink over the page's own white.
-const LIGHT_THREADS = {
-  ...DARK_THREADS,
-  backgroundColor: "#ffffff",
-  lightMode: true,
-};
-
-/** Woven threads behind the hero, still under reduced motion. */
+/**
+ * Woven threads behind the hero, still under reduced motion. Light mode
+ * inverts the dark render: over white that gives dark threads exactly as
+ * strong as the light ones on the dark page, with no grey veil between them.
+ */
 export const HeroThreads = () => {
-  const { resolvedTheme } = useTheme();
   const reducedMotion = useReducedMotion();
-  const theme = resolvedTheme === "light" ? LIGHT_THREADS : DARK_THREADS;
 
   return (
     <WebThreads
-      {...theme}
       brightness={0.55}
+      className="invert dark:invert-0"
+      color1="#ffffff"
+      color2="#666666"
+      color3="#ffffff"
       falloff={0.59}
       fanMode="center"
       frequency={10.5}
