@@ -1,5 +1,17 @@
+import { createMDX } from "fumadocs-mdx/next";
 import type { NextConfig } from "next";
 
-const nextConfig: NextConfig = {};
+const withMDX = createMDX();
 
-export default nextConfig;
+const nextConfig: NextConfig = {
+  outputFileTracingIncludes: {
+    "/docs/**/*": [
+      "./content/docs/**/*",
+      "./components/**/*",
+      "./hooks/**/*",
+      "./lib/**/*",
+    ],
+  },
+};
+
+export default withMDX(nextConfig);

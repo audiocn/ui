@@ -1,0 +1,15 @@
+---
+title: Introduction
+description: Audio components for React, built the shadcn way.
+---
+
+audiocn is a set of audio components for React: level meters, visualizers, faders, channel strips, a complete mixer, players and sound pads.
+
+It is not a package you install. Like shadcn/ui, each component is copied into your project with the shadcn CLI, so you own the code and can change anything.
+
+## What makes it different
+
+- **Built on Base UI**, styled with Tailwind CSS, and themed with the same CSS variables as shadcn/ui. Any shadcn theme restyles audiocn.
+- **Fast by default.** Meters and visualizers paint on the animation frame without re-rendering React, so a mixer with many channels stays smooth.
+- **Bring your own audio.** Components receive levels and values; they never open a microphone themselves. Use the included Web Audio hooks, or feed them from any other engine.
+- **Real units.** Mixer components speak decibels, the way audio engineers do.

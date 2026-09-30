@@ -1,7 +1,10 @@
-import { Geist_Mono, DM_Sans, Outfit } from "next/font/google";
+import { RootProvider } from "fumadocs-ui/provider/next";
+import type { Metadata } from "next";
+import { DM_Sans, Geist_Mono, Outfit } from "next/font/google";
 
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
+import { siteConfig } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
 const outfitHeading = Outfit({
@@ -15,6 +18,15 @@ const fontMono = Geist_Mono({
   subsets: ["latin"],
   variable: "--font-mono",
 });
+
+export const metadata: Metadata = {
+  description: siteConfig.description,
+  metadataBase: new URL(siteConfig.url),
+  title: {
+    default: `${siteConfig.name} — audio components for shadcn/ui`,
+    template: `%s — ${siteConfig.name}`,
+  },
+};
 
 const RootLayout = ({
   children,
@@ -32,8 +44,10 @@ const RootLayout = ({
       outfitHeading.variable
     )}
   >
-    <body>
-      <ThemeProvider>{children}</ThemeProvider>
+    <body className="flex min-h-svh flex-col">
+      <ThemeProvider>
+        <RootProvider theme={{ enabled: false }}>{children}</RootProvider>
+      </ThemeProvider>
     </body>
   </html>
 );

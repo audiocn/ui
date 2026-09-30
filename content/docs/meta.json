@@ -1,0 +1,19 @@
+{
+  "pages": [
+    "---Getting started---",
+    "index",
+    "installation",
+    "---Concepts---",
+    "concepts/decibels",
+    "concepts/feeding-data",
+    "concepts/theming",
+    "concepts/accessibility",
+    "concepts/custom-engine",
+    "---Components---",
+    "...components",
+    "---Hooks---",
+    "...hooks",
+    "---Blocks---",
+    "...blocks"
+  ]
+}
