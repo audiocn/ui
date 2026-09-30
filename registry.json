@@ -356,6 +356,102 @@
           "type": "registry:ui"
         }
       ]
+    },
+    {
+      "name": "parameter-slider",
+      "type": "registry:ui",
+      "title": "Parameter Slider",
+      "description": "A labelled slider with a numeric input, unit, marks, reset and a linear or log scale, for gain trims, delays, thresholds and frequencies.",
+      "dependencies": [
+        "@base-ui/react"
+      ],
+      "registryDependencies": [
+        "@audiocn/core",
+        "@audiocn/use-audio-config"
+      ],
+      "files": [
+        {
+          "path": "components/ui/parameter-slider.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "knob",
+      "type": "registry:ui",
+      "title": "Knob",
+      "description": "A rotary control drawn in SVG, with vertical, horizontal or circular dragging, fine adjustment, reset and a bipolar origin.",
+      "dependencies": [
+        "class-variance-authority"
+      ],
+      "registryDependencies": [
+        "@audiocn/core",
+        "@audiocn/use-audio-config"
+      ],
+      "files": [
+        {
+          "path": "components/ui/knob.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "pan-control",
+      "type": "registry:ui",
+      "title": "Pan Control",
+      "description": "Left and right balance with a fill from the centre, a centre detent and reset.",
+      "dependencies": [
+        "@base-ui/react",
+        "class-variance-authority"
+      ],
+      "registryDependencies": [
+        "@audiocn/core",
+        "@audiocn/use-audio-config"
+      ],
+      "files": [
+        {
+          "path": "components/ui/pan-control.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "channel-toggle",
+      "type": "registry:ui",
+      "title": "Channel Toggle",
+      "description": "Mute, solo and monitor toggle buttons with their own pressed colours.",
+      "dependencies": [
+        "@base-ui/react",
+        "class-variance-authority"
+      ],
+      "registryDependencies": [
+        "@audiocn/use-audio-config"
+      ],
+      "files": [
+        {
+          "path": "components/ui/channel-toggle.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "volume-control",
+      "type": "registry:ui",
+      "title": "Volume Control",
+      "description": "A 0..1 volume slider with a mute button and a perceptual curve, for players.",
+      "dependencies": [
+        "@base-ui/react"
+      ],
+      "registryDependencies": [
+        "@audiocn/core",
+        "@audiocn/use-audio-config"
+      ],
+      "files": [
+        {
+          "path": "components/ui/volume-control.tsx",
+          "type": "registry:ui"
+        }
+      ]
     }
   ]
 }
