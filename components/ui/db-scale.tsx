@@ -1,6 +1,13 @@
 "use client";
 
-import { createContext, useContext, useMemo } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+} from "react";
 import type { ComponentProps, CSSProperties } from "react";
 
 import { useAudioConfig } from "@/hooks/use-audio-config";
@@ -12,6 +19,60 @@ import { cn } from "@/lib/utils";
 
 const DEFAULT_TICKS = [12, 6, 0, -6, -12, -18, -24, -36, -48, -60, -72, -90];
 const EDGE = 0.02;
+/** Space kept between two labels, in pixels. */
+const LABEL_GAP = 3;
+const MAJOR_STEP = 12;
+
+/**
+ * Hides labels that would touch a more important one, so narrow scales stay
+ * readable: 0 dB first, then the ends, then multiples of 12, then the rest.
+ */
+export const thinDbScaleLabels = (scale: HTMLElement) => {
+  const horizontal = scale.dataset.orientation !== "vertical";
+  const entries: { label: HTMLElement; rank: number; value: number }[] = [];
+  for (const tick of scale.querySelectorAll<HTMLElement>(
+    "[data-slot=db-scale-tick]"
+  )) {
+    const label = tick.querySelector<HTMLElement>("[data-slot=db-scale-label]");
+    if (label) {
+      delete label.dataset.hidden;
+      entries.push({ label, rank: 3, value: Number(tick.dataset.value) });
+    }
+  }
+  const values = entries.map((entry) => entry.value);
+  const top = Math.max(...values);
+  const bottom = Math.min(...values);
+  for (const entry of entries) {
+    if (entry.value === 0) {
+      entry.rank = 0;
+    } else if (entry.value === top || entry.value === bottom) {
+      entry.rank = 1;
+    } else if (entry.value % MAJOR_STEP === 0) {
+      entry.rank = 2;
+    }
+  }
+  entries.sort((a, b) => a.rank - b.rank || b.value - a.value);
+
+  const kept: [number, number][] = [];
+  for (const { label } of entries) {
+    const rect = label.getBoundingClientRect();
+    // Not laid out, so there is nothing to compare.
+    if (rect.width === 0 && rect.height === 0) {
+      continue;
+    }
+    const start = horizontal ? rect.left : rect.top;
+    const end = horizontal ? rect.right : rect.bottom;
+    const collides = kept.some(
+      ([keptStart, keptEnd]) =>
+        start < keptEnd + LABEL_GAP && end > keptStart - LABEL_GAP
+    );
+    if (collides) {
+      label.dataset.hidden = "";
+    } else {
+      kept.push([start, end]);
+    }
+  }
+};
 
 const defaultFormat = (db: number) =>
   formatDb(db, { decimals: 0, unit: false });
@@ -87,6 +148,7 @@ export const DbScaleTick = ({
       )}
       data-major={major ? "" : undefined}
       data-slot="db-scale-tick"
+      data-value={value}
       style={
         { "--tick-position": `${position * 100}%`, ...style } as CSSProperties
       }
@@ -97,7 +159,9 @@ export const DbScaleTick = ({
         data-slot="db-scale-mark"
       />
       {labels ? (
-        <span data-slot="db-scale-label">{children ?? format(value)}</span>
+        <span className="data-hidden:invisible" data-slot="db-scale-label">
+          {children ?? format(value)}
+        </span>
       ) : null}
     </div>
   );
@@ -131,6 +195,7 @@ export const DbScale = ({
   format = defaultFormat,
   className,
   children,
+  ref,
   ...props
 }: DbScaleProps) => {
   const config = useAudioConfig();
@@ -152,6 +217,53 @@ export const DbScale = ({
   const values =
     ticks ?? DEFAULT_TICKS.filter((tick) => tick >= minDb && tick <= maxDb);
 
+  const scaleRef = useRef<HTMLDivElement | null>(null);
+  const setScaleRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      scaleRef.current = node;
+      if (typeof ref === "function") {
+        ref(node);
+      } else if (ref) {
+        ref.current = node;
+      }
+    },
+    [ref]
+  );
+
+  // Re-check label collisions when the scale resizes or its ticks change.
+  useLayoutEffect(() => {
+    const scale = scaleRef.current;
+    if (!(scale && labels)) {
+      return;
+    }
+    let cancelled = false;
+    const thin = () => thinDbScaleLabels(scale);
+    thin();
+    const resize =
+      typeof ResizeObserver === "undefined" ? null : new ResizeObserver(thin);
+    resize?.observe(scale);
+    // Only style changes: hiding a label must not trigger another pass.
+    const ticksChanged = new MutationObserver(thin);
+    ticksChanged.observe(scale, {
+      attributeFilter: ["style"],
+      characterData: true,
+      childList: true,
+      subtree: true,
+    });
+    const afterFonts = async () => {
+      await document.fonts?.ready;
+      if (!cancelled) {
+        thin();
+      }
+    };
+    afterFonts();
+    return () => {
+      cancelled = true;
+      resize?.disconnect();
+      ticksChanged.disconnect();
+    };
+  }, [labels]);
+
   return (
     <DbScaleContext.Provider value={value}>
       <div
@@ -164,6 +276,7 @@ export const DbScale = ({
         data-orientation={orientation}
         data-side={side}
         data-slot="db-scale"
+        ref={setScaleRef}
         {...props}
       >
         {children ??
