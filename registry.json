@@ -72,6 +72,79 @@
           "channel-monitor": "oklch(0.707 0.165 254.624)"
         }
       }
+    },
+    {
+      "name": "use-frame-source",
+      "type": "registry:hook",
+      "title": "useFrameSource",
+      "description": "Subscribe a callback to a frame source, with a stable callback and automatic cleanup.",
+      "registryDependencies": [
+        "@audiocn/core"
+      ],
+      "files": [
+        {
+          "path": "hooks/use-frame-source.ts",
+          "type": "registry:hook"
+        }
+      ]
+    },
+    {
+      "name": "use-level",
+      "type": "registry:hook",
+      "title": "useLevel",
+      "description": "Read a meter source into React state at a low rate, for labels and conditional UI.",
+      "registryDependencies": [
+        "@audiocn/core",
+        "@audiocn/use-frame-source"
+      ],
+      "files": [
+        {
+          "path": "hooks/use-level.ts",
+          "type": "registry:hook"
+        }
+      ]
+    },
+    {
+      "name": "use-clip-hold",
+      "type": "registry:hook",
+      "title": "useClipHold",
+      "description": "Clip detection with a hold time, a clip count and a reset.",
+      "registryDependencies": [
+        "@audiocn/core"
+      ],
+      "files": [
+        {
+          "path": "hooks/use-clip-hold.ts",
+          "type": "registry:hook"
+        }
+      ]
+    },
+    {
+      "name": "use-reduced-motion",
+      "type": "registry:hook",
+      "title": "useReducedMotion",
+      "description": "True when the user asked the system to reduce motion.",
+      "files": [
+        {
+          "path": "hooks/use-reduced-motion.ts",
+          "type": "registry:hook"
+        }
+      ]
+    },
+    {
+      "name": "use-demo-signal",
+      "type": "registry:hook",
+      "title": "useDemoSignal",
+      "description": "A synthetic speech, music, tone or noise signal as frame sources, for previews, prototypes and tests.",
+      "registryDependencies": [
+        "@audiocn/core"
+      ],
+      "files": [
+        {
+          "path": "hooks/use-demo-signal.ts",
+          "type": "registry:hook"
+        }
+      ]
     }
   ]
 }
