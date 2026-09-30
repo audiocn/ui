@@ -9,11 +9,17 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
 } from "react";
-import type { ComponentProps, CSSProperties, KeyboardEvent } from "react";
+import type {
+  ComponentProps,
+  CSSProperties,
+  KeyboardEvent,
+  RefObject,
+} from "react";
 
 import { DbScale } from "@/components/ui/db-scale";
 import type { DbScaleProps } from "@/components/ui/db-scale";
@@ -30,6 +36,9 @@ const DEFAULT_MAX_DB = 6;
 const POSITION_STEP = 0.0005;
 const DETENT_SNAP = 0.012;
 const PRECISION = 1e6;
+const DEFAULT_DETENTS = [0];
+const DB_SUFFIX = /db/iu;
+const INFINITY_TEXT = /^-?(?:inf|infinity|∞)$/iu;
 
 export type FaderChangeReason =
   | "drag"
@@ -77,361 +86,13 @@ const defaultFormat = (db: number) =>
 
 const roundValue = (value: number) => Math.round(value * PRECISION) / PRECISION;
 
-const faderVariants = cva(
-  "group/fader relative flex touch-none gap-2 select-none data-disabled:opacity-50",
-  {
-    defaultVariants: {
-      orientation: "horizontal",
-      size: "default",
-    },
-    variants: {
-      orientation: {
-        horizontal: "w-full flex-col",
-        vertical: "h-full min-h-32 flex-row justify-center",
-      },
-      size: {
-        default: "[--fader-thumb-size:1rem] [--fader-track-size:0.25rem]",
-        lg: "[--fader-thumb-size:1.25rem] [--fader-track-size:0.375rem]",
-        sm: "[--fader-thumb-size:0.75rem] [--fader-track-size:0.1875rem]",
-      },
-    },
-  }
-);
-
-type SliderRootProps = SliderPrimitive.Root.Props<number>;
-
-export interface FaderProps extends Omit<
-  SliderRootProps,
-  | "value"
-  | "defaultValue"
-  | "onValueChange"
-  | "onValueCommitted"
-  | "min"
-  | "max"
-  | "step"
-  | "largeStep"
-  | "format"
-  | "orientation"
-> {
-  /** The value in dB. */
-  value?: number;
-  defaultValue?: number;
-  onValueChange?: (value: number, details: FaderChangeDetails) => void;
-  /** Fires when a drag ends, after keyboard input, and on reset. */
-  onValueCommitted?: (value: number) => void;
-  /** Bottom of the range in dB. Default −60. */
-  min?: number;
-  /** Top of the range in dB. Default +6. */
-  max?: number;
-  /** Arrow keys and drag resolution in dB. Default 0.5. */
-  step?: number;
-  /** Shift+arrow and Page Up/Down, in dB. Default 6. */
-  largeStep?: number;
-  /** Alt+arrow and Alt+drag resolution, in dB. Default 0.1. */
-  fineStep?: number;
-  /** Value restored by double-clicking the thumb. Default 0. */
-  resetValue?: number;
-  /** Position law. Default `linear`. */
-  taper?: TaperInput;
-  /** Where the range fill starts. Set 0 for a bipolar gain. Default `min`. */
-  origin?: number;
-  /** Values the thumb snaps to while dragging. Default `[0]`. */
-  detents?: number[];
-  /** The bottom position reports `-Infinity`. Default false. */
-  silenceAtMin?: boolean;
-  /** The mouse wheel adjusts the value while the fader is focused. Default false. */
-  allowWheel?: boolean;
-  orientation?: Orientation;
-  /** `console` has a wide cap thumb. Default `default`. */
-  variant?: "default" | "console";
-  size?: AudioSize;
-  /** Formats the value for `FaderValue` and assistive technology. */
-  format?: (db: number) => string;
-}
-
-export const Fader = ({
-  value: valueProp,
-  defaultValue,
-  onValueChange,
-  onValueCommitted,
-  min = DEFAULT_MIN_DB,
-  max = DEFAULT_MAX_DB,
-  step = 0.5,
-  largeStep = 6,
-  fineStep = 0.1,
-  resetValue = 0,
-  taper = "linear",
-  origin,
-  detents,
-  silenceAtMin = false,
-  allowWheel = false,
-  orientation: orientationProp,
-  variant = "default",
-  size: sizeProp,
-  format = defaultFormat,
-  disabled: disabledProp,
-  className,
-  children,
-  ref,
-  ...props
-}: FaderProps) => {
-  const config = useAudioConfig();
-  const orientation = orientationProp ?? config.orientation ?? "horizontal";
-  const size = sizeProp ?? config.size ?? "default";
-  const disabled = disabledProp ?? config.disabled ?? false;
-  const [uncontrolled, setUncontrolled] = useState(
-    defaultValue ?? clamp(resetValue, min, max)
-  );
-  const value = valueProp ?? uncontrolled;
-  const latestRef = useRef(value);
-  latestRef.current = value;
-
-  const taperFn = useMemo(
-    () => resolveTaper(taper, min, max),
-    [taper, min, max]
-  );
-  const snapPoints = useMemo(() => detents ?? [0], [detents]);
-
-  const toPosition = useCallback(
-    (db: number) => (db === SILENCE_DB ? 0 : taperFn.toPosition(db)),
-    [taperFn]
-  );
-
-  const quantize = useCallback(
-    (db: number, increment: number) => {
-      if (db === SILENCE_DB) {
-        return silenceAtMin ? SILENCE_DB : min;
-      }
-      const stepped = min + Math.round((db - min) / increment) * increment;
-      return roundValue(clamp(stepped, min, max));
-    },
-    [max, min, silenceAtMin]
-  );
-
-  const change = useCallback(
-    (db: number, details: FaderChangeDetails) => {
-      if (db === latestRef.current) {
-        return;
-      }
-      latestRef.current = db;
-      if (valueProp === undefined) {
-        setUncontrolled(db);
-      }
-      onValueChange?.(db, details);
-    },
-    [onValueChange, valueProp]
-  );
-
-  const commit = useCallback(
-    (db: number) => {
-      onValueCommitted?.(db);
-    },
-    [onValueCommitted]
-  );
-
-  const fromPosition = useCallback(
-    (position: number, fine: boolean) => {
-      if (silenceAtMin && position <= 0) {
-        return SILENCE_DB;
-      }
-      for (const detent of snapPoints) {
-        if (Math.abs(position - toPosition(detent)) < DETENT_SNAP) {
-          return detent;
-        }
-      }
-      return quantize(taperFn.toValue(position), fine ? fineStep : step);
-    },
-    [fineStep, quantize, silenceAtMin, snapPoints, step, taperFn, toPosition]
-  );
-
-  const nudge = useCallback(
-    (direction: number, increment: number) => {
-      const { current } = latestRef;
-      if (current === SILENCE_DB) {
-        return direction > 0 ? min : SILENCE_DB;
-      }
-      const next = quantize(
-        current + direction * increment,
-        Math.min(increment, step)
-      );
-      if (silenceAtMin && direction < 0 && current <= min) {
-        return SILENCE_DB;
-      }
-      return next;
-    },
-    [min, quantize, silenceAtMin, step]
-  );
-
-  const handleKeyDown = useCallback(
-    (event: KeyboardEvent<HTMLInputElement>) => {
-      let increment = step;
-      if (event.altKey) {
-        increment = fineStep;
-      } else if (event.shiftKey) {
-        increment = largeStep;
-      }
-      let next: number | null = null;
-      switch (event.key) {
-        case "ArrowUp":
-        case "ArrowRight": {
-          next = nudge(1, increment);
-          break;
-        }
-        case "ArrowDown":
-        case "ArrowLeft": {
-          next = nudge(-1, increment);
-          break;
-        }
-        case "PageUp": {
-          next = nudge(1, largeStep);
-          break;
-        }
-        case "PageDown": {
-          next = nudge(-1, largeStep);
-          break;
-        }
-        case "Home": {
-          next = silenceAtMin ? SILENCE_DB : min;
-          break;
-        }
-        case "End": {
-          next = max;
-          break;
-        }
-        default: {
-          break;
-        }
-      }
-      if (next === null) {
-        return;
-      }
-      event.preventDefault();
-      change(next, { event: event.nativeEvent, reason: "keyboard" });
-      commit(next);
-    },
-    [change, commit, fineStep, largeStep, max, min, nudge, silenceAtMin, step]
-  );
-
-  const rootRef = useRef<HTMLDivElement | null>(null);
-  const wheelRef = useRef({ change, commit, disabled, fineStep, nudge, step });
-  wheelRef.current = { change, commit, disabled, fineStep, nudge, step };
-
-  useEffect(() => {
-    const root = rootRef.current;
-    if (!(root && allowWheel)) {
-      return;
-    }
-    const onWheel = (event: globalThis.WheelEvent) => {
-      const { current } = wheelRef;
-      const focused = root.contains(document.activeElement);
-      if (current.disabled || !focused || event.deltaY === 0) {
-        return;
-      }
-      event.preventDefault();
-      const next = current.nudge(
-        event.deltaY < 0 ? 1 : -1,
-        event.altKey ? current.fineStep : current.step
-      );
-      current.change(next, { event, reason: "wheel" });
-      current.commit(next);
-    };
-    root.addEventListener("wheel", onWheel, { passive: false });
-    return () => {
-      root.removeEventListener("wheel", onWheel);
-    };
-  }, [allowWheel]);
-
-  const setRootRef = useCallback(
-    (node: HTMLDivElement | null) => {
-      rootRef.current = node;
-      if (typeof ref === "function") {
-        ref(node);
-      } else if (ref) {
-        ref.current = node;
-      }
-    },
-    [ref]
-  );
-
-  const position = toPosition(value);
-  const originPosition = toPosition(clamp(origin ?? min, min, max));
-  const atDetent = snapPoints.includes(value);
-
-  const contextValue = useMemo<FaderContextValue>(
-    () => ({
-      change,
-      commit,
-      disabled,
-      format,
-      handleKeyDown,
-      max,
-      min,
-      orientation,
-      originPosition,
-      position,
-      resetValue,
-      size,
-      taper: taperFn,
-      value,
-      variant,
-    }),
-    [
-      change,
-      commit,
-      disabled,
-      format,
-      handleKeyDown,
-      max,
-      min,
-      orientation,
-      originPosition,
-      position,
-      resetValue,
-      size,
-      taperFn,
-      value,
-      variant,
-    ]
-  );
-
-  return (
-    <FaderContext.Provider value={contextValue}>
-      <SliderPrimitive.Root
-        className={cn(faderVariants({ orientation, size }), className)}
-        data-at-detent={atDetent ? "" : undefined}
-        data-silent={value === SILENCE_DB ? "" : undefined}
-        data-size={size}
-        data-slot="fader"
-        data-variant={variant}
-        disabled={disabled}
-        max={1}
-        min={0}
-        onValueChange={(next, details) => {
-          const fine =
-            "altKey" in details.event &&
-            Boolean((details.event as MouseEvent).altKey);
-          const reason: FaderChangeReason =
-            details.reason === "track-press" ? "track-press" : "drag";
-          change(fromPosition(next, fine), { event: details.event, reason });
-        }}
-        onValueCommitted={() => {
-          commit(latestRef.current);
-        }}
-        orientation={orientation}
-        ref={setRootRef}
-        step={POSITION_STEP}
-        value={position}
-        {...props}
-      >
-        {children ?? (
-          <FaderTrack>
-            <FaderRange />
-            <FaderThumb />
-          </FaderTrack>
-        )}
-      </SliderPrimitive.Root>
-    </FaderContext.Provider>
-  );
+/** A ref that always holds the latest value, for event handlers. */
+const useLatest = <T,>(value: T): RefObject<T> => {
+  const ref = useRef(value);
+  useLayoutEffect(() => {
+    ref.current = value;
+  });
+  return ref;
 };
 
 export const FaderLabel = ({
@@ -480,28 +141,27 @@ export const FaderTrack = ({
   );
 };
 
-export const FaderRange = ({
-  className,
-  style,
-  ...props
-}: ComponentProps<"div">) => {
+export const FaderRange = ({ className, ...props }: ComponentProps<"div">) => {
   const { orientation, originPosition, position } = useFader("FaderRange");
   const start = Math.min(originPosition, position) * 100;
   const end = Math.max(originPosition, position) * 100;
-  const placement: CSSProperties =
-    orientation === "horizontal"
-      ? { left: `${start}%`, width: `${end - start}%` }
-      : { bottom: `${start}%`, height: `${end - start}%` };
 
   return (
     <div
       className={cn(
         "bg-primary absolute rounded-full",
-        orientation === "horizontal" ? "inset-y-0" : "inset-x-0",
+        orientation === "horizontal"
+          ? "inset-y-0 left-(--fader-range-start) w-(--fader-range-size)"
+          : "inset-x-0 bottom-(--fader-range-start) h-(--fader-range-size)",
         className
       )}
       data-slot="fader-range"
-      style={{ ...placement, ...style }}
+      style={
+        {
+          "--fader-range-size": `${end - start}%`,
+          "--fader-range-start": `${start}%`,
+        } as CSSProperties
+      }
       {...props}
     />
   );
@@ -609,11 +269,14 @@ export const FaderScale = ({ className, ...props }: FaderScaleProps) => {
 };
 
 const parseDb = (text: string): number | null => {
-  const normalized = text.replaceAll("−", "-").replace(/db/i, "").trim();
-  if (/^-?(inf|infinity|∞)$/i.test(normalized)) {
+  const normalized = text.replaceAll("−", "-").replace(DB_SUFFIX, "").trim();
+  if (INFINITY_TEXT.test(normalized)) {
     return SILENCE_DB;
   }
-  const parsed = Number.parseFloat(normalized);
+  if (normalized === "") {
+    return null;
+  }
+  const parsed = Number(normalized);
   return Number.isNaN(parsed) ? null : parsed;
 };
 
@@ -747,6 +410,462 @@ export const FaderReset = ({
       slot: "fader-reset",
     },
   });
+};
+
+const faderVariants = cva(
+  "group/fader relative flex touch-none gap-2 select-none data-disabled:opacity-50",
+  {
+    defaultVariants: {
+      orientation: "horizontal",
+      size: "default",
+    },
+    variants: {
+      orientation: {
+        horizontal: "w-full flex-col",
+        vertical: "h-full min-h-32 flex-row justify-center",
+      },
+      size: {
+        default: "[--fader-thumb-size:1rem] [--fader-track-size:0.25rem]",
+        lg: "[--fader-thumb-size:1.25rem] [--fader-track-size:0.375rem]",
+        sm: "[--fader-thumb-size:0.75rem] [--fader-track-size:0.1875rem]",
+      },
+    },
+  }
+);
+
+type SliderRootProps = SliderPrimitive.Root.Props<number>;
+
+export interface FaderProps extends Omit<
+  SliderRootProps,
+  | "value"
+  | "defaultValue"
+  | "onValueChange"
+  | "onValueCommitted"
+  | "min"
+  | "max"
+  | "step"
+  | "largeStep"
+  | "format"
+  | "orientation"
+> {
+  /** The value in dB. */
+  value?: number;
+  defaultValue?: number;
+  onValueChange?: (value: number, details: FaderChangeDetails) => void;
+  /** Fires when a drag ends, after keyboard input, and on reset. */
+  onValueCommitted?: (value: number) => void;
+  /** Bottom of the range in dB. Default −60. */
+  min?: number;
+  /** Top of the range in dB. Default +6. */
+  max?: number;
+  /** Arrow keys and drag resolution in dB. Default 0.5. */
+  step?: number;
+  /** Shift+arrow and Page Up/Down, in dB. Default 6. */
+  largeStep?: number;
+  /** Alt+arrow and Alt+drag resolution, in dB. Default 0.1. */
+  fineStep?: number;
+  /** Value restored by double-clicking the thumb. Default 0. */
+  resetValue?: number;
+  /** Position law. Default `linear`. */
+  taper?: TaperInput;
+  /** Where the range fill starts. Set 0 for a bipolar gain. Default `min`. */
+  origin?: number;
+  /** Values the thumb snaps to while dragging. Default `[0]`. */
+  detents?: number[];
+  /** The bottom position reports `-Infinity`. Default false. */
+  silenceAtMin?: boolean;
+  /** The mouse wheel adjusts the value while the fader is focused. Default false. */
+  allowWheel?: boolean;
+  orientation?: Orientation;
+  /** `console` has a wide cap thumb. Default `default`. */
+  variant?: "default" | "console";
+  size?: AudioSize;
+  /** Formats the value for `FaderValue` and assistive technology. */
+  format?: (db: number) => string;
+}
+
+interface FaderValueOptions {
+  value: number | undefined;
+  defaultValue: number | undefined;
+  resetValue: number;
+  min: number;
+  max: number;
+  onValueChange: FaderProps["onValueChange"];
+  onValueCommitted: FaderProps["onValueCommitted"];
+}
+
+/** Controlled or uncontrolled value, with change and commit callbacks. */
+const useFaderValue = ({
+  value: valueProp,
+  defaultValue,
+  resetValue,
+  min,
+  max,
+  onValueChange,
+  onValueCommitted,
+}: FaderValueOptions) => {
+  const [uncontrolled, setUncontrolled] = useState(
+    defaultValue ?? clamp(resetValue, min, max)
+  );
+  const value = valueProp ?? uncontrolled;
+  const latestRef = useLatest(value);
+  const controlled = valueProp !== undefined;
+
+  const change = useCallback(
+    (db: number, details: FaderChangeDetails) => {
+      if (db === latestRef.current) {
+        return;
+      }
+      latestRef.current = db;
+      if (!controlled) {
+        setUncontrolled(db);
+      }
+      onValueChange?.(db, details);
+    },
+    [controlled, latestRef, onValueChange]
+  );
+
+  const commit = useCallback(
+    (db: number) => {
+      onValueCommitted?.(db);
+    },
+    [onValueCommitted]
+  );
+
+  return { change, commit, latestRef, value };
+};
+
+interface FaderSteppingOptions {
+  min: number;
+  max: number;
+  step: number;
+  largeStep: number;
+  fineStep: number;
+  silenceAtMin: boolean;
+  detents: number[];
+  taper: TaperInput;
+  latestRef: RefObject<number>;
+  change: (db: number, details: FaderChangeDetails) => void;
+  commit: (db: number) => void;
+}
+
+const incrementFor = (
+  event: { altKey: boolean; shiftKey: boolean },
+  step: number,
+  fineStep: number,
+  largeStep: number
+) => {
+  if (event.altKey) {
+    return fineStep;
+  }
+  return event.shiftKey ? largeStep : step;
+};
+
+/** Maps positions to dB and handles keyboard stepping. */
+const useFaderStepping = ({
+  min,
+  max,
+  step,
+  largeStep,
+  fineStep,
+  silenceAtMin,
+  detents,
+  taper,
+  latestRef,
+  change,
+  commit,
+}: FaderSteppingOptions) => {
+  const taperFn = useMemo(
+    () => resolveTaper(taper, min, max),
+    [taper, min, max]
+  );
+
+  const toPosition = useCallback(
+    (db: number) => (db === SILENCE_DB ? 0 : taperFn.toPosition(db)),
+    [taperFn]
+  );
+
+  const quantize = useCallback(
+    (db: number, increment: number) => {
+      if (db === SILENCE_DB) {
+        return silenceAtMin ? SILENCE_DB : min;
+      }
+      const stepped = min + Math.round((db - min) / increment) * increment;
+      return roundValue(clamp(stepped, min, max));
+    },
+    [max, min, silenceAtMin]
+  );
+
+  const fromPosition = useCallback(
+    (position: number, fine: boolean) => {
+      if (silenceAtMin && position <= 0) {
+        return SILENCE_DB;
+      }
+      for (const detent of detents) {
+        if (Math.abs(position - toPosition(detent)) < DETENT_SNAP) {
+          return detent;
+        }
+      }
+      return quantize(taperFn.toValue(position), fine ? fineStep : step);
+    },
+    [detents, fineStep, quantize, silenceAtMin, step, taperFn, toPosition]
+  );
+
+  const nudge = useCallback(
+    (direction: number, increment: number) => {
+      const { current } = latestRef;
+      if (current === SILENCE_DB) {
+        return direction > 0 ? min : SILENCE_DB;
+      }
+      if (silenceAtMin && direction < 0 && current <= min) {
+        return SILENCE_DB;
+      }
+      return quantize(
+        current + direction * increment,
+        Math.min(increment, step)
+      );
+    },
+    [latestRef, min, quantize, silenceAtMin, step]
+  );
+
+  const handleKeyDown = useCallback(
+    (event: KeyboardEvent<HTMLInputElement>) => {
+      const increment = incrementFor(event, step, fineStep, largeStep);
+      const targets: Record<string, () => number> = {
+        ArrowDown: () => nudge(-1, increment),
+        ArrowLeft: () => nudge(-1, increment),
+        ArrowRight: () => nudge(1, increment),
+        ArrowUp: () => nudge(1, increment),
+        End: () => max,
+        Home: () => (silenceAtMin ? SILENCE_DB : min),
+        PageDown: () => nudge(-1, largeStep),
+        PageUp: () => nudge(1, largeStep),
+      };
+      const target = targets[event.key];
+      if (!target) {
+        return;
+      }
+      event.preventDefault();
+      const next = target();
+      change(next, { event: event.nativeEvent, reason: "keyboard" });
+      commit(next);
+    },
+    [change, commit, fineStep, largeStep, max, min, nudge, silenceAtMin, step]
+  );
+
+  return { fromPosition, handleKeyDown, nudge, taperFn, toPosition };
+};
+
+/** Mouse-wheel adjustment while focused, with a non-passive listener. */
+const useFaderWheel = (
+  rootRef: RefObject<HTMLDivElement | null>,
+  enabled: boolean,
+  handlers: {
+    disabled: boolean;
+    fineStep: number;
+    step: number;
+    nudge: (direction: number, increment: number) => number;
+    change: (db: number, details: FaderChangeDetails) => void;
+    commit: (db: number) => void;
+  }
+) => {
+  const latest = useLatest(handlers);
+
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!(root && enabled)) {
+      return;
+    }
+    const onWheel = (event: globalThis.WheelEvent) => {
+      const { current } = latest;
+      const focused = root.contains(document.activeElement);
+      if (current.disabled || !focused || event.deltaY === 0) {
+        return;
+      }
+      event.preventDefault();
+      const next = current.nudge(
+        event.deltaY < 0 ? 1 : -1,
+        event.altKey ? current.fineStep : current.step
+      );
+      current.change(next, { event, reason: "wheel" });
+      current.commit(next);
+    };
+    root.addEventListener("wheel", onWheel, { passive: false });
+    return () => {
+      root.removeEventListener("wheel", onWheel);
+    };
+  }, [enabled, latest, rootRef]);
+};
+
+/** Orientation, size and disabled, from props or the surrounding strip. */
+const useControlSettings = (props: {
+  orientation?: Orientation;
+  size?: AudioSize;
+  disabled?: boolean;
+}) => {
+  const config = useAudioConfig();
+  return {
+    disabled: props.disabled ?? config.disabled ?? false,
+    orientation: props.orientation ?? config.orientation ?? "horizontal",
+    size: props.size ?? config.size ?? "default",
+  };
+};
+
+export const Fader = ({
+  value: valueProp,
+  defaultValue,
+  onValueChange,
+  onValueCommitted,
+  min = DEFAULT_MIN_DB,
+  max = DEFAULT_MAX_DB,
+  step = 0.5,
+  largeStep = 6,
+  fineStep = 0.1,
+  resetValue = 0,
+  taper = "linear",
+  origin,
+  detents = DEFAULT_DETENTS,
+  silenceAtMin = false,
+  allowWheel = false,
+  orientation: orientationProp,
+  variant = "default",
+  size: sizeProp,
+  format = defaultFormat,
+  disabled: disabledProp,
+  className,
+  children,
+  ref,
+  ...props
+}: FaderProps) => {
+  const { disabled, orientation, size } = useControlSettings({
+    disabled: disabledProp,
+    orientation: orientationProp,
+    size: sizeProp,
+  });
+  const { change, commit, latestRef, value } = useFaderValue({
+    defaultValue,
+    max,
+    min,
+    onValueChange,
+    onValueCommitted,
+    resetValue,
+    value: valueProp,
+  });
+  const { fromPosition, handleKeyDown, nudge, taperFn, toPosition } =
+    useFaderStepping({
+      change,
+      commit,
+      detents,
+      fineStep,
+      largeStep,
+      latestRef,
+      max,
+      min,
+      silenceAtMin,
+      step,
+      taper,
+    });
+
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  useFaderWheel(rootRef, allowWheel, {
+    change,
+    commit,
+    disabled,
+    fineStep,
+    nudge,
+    step,
+  });
+
+  const setRootRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      rootRef.current = node;
+      if (typeof ref === "function") {
+        ref(node);
+      } else if (ref) {
+        ref.current = node;
+      }
+    },
+    [ref]
+  );
+
+  const position = toPosition(value);
+  const originPosition = toPosition(clamp(origin ?? min, min, max));
+
+  const contextValue = useMemo<FaderContextValue>(
+    () => ({
+      change,
+      commit,
+      disabled,
+      format,
+      handleKeyDown,
+      max,
+      min,
+      orientation,
+      originPosition,
+      position,
+      resetValue,
+      size,
+      taper: taperFn,
+      value,
+      variant,
+    }),
+    [
+      change,
+      commit,
+      disabled,
+      format,
+      handleKeyDown,
+      max,
+      min,
+      orientation,
+      originPosition,
+      position,
+      resetValue,
+      size,
+      taperFn,
+      value,
+      variant,
+    ]
+  );
+
+  return (
+    <FaderContext.Provider value={contextValue}>
+      <SliderPrimitive.Root
+        className={cn(faderVariants({ orientation, size }), className)}
+        data-at-detent={detents.includes(value) ? "" : undefined}
+        data-silent={value === SILENCE_DB ? "" : undefined}
+        data-size={size}
+        data-slot="fader"
+        data-variant={variant}
+        disabled={disabled}
+        max={1}
+        min={0}
+        onValueChange={(next, details) => {
+          const fine =
+            "altKey" in details.event &&
+            Boolean((details.event as MouseEvent).altKey);
+          const reason: FaderChangeReason =
+            details.reason === "track-press" ? "track-press" : "drag";
+          change(fromPosition(next, fine), { event: details.event, reason });
+        }}
+        onValueCommitted={() => {
+          commit(latestRef.current);
+        }}
+        orientation={orientation}
+        ref={setRootRef}
+        step={POSITION_STEP}
+        value={position}
+        {...props}
+      >
+        {children ?? (
+          <FaderTrack>
+            <FaderRange />
+            <FaderThumb />
+          </FaderTrack>
+        )}
+      </SliderPrimitive.Root>
+    </FaderContext.Provider>
+  );
 };
 
 export { faderVariants };
