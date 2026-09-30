@@ -14,15 +14,17 @@ const componentCount = source
   .filter((page) => page.url.startsWith("/docs/components/")).length;
 
 const Page = () => (
-  <main className="relative isolate w-full">
-    <div
-      aria-hidden
-      className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-150 mask-b-from-60%"
-    >
-      <HeroThreads />
-    </div>
-    <div className="mx-auto flex w-full max-w-7xl flex-col px-4 pt-16 pb-24 sm:px-6 lg:pt-24">
-      <section className="flex flex-col items-center gap-6 text-center">
+  <main className="w-full">
+    {/* The threads sit on the hero's bottom edge, so they cross the install
+        command however the text above it wraps, and never reach the grid. */}
+    <section className="relative isolate overflow-hidden px-4 pt-16 pb-24 sm:px-6 lg:pt-24 lg:pb-32">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-150 mask-b-from-60% lg:bottom-4"
+      >
+        <HeroThreads />
+      </div>
+      <div className="mx-auto flex max-w-7xl flex-col items-center gap-6 text-center">
         <Link
           className="text-muted-foreground hover:text-foreground hover:bg-muted/60 focus-visible:ring-ring/50 group/pill flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition-colors outline-none focus-visible:ring-3"
           href="/docs/components"
@@ -56,8 +58,10 @@ const Page = () => (
         <CopyCommand
           command={`npx shadcn@latest add ${siteConfig.registryNamespace}/mixer`}
         />
-      </section>
-      <div className="mt-24 mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between lg:mt-32">
+      </div>
+    </section>
+    <div className="mx-auto flex w-full max-w-7xl flex-col px-4 pb-24 sm:px-6">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-muted-foreground text-sm">
           Everything here is live. Drag a fader, turn a knob, hit a pad.
         </p>
