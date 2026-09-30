@@ -1,0 +1,29 @@
+{
+  "title": "Components",
+  "pages": [
+    "---Meters and visualizers---",
+    "level-meter",
+    "db-scale",
+    "db-readout",
+    "clip-indicator",
+    "bar-visualizer",
+    "live-waveform",
+    "waveform",
+    "spectrum",
+    "---Controls---",
+    "fader",
+    "parameter-slider",
+    "knob",
+    "pan-control",
+    "channel-toggle",
+    "volume-control",
+    "audio-device-select",
+    "---Mixer---",
+    "channel-strip",
+    "mixer",
+    "---Sounds and music---",
+    "audio-player",
+    "track-list",
+    "sound-pad"
+  ]
+}

@@ -1,0 +1,182 @@
+---
+title: Level Meter
+description: A peak and RMS level meter with zones, peak hold, a scale, a readout and a clip light.
+---
+
+<ComponentPreview name="level-meter-demo" />
+
+## Installation
+
+```npm
+npx shadcn@latest add @audiocn/level-meter
+```
+
+## Usage
+
+```tsx
+import { LevelMeter } from "@/components/ui/level-meter";
+```
+
+```tsx
+<LevelMeter aria-label="Microphone level" peakDb={-12} />
+```
+
+With no children, `LevelMeter` renders one track per channel with a peak bar
+and a peak-hold tick. Add children to control the anatomy.
+
+## Anatomy
+
+```tsx
+<LevelMeter source={analyser.meter}>
+  <LevelMeterChannels>
+    <LevelMeterChannel index={0}>
+      <LevelMeterTrack>
+        <LevelMeterBar measure="rms" />
+        <LevelMeterBar measure="peak" />
+        <LevelMeterHold />
+      </LevelMeterTrack>
+    </LevelMeterChannel>
+    <LevelMeterScale />
+  </LevelMeterChannels>
+  <LevelMeterValue />
+  <LevelMeterClip />
+</LevelMeter>
+```
+
+## Examples
+
+### Default
+
+<ComponentPreview name="level-meter-simple" />
+
+### Values
+
+Pass `peakDb` (and optionally `rmsDb`) for data that arrives slowly. The meter
+still moves smoothly between updates.
+
+<ComponentPreview name="level-meter-values" />
+
+### Vertical
+
+<ComponentPreview name="level-meter-vertical" />
+
+### Variants
+
+<ComponentPreview name="level-meter-variants" />
+
+### Peak and RMS
+
+Layer an `rms` bar over a translucent `peak` bar for a dual meter.
+
+<ComponentPreview name="level-meter-dual" />
+
+### Ballistics
+
+`peak` rises in 15 ms and falls steadily; `vu` is slow and averaged; `instant`
+follows the input exactly.
+
+<ComponentPreview name="level-meter-ballistics" />
+
+### Colors and zones
+
+Override the meter tokens with a class, or pass your own `zones`.
+
+<ComponentPreview name="level-meter-custom-colors" />
+
+### Build your own visual
+
+Each channel writes its live level to `--meter-level` (0..1). Anything inside a
+`LevelMeterChannel` can use it in CSS.
+
+<ComponentPreview name="level-meter-css-level" />
+
+### Microphone
+
+<ComponentPreview name="level-meter-microphone" />
+
+## Feeding data
+
+A meter accepts levels three ways. See [Feeding data](/docs/concepts/feeding-data).
+
+```tsx
+// A source: subscribes and paints itself, no React renders.
+<LevelMeter source={analyser.meter} />
+
+// Values: for slow data. Ballistics smooth the movement.
+<LevelMeter peakDb={-9.1} rmsDb={-18} />
+
+// A handle: for callers that own their own frame loop.
+const meter = useRef<LevelMeterActions>(null);
+meter.current?.paint({ channels: [{ peakDb: -9.1 }] });
+<LevelMeter actionsRef={meter} />
+```
+
+## Theming
+
+| Token or variable | Where | Default |
+| --- | --- | --- |
+| `--meter-ok`, `--meter-warn`, `--meter-clip` | theme | green, amber, `--destructive` |
+| `--meter-thickness` | root | `0.5rem` (`sm` 0.25rem, `lg` 0.75rem) |
+| `--meter-gap` | root | `0.25rem`, between channels |
+| `--meter-level`, `--meter-rms`, `--meter-hold` | each channel, live | 0..1 |
+
+| Data attribute | On | Meaning |
+| --- | --- | --- |
+| `data-orientation`, `data-variant`, `data-size` | root | Current settings |
+| `data-zone` | root, channels | `ok`, `warn` or `clip` |
+| `data-clipping` | root | The signal clipped in the last 1.5 s |
+| `data-active` | channels | The level is above the bottom of the range |
+| `data-dimmed` | root | Inside a muted or silenced channel strip |
+| `data-measure` | bars | `peak` or `rms` |
+
+## Accessibility
+
+- The root has `role="meter"` with `aria-valuemin`, `aria-valuemax` and
+  `aria-valuenow` in dB, and `aria-valuetext` such as "−12.0 dB". These update
+  at most four times a second.
+- Give every meter a name with `aria-label` or `aria-labelledby`.
+- With reduced motion, the meter shows the current level four times a second
+  instead of animating.
+
+## API reference
+
+### LevelMeter
+
+<PropsTable
+  rows={[
+    ["source", "FrameSource<MeterFrame> | null", null, "Subscribes and paints without re-rendering React."],
+    ["peakDb", "number", null, "Mono peak level in dBFS, for declarative use."],
+    ["rmsDb", "number", null, "Mono RMS level in dBFS."],
+    ["channels", "ChannelLevel[]", null, "Levels per channel, for declarative multi-channel use."],
+    ["channelCount", "number", "1", "Tracks to render before data arrives."],
+    ["minDb", "number", "-60", "Bottom of the displayed range."],
+    ["maxDb", "number", "0", "Top of the displayed range."],
+    ["zones", "MeterZone[]", "DEFAULT_ZONES", "Colour zones: ok, warn from −20, clip from −9."],
+    ["ballistics", '"peak" | "vu" | "instant" | Partial<BallisticsOptions>', '"peak"', "How the meter moves."],
+    ["taper", '"linear" | "audio" | Taper', '"linear"', "Scale law."],
+    ["orientation", '"horizontal" | "vertical"', '"horizontal"', "Inherited from a channel strip."],
+    ["variant", '"solid" | "segmented" | "gradient"', '"solid"', "segmented is an LED ladder."],
+    ["segments", "number", "24", "Segments for the segmented variant."],
+    ["size", '"sm" | "default" | "lg"', '"default"', "Track thickness."],
+    ["actionsRef", "Ref<LevelMeterActions>", null, "{ paint(frame), reset() }."],
+  ]}
+/>
+
+### LevelMeterChannel
+
+<PropsTable
+  rows={[["index", "number", "0", "Which channel of the frames this track shows."]]}
+/>
+
+### LevelMeterBar
+
+<PropsTable
+  rows={[["measure", '"peak" | "rms"', '"peak"', "Which measurement the bar shows."]]}
+/>
+
+### LevelMeterScale, LevelMeterValue, LevelMeterClip
+
+These wrap [`DbScale`](/docs/components/db-scale),
+[`DbReadout`](/docs/components/db-readout) and
+[`ClipIndicator`](/docs/components/clip-indicator), and take their props. The
+range, orientation and data come from the meter.

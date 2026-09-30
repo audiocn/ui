@@ -6,4 +6,14 @@ import type { ComponentType } from "react";
 
 export const examples: Record<string, ComponentType | undefined> = {
   "frame-source-demo": dynamic(() => import("@/components/examples/frame-source-demo")),
+  "level-meter-ballistics": dynamic(() => import("@/components/examples/level-meter-ballistics")),
+  "level-meter-css-level": dynamic(() => import("@/components/examples/level-meter-css-level")),
+  "level-meter-custom-colors": dynamic(() => import("@/components/examples/level-meter-custom-colors")),
+  "level-meter-demo": dynamic(() => import("@/components/examples/level-meter-demo")),
+  "level-meter-dual": dynamic(() => import("@/components/examples/level-meter-dual")),
+  "level-meter-microphone": dynamic(() => import("@/components/examples/level-meter-microphone")),
+  "level-meter-simple": dynamic(() => import("@/components/examples/level-meter-simple")),
+  "level-meter-values": dynamic(() => import("@/components/examples/level-meter-values")),
+  "level-meter-variants": dynamic(() => import("@/components/examples/level-meter-variants")),
+  "level-meter-vertical": dynamic(() => import("@/components/examples/level-meter-vertical")),
 };
