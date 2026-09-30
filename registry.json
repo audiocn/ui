@@ -846,6 +846,41 @@
       "categories": [
         "sounds"
       ]
+    },
+    {
+      "name": "music-player",
+      "type": "registry:block",
+      "title": "Music Player",
+      "description": "A playlist player with a waveform seek bar, shuffle, repeat, volume and optional ducking under the microphone.",
+      "dependencies": [
+        "@phosphor-icons/react"
+      ],
+      "registryDependencies": [
+        "card",
+        "empty",
+        "label",
+        "switch",
+        "toggle",
+        "@audiocn/audio-player",
+        "@audiocn/parameter-slider",
+        "@audiocn/track-list",
+        "@audiocn/volume-control",
+        "@audiocn/waveform",
+        "@audiocn/use-audio-analyser",
+        "@audiocn/use-audio-context",
+        "@audiocn/use-audio-player",
+        "@audiocn/use-frame-source",
+        "@audiocn/use-waveform-data"
+      ],
+      "files": [
+        {
+          "path": "components/blocks/music-player/music-player.tsx",
+          "type": "registry:block"
+        }
+      ],
+      "categories": [
+        "music"
+      ]
     }
   ]
 }
