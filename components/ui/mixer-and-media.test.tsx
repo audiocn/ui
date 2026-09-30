@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
+import type { CSSProperties } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import {
@@ -63,6 +64,24 @@ describe("ChannelStrip", () => {
     const meter = screen.getByRole("meter");
     expect(meter).toHaveAttribute("data-orientation", "vertical");
     expect(meter).toHaveAttribute("data-dimmed");
+  });
+
+  it("lays its parts out on an inner grid and keeps console strips from shrinking", () => {
+    const { rerender } = render(
+      <ChannelStrip>
+        <ChannelStripTitle>Mic</ChannelStripTitle>
+      </ChannelStrip>
+    );
+    const strip = screen.getByRole("group", { name: "Mic" });
+    const layout = strip.querySelector('[data-slot="channel-strip-layout"]');
+    expect(layout).toContainElement(screen.getByText("Mic"));
+    expect(strip.className).toContain("@container/channel-strip");
+    rerender(
+      <ChannelStrip orientation="vertical">
+        <ChannelStripTitle>Mic</ChannelStripTitle>
+      </ChannelStrip>
+    );
+    expect(screen.getByRole("group", { name: "Mic" })).toHaveClass("shrink-0");
   });
 
   it("exposes its state to custom parts", () => {
@@ -159,6 +178,34 @@ describe("TrackList", () => {
 });
 
 describe("SoundPad", () => {
+  it("keeps its accent when a trigger passes its own style", () => {
+    render(
+      <SoundPad accent="red" style={{ "--from-test": "1" } as CSSProperties}>
+        Pad
+      </SoundPad>
+    );
+    const pad = screen.getByRole("button", { name: "Pad" });
+    expect(pad.style.getPropertyValue("--pad-accent")).toBe("red");
+    expect(pad.style.getPropertyValue("--from-test")).toBe("1");
+  });
+
+  it("caps grid columns and keeps a minimum pad width", () => {
+    render(
+      <SoundPadGrid
+        aria-label="Pads"
+        columns={4}
+        style={{ "--from-test": "1" } as CSSProperties}
+      >
+        <SoundPad>Pad</SoundPad>
+      </SoundPadGrid>
+    );
+    const grid = screen.getByRole("group", { name: "Pads" });
+    const columns = grid.style.getPropertyValue("--pad-columns");
+    expect(columns).toContain("auto-fill");
+    expect(columns).toContain("/ 4");
+    expect(grid.style.getPropertyValue("--from-test")).toBe("1");
+  });
+
   it("toggles in toggle mode", () => {
     const onTrigger = vi.fn();
     const onStop = vi.fn();

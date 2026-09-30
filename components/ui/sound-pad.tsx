@@ -85,7 +85,10 @@ const moveFocus = (event: KeyboardEvent<HTMLDivElement>) => {
 };
 
 export interface SoundPadGridProps extends ComponentProps<"div"> {
-  /** Default 4. Also settable with a class. */
+  /**
+   * The most columns. The grid drops columns to keep pads at least
+   * `--pad-min-width` wide (default 5.5rem). Default 4.
+   */
   columns?: number;
   /** Listen for pad hotkeys. Default false. */
   hotkeys?: boolean;
@@ -98,6 +101,7 @@ export const SoundPadGrid = ({
   hotkeys = false,
   hotkeyScope = "focus",
   className,
+  style,
   onKeyDown,
   onKeyUp,
   ...props
@@ -171,7 +175,10 @@ export const SoundPadGrid = ({
   return (
     <SoundPadGridContext.Provider value={contextValue}>
       <div
-        className={cn("grid grid-cols-(--pad-columns) gap-2", className)}
+        className={cn(
+          "grid grid-cols-(--pad-columns) gap-(--pad-gap) [--pad-gap:0.5rem]",
+          className
+        )}
         data-slot="sound-pad-grid"
         onKeyDown={(event) => {
           onKeyDown?.(event);
@@ -199,7 +206,9 @@ export const SoundPadGrid = ({
         role="group"
         style={
           {
-            "--pad-columns": `repeat(${columns}, minmax(0, 1fr))`,
+            // Up to `columns` tracks, never narrower than --pad-min-width.
+            "--pad-columns": `repeat(auto-fill, minmax(max(var(--pad-min-width, 5.5rem), calc((100% - ${columns - 1} * var(--pad-gap)) / ${columns})), 1fr))`,
+            ...style,
           } as CSSProperties
         }
         {...props}
@@ -257,6 +266,7 @@ export const SoundPad = ({
   size = "default",
   disabled,
   className,
+  style,
   onPointerDown,
   onPointerUp,
   onPointerLeave,
@@ -359,7 +369,10 @@ export const SoundPad = ({
           release();
         }}
         style={
-          accent ? ({ "--pad-accent": accent } as CSSProperties) : undefined
+          {
+            "--pad-accent": accent,
+            ...style,
+          } as CSSProperties
         }
         type="button"
         {...props}
@@ -390,7 +403,10 @@ export const SoundPadLabel = ({
   ...props
 }: ComponentProps<"span">) => (
   <span
-    className={cn("relative line-clamp-2 text-sm font-medium", className)}
+    className={cn(
+      "relative mt-auto line-clamp-2 text-sm font-medium group-has-data-[variant=ring]/sound-pad:pe-6",
+      className
+    )}
     data-slot="sound-pad-label"
     {...props}
   />

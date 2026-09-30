@@ -61,6 +61,8 @@ Press 1–8 while the grid has focus. Whoosh toggles and the drum roll plays onl
 | --- | --- |
 | `--pad-accent` | Set by `accent`, default `primary` |
 | `--pad-progress` | Live progress, 0..1 |
+| `--pad-min-width` | Narrowest pad before the grid drops a column, default `5.5rem`. Set on `SoundPadGrid` |
+| `--pad-gap` | Gap between pads, default `0.5rem`. Set on `SoundPadGrid` |
 | `data-playing`, `data-pressed`, `data-mode`, `data-loading` | State |
 
 ## Accessibility
@@ -90,7 +92,12 @@ A pad is a real `<button>`. In toggle and loop modes it has `aria-pressed`. The 
 
 <PropsTable
   rows={[
-    ["columns", "number", "4", "Also settable with a class."],
+    [
+      "columns",
+      "number",
+      "4",
+      "The most columns. The grid drops columns to keep pads at least `--pad-min-width` wide; a `grid-cols-*` class fixes the count.",
+    ],
     ["hotkeys", "boolean", "false", "Listen for pad hotkeys."],
     [
       "hotkeyScope",
