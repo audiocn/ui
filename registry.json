@@ -276,6 +276,30 @@
           "type": "registry:ui"
         }
       ]
+    },
+    {
+      "name": "level-meter",
+      "type": "registry:ui",
+      "title": "Level Meter",
+      "description": "A peak and RMS level meter: mono or stereo, horizontal or vertical, solid, segmented or gradient, with zones, peak hold, a scale, a readout and a clip light.",
+      "dependencies": [
+        "class-variance-authority"
+      ],
+      "registryDependencies": [
+        "@audiocn/core",
+        "@audiocn/use-audio-config",
+        "@audiocn/use-frame-source",
+        "@audiocn/use-reduced-motion",
+        "@audiocn/db-scale",
+        "@audiocn/db-readout",
+        "@audiocn/clip-indicator"
+      ],
+      "files": [
+        {
+          "path": "components/ui/level-meter.tsx",
+          "type": "registry:ui"
+        }
+      ]
     }
   ]
 }
