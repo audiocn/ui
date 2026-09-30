@@ -20,6 +20,20 @@ const collectPages = (dir: string, prefix = "/docs"): string[] =>
 
 const pages = collectPages(DOCS_DIR);
 
+test("missing docs pages offer a way back to the documentation", async ({
+  page,
+}) => {
+  const response = await page.goto("/docs/does-not-exist");
+  expect(response?.status()).toBe(404);
+  await expect(
+    page.getByRole("heading", { name: "Page not found" })
+  ).toBeVisible();
+  await page.getByRole("link", { name: "Browse documentation" }).click();
+  await expect(
+    page.getByRole("heading", { exact: true, name: "Introduction" })
+  ).toBeVisible();
+});
+
 test.describe("every docs page", () => {
   for (const url of pages) {
     test(`renders ${url}`, async ({ page }) => {
