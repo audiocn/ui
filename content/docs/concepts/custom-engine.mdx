@@ -1,0 +1,74 @@
+---
+title: Using your own audio engine
+description: Drive audiocn from a native backend, a WebSocket, a worker or anything else.
+---
+
+The Web Audio hooks are optional. If your audio runs somewhere else, such as a
+Rust or C++ engine in a desktop app, a server, or an `AudioWorklet`, use the
+components and the audio core on their own.
+
+## Levels from anywhere
+
+Wrap your data in a frame source with `createFrameEmitter`:
+
+```ts
+import { createFrameEmitter } from "@/lib/audio/frame-source";
+import type { MeterFrame } from "@/lib/audio/types";
+
+export const micLevels = createFrameEmitter<MeterFrame>();
+
+backend.on("levels", ({ peakDb, rmsDb }) => {
+  micLevels.emit({ channels: [{ peakDb, rmsDb }] });
+});
+```
+
+```tsx
+<LevelMeter aria-label="Microphone" source={micLevels} />
+```
+
+Meters apply their own ballistics, so any update rate works: at 30 updates a
+second or more they look like a hardware meter, and at one a second they still
+move smoothly.
+
+## Controls to anywhere
+
+Controls report values; they never touch audio. Send changes to your engine:
+
+```tsx
+<Fader
+  onValueChange={(gainDb) => backend.setGain("mic", gainDb)}
+  onValueCommitted={(gainDb) => settings.save({ micGainDb: gainDb })}
+  value={micGainDb}
+/>
+```
+
+Use `onValueChange` for live updates and `onValueCommitted` for anything slow,
+such as saving settings.
+
+## Mixer state without Web Audio
+
+[`useMixer`](/docs/hooks/use-mixer) holds gain, mute, solo, pan and monitor for
+every channel and knows which channels are audible. Send its state to your
+engine:
+
+```tsx
+const mixer = useMixer({ channels, onStateChange: (state) => backend.applyMixer(state) });
+```
+
+## Devices from anywhere
+
+[`AudioDeviceSelect`](/docs/components/audio-device-select) takes its devices as
+a prop, including their status, so a native device list works the same as the
+browser's.
+
+## Swapping sources
+
+If the audio behind a meter restarts, use a relay so components keep their
+subscription:
+
+```ts
+import { createFrameRelay } from "@/lib/audio/frame-source";
+
+const relay = createFrameRelay<MeterFrame>();
+relay.setSource(currentSession.levels);
+```

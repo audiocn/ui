@@ -1,0 +1,88 @@
+---
+title: Feeding data
+description: Every meter and visualizer accepts levels three ways, so it fits any audio source.
+---
+
+audiocn components never open a microphone or connect to Web Audio themselves.
+They receive levels, and they accept them three ways.
+
+## 1. A source
+
+A **frame source** is anything with a `subscribe` method:
+
+```ts
+interface FrameSource<T> {
+  subscribe: (callback: (frame: T) => void) => () => void;
+}
+```
+
+Pass one as `source` and the component subscribes and paints itself on every
+animation frame, without re-rendering React. This is the fastest way, and the
+one to use for live audio.
+
+```tsx
+const analyser = useAudioAnalyser(stream);
+
+<LevelMeter source={analyser.meter} />;
+<BarVisualizer source={analyser.visual} />;
+```
+
+The hooks in this library return sources, and so can your own code:
+
+```ts
+import { createFrameEmitter } from "@/lib/audio/frame-source";
+
+const levels = createFrameEmitter<MeterFrame>();
+socket.on("levels", (frame) => levels.emit(frame));
+
+<LevelMeter source={levels} />;
+```
+
+## 2. Values
+
+For data that arrives slowly, such as once a second from a server, pass plain
+values. The meter's ballistics still move it smoothly between updates.
+
+```tsx
+<LevelMeter peakDb={-9.1} rmsDb={-18} />
+<LevelMeter channels={[{ peakDb: -12 }, { peakDb: -14 }]} />
+```
+
+## 3. A handle
+
+If you already run your own frame loop, paint through `actionsRef`:
+
+```tsx
+const meter = useRef<LevelMeterActions>(null);
+
+onFrame((levels) => {
+  meter.current?.paint({ channels: levels });
+});
+
+<LevelMeter actionsRef={meter} />;
+```
+
+## Frames
+
+```ts
+interface MeterFrame {
+  channels: { peakDb: number; rmsDb?: number }[];
+}
+
+interface VisualFrame {
+  bands: Float32Array; // 0..1 per frequency band
+  history: Float32Array; // ring of recent levels, 0..1
+  historyStart: number;
+  historyLength: number;
+  timeDomain?: Float32Array; // −1..1 samples
+  peakDb: number;
+}
+```
+
+Sources reuse their frame objects to avoid allocating on every frame. Copy a
+frame if you need to keep it.
+
+## In React state
+
+When you need a level in React, for a label or a warning, use
+[`useLevel`](/docs/hooks/use-level). It samples a source a few times a second.
