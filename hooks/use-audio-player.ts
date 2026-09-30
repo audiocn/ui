@@ -219,13 +219,13 @@ export const useAudioPlayer = ({
 
   const time = useMemo<FrameSource<number>>(
     () => ({
-      subscribe: (callback) => {
-        timeSubscribers.add(callback);
+      subscribe: (listener) => {
+        timeSubscribers.add(listener);
         if (element) {
-          callback(element.currentTime);
+          listener(element.currentTime);
         }
         return () => {
-          timeSubscribers.delete(callback);
+          timeSubscribers.delete(listener);
         };
       },
     }),

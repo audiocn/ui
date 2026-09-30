@@ -239,10 +239,10 @@ export const useSound = (
 
   const progress = useMemo<FrameSource<number>>(
     () => ({
-      subscribe: (callback) => {
-        progressSubscribers.add(callback);
+      subscribe: (listener) => {
+        progressSubscribers.add(listener);
         return () => {
-          progressSubscribers.delete(callback);
+          progressSubscribers.delete(listener);
         };
       },
     }),

@@ -32,7 +32,7 @@ interface WaveformContextValue {
   /** Current progress, 0..1, read by the canvas and cursor on every frame. */
   progressRef: { current: number };
   hoverRef: { current: number | null };
-  subscribeHover: (callback: () => void) => () => void;
+  subscribeHover: (listener: () => void) => () => void;
   timeToPosition: (time: number) => number;
 }
 
@@ -192,10 +192,10 @@ export const Waveform = ({
       loading,
       peaks,
       progressRef,
-      subscribeHover: (callback) => {
-        hoverListeners.add(callback);
+      subscribeHover: (listener) => {
+        hoverListeners.add(listener);
         return () => {
-          hoverListeners.delete(callback);
+          hoverListeners.delete(listener);
         };
       },
       timeToPosition,

@@ -304,11 +304,11 @@ export const createDemoSignal = (
   const sourceFor = <T>(
     subscribers: Set<(frame: T) => void>
   ): FrameSource<T> => ({
-    subscribe: (callback) => {
-      subscribers.add(callback);
+    subscribe: (listener) => {
+      subscribers.add(listener);
       updateLoop();
       return () => {
-        subscribers.delete(callback);
+        subscribers.delete(listener);
         updateLoop();
       };
     },
