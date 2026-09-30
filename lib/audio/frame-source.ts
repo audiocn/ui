@@ -33,3 +33,56 @@ export const createFrameEmitter = <T>(): FrameEmitter<T> => {
     },
   };
 };
+
+export interface FrameRelay<T> extends FrameSource<T> {
+  /** Forwards frames from `source`. Subscribers stay attached when it changes. */
+  setSource: (source: FrameSource<T> | null) => void;
+}
+
+/**
+ * A frame source whose upstream can be swapped. Components keep a stable
+ * subscription while the audio behind it is rebuilt.
+ */
+export const createFrameRelay = <T>(): FrameRelay<T> => {
+  const subscribers = new Set<(frame: T) => void>();
+  let source: FrameSource<T> | null = null;
+  let detach: (() => void) | null = null;
+
+  const forward = (frame: T) => {
+    for (const subscriber of subscribers) {
+      subscriber(frame);
+    }
+  };
+
+  const attach = () => {
+    if (!detach && source && subscribers.size > 0) {
+      detach = source.subscribe(forward);
+    }
+  };
+
+  const release = () => {
+    detach?.();
+    detach = null;
+  };
+
+  return {
+    setSource: (next) => {
+      if (next === source) {
+        return;
+      }
+      release();
+      source = next;
+      attach();
+    },
+    subscribe: (callback) => {
+      subscribers.add(callback);
+      attach();
+      return () => {
+        subscribers.delete(callback);
+        if (subscribers.size === 0) {
+          release();
+        }
+      };
+    },
+  };
+};

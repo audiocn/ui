@@ -6,11 +6,12 @@ import { useAudioContext } from "@/hooks/use-audio-context";
 import { bandsFromSpectrum, logBandEdges } from "@/lib/audio/bands";
 import { dbToLevel, peakDb, rmsDb } from "@/lib/audio/decibels";
 import { subscribeFrame } from "@/lib/audio/frame-loop";
+import { createFrameRelay } from "@/lib/audio/frame-source";
 import type { FrameSource, MeterFrame, VisualFrame } from "@/lib/audio/types";
 
 export type AnalyserInput = MediaStream | HTMLMediaElement | AudioNode | null;
 
-export interface AudioAnalyserOptions {
+export interface AnalyserTapOptions {
   /** Analyser FFT size. Default 2048. */
   fftSize?: number;
   /** Analyser smoothing constant, 0..1. Default 0.3. */
@@ -29,6 +30,9 @@ export interface AudioAnalyserOptions {
   intervalMs?: number;
   /** `stereo` measures left and right separately. Default `mono`. */
   channels?: "mono" | "stereo";
+}
+
+export interface AudioAnalyserOptions extends AnalyserTapOptions {
   /** Pause analysis without tearing it down. Default true. */
   enabled?: boolean;
 }
@@ -41,14 +45,20 @@ export interface AudioAnalyser {
   status: AudioAnalyserStatus;
 }
 
+export interface AnalyserTap {
+  meter: FrameSource<MeterFrame>;
+  visual: FrameSource<VisualFrame>;
+  dispose: () => void;
+}
+
 const mediaElementSources = new WeakMap<
   HTMLMediaElement,
   MediaElementAudioSourceNode
 >();
 
 /**
- * Connects a media element to the context once. Its audio then plays through
- * the context instead of directly, so it is also routed to the speakers.
+ * Connects a media element to the context once, and routes it to the
+ * speakers through the context so it keeps playing.
  */
 export const getMediaElementSource = (
   context: AudioContext,
@@ -64,7 +74,8 @@ export const getMediaElementSource = (
   return node;
 };
 
-const createSourceNode = (
+/** Turns any analyser input into an audio node, and says whether you own it. */
+export const createInputNode = (
   context: AudioContext,
   input: Exclude<AnalyserInput, null>
 ): { node: AudioNode; owned: boolean } => {
@@ -77,25 +88,29 @@ const createSourceNode = (
   return { node: input, owned: false };
 };
 
-interface Graph {
-  analysers: AnalyserNode[];
-  mix: AnalyserNode;
-  sampleRate: number;
-  dispose: () => void;
-}
-
-const buildGraph = (
-  context: AudioContext,
-  input: Exclude<AnalyserInput, null>,
-  options: Required<
-    Pick<AudioAnalyserOptions, "fftSize" | "smoothing" | "channels">
-  >
-): Graph => {
-  const { node, owned } = createSourceNode(context, input);
+/**
+ * Taps an audio node with analysers and exposes meter and visual frame
+ * sources. Analysis runs only while something is subscribed.
+ */
+export const createAnalyserTap = (
+  context: BaseAudioContext,
+  node: AudioNode,
+  {
+    fftSize = 2048,
+    smoothing = 0.3,
+    bands = 32,
+    minHz = 40,
+    maxHz = 16_000,
+    historySize = 60,
+    historyIntervalMs = 50,
+    intervalMs = 0,
+    channels = "mono",
+  }: AnalyserTapOptions = {}
+): AnalyserTap => {
   const createAnalyser = () => {
     const analyser = context.createAnalyser();
-    analyser.fftSize = options.fftSize;
-    analyser.smoothingTimeConstant = options.smoothing;
+    analyser.fftSize = fftSize;
+    analyser.smoothingTimeConstant = smoothing;
     return analyser;
   };
 
@@ -103,8 +118,7 @@ const buildGraph = (
   node.connect(mix);
   const analysers: AnalyserNode[] = [];
   let splitter: ChannelSplitterNode | null = null;
-
-  if (options.channels === "stereo") {
+  if (channels === "stereo") {
     splitter = context.createChannelSplitter(2);
     node.connect(splitter);
     for (let channel = 0; channel < 2; channel += 1) {
@@ -116,162 +130,171 @@ const buildGraph = (
     analysers.push(mix);
   }
 
-  const dispose = () => {
-    node.disconnect(mix);
-    if (splitter) {
-      node.disconnect(splitter);
-      splitter.disconnect();
-    }
-    if (owned) {
-      node.disconnect();
+  const timeDomain = new Float32Array(fftSize);
+  const mixTimeDomain = new Float32Array(fftSize);
+  const spectrum = new Float32Array(mix.frequencyBinCount);
+  const edges = logBandEdges(
+    bands,
+    minHz,
+    Math.min(maxHz, context.sampleRate / 2)
+  );
+  const meterFrame: MeterFrame = { channels: [] };
+  const visualFrame: VisualFrame = {
+    bands: new Float32Array(bands),
+    history: new Float32Array(historySize),
+    historyLength: 0,
+    historyStart: 0,
+    peakDb: Number.NEGATIVE_INFINITY,
+    timeDomain: mixTimeDomain,
+  };
+  const meterSubscribers = new Set<(frame: MeterFrame) => void>();
+  const visualSubscribers = new Set<(frame: VisualFrame) => void>();
+  let lastFrameMs = 0;
+  let lastHistoryMs = 0;
+  let stopLoop: (() => void) | null = null;
+  let disposed = false;
+
+  const pushHistory = (level: number) => {
+    const { history } = visualFrame;
+    const size = history.length;
+    if (visualFrame.historyLength < size) {
+      history[(visualFrame.historyStart + visualFrame.historyLength) % size] =
+        level;
+      visualFrame.historyLength += 1;
+    } else {
+      history[visualFrame.historyStart] = level;
+      visualFrame.historyStart = (visualFrame.historyStart + 1) % size;
     }
   };
 
-  return { analysers, dispose, mix, sampleRate: context.sampleRate };
-};
-
-/**
- * Turns a `MediaStream`, media element or `AudioNode` into meter and visual
- * frame sources. Analysis only runs while something is subscribed.
- */
-export const useAudioAnalyser = (
-  input: AnalyserInput,
-  {
-    fftSize = 2048,
-    smoothing = 0.3,
-    bands = 32,
-    minHz = 40,
-    maxHz = 16_000,
-    historySize = 60,
-    historyIntervalMs = 50,
-    intervalMs = 0,
-    channels = "mono",
-    enabled = true,
-  }: AudioAnalyserOptions = {}
-): AudioAnalyser => {
-  const { context, status: contextStatus } = useAudioContext();
-  const [hub] = useState(() => {
-    const meterSubscribers = new Set<(frame: MeterFrame) => void>();
-    const visualSubscribers = new Set<(frame: VisualFrame) => void>();
-    const listeners = new Set<() => void>();
-    const sourceFor = <T>(
-      subscribers: Set<(frame: T) => void>
-    ): FrameSource<T> => ({
-      subscribe: (callback) => {
-        subscribers.add(callback);
-        for (const listener of listeners) {
-          listener();
-        }
-        return () => {
-          subscribers.delete(callback);
-          for (const listener of listeners) {
-            listener();
-          }
-        };
-      },
-    });
-    return {
-      listeners,
-      meter: sourceFor(meterSubscribers),
-      meterSubscribers,
-      visual: sourceFor(visualSubscribers),
-      visualSubscribers,
-    };
-  });
-
-  const hasInput = input !== null;
-
-  useEffect(() => {
-    if (!(context && input && enabled)) {
+  const tick = (nowMs: number) => {
+    if (nowMs - lastFrameMs < intervalMs) {
       return;
     }
+    lastFrameMs = nowMs;
 
-    const graph = buildGraph(context, input, { channels, fftSize, smoothing });
-    const timeDomain = new Float32Array(fftSize);
-    const mixTimeDomain = new Float32Array(fftSize);
-    const spectrum = new Float32Array(graph.mix.frequencyBinCount);
-    const edges = logBandEdges(
-      bands,
-      minHz,
-      Math.min(maxHz, graph.sampleRate / 2)
-    );
-    const meterFrame: MeterFrame = { channels: [] };
-    const visualFrame: VisualFrame = {
-      bands: new Float32Array(bands),
-      history: new Float32Array(historySize),
-      historyLength: 0,
-      historyStart: 0,
-      peakDb: Number.NEGATIVE_INFINITY,
-      timeDomain: mixTimeDomain,
-    };
-    let lastFrameMs = 0;
-    let lastHistoryMs = 0;
-    let stopLoop: (() => void) | null = null;
-
-    const pushHistory = (level: number) => {
-      const { history } = visualFrame;
-      const size = history.length;
-      if (visualFrame.historyLength < size) {
-        history[(visualFrame.historyStart + visualFrame.historyLength) % size] =
-          level;
-        visualFrame.historyLength += 1;
-      } else {
-        history[visualFrame.historyStart] = level;
-        visualFrame.historyStart = (visualFrame.historyStart + 1) % size;
-      }
-    };
-
-    const tick = (nowMs: number) => {
-      if (nowMs - lastFrameMs < intervalMs) {
-        return;
-      }
-      lastFrameMs = nowMs;
-
-      meterFrame.channels.length = graph.analysers.length;
-      for (const [index, analyser] of graph.analysers.entries()) {
+    if (meterSubscribers.size > 0) {
+      meterFrame.channels.length = analysers.length;
+      for (const [index, analyser] of analysers.entries()) {
         analyser.getFloatTimeDomainData(timeDomain);
         meterFrame.channels[index] = {
           peakDb: peakDb(timeDomain),
           rmsDb: rmsDb(timeDomain),
         };
       }
-      for (const subscriber of hub.meterSubscribers) {
+      for (const subscriber of meterSubscribers) {
         subscriber(meterFrame);
       }
+    }
 
-      if (hub.visualSubscribers.size === 0) {
-        return;
-      }
-      graph.mix.getFloatTimeDomainData(mixTimeDomain);
-      graph.mix.getFloatFrequencyData(spectrum);
-      bandsFromSpectrum(spectrum, graph.sampleRate, edges, visualFrame.bands);
-      visualFrame.peakDb = peakDb(mixTimeDomain);
-      if (nowMs - lastHistoryMs >= historyIntervalMs) {
-        lastHistoryMs = nowMs;
-        pushHistory(dbToLevel(visualFrame.peakDb));
-      }
-      for (const subscriber of hub.visualSubscribers) {
-        subscriber(visualFrame);
-      }
-    };
+    if (visualSubscribers.size === 0) {
+      return;
+    }
+    mix.getFloatTimeDomainData(mixTimeDomain);
+    mix.getFloatFrequencyData(spectrum);
+    bandsFromSpectrum(spectrum, context.sampleRate, edges, visualFrame.bands);
+    visualFrame.peakDb = peakDb(mixTimeDomain);
+    if (nowMs - lastHistoryMs >= historyIntervalMs) {
+      lastHistoryMs = nowMs;
+      pushHistory(dbToLevel(visualFrame.peakDb));
+    }
+    for (const subscriber of visualSubscribers) {
+      subscriber(visualFrame);
+    }
+  };
 
-    const updateLoop = () => {
-      const active = hub.meterSubscribers.size + hub.visualSubscribers.size > 0;
-      if (active && !stopLoop) {
-        stopLoop = subscribeFrame(tick);
-      } else if (!active && stopLoop) {
-        stopLoop();
-        stopLoop = null;
-      }
-    };
+  const updateLoop = () => {
+    const active =
+      !disposed && meterSubscribers.size + visualSubscribers.size > 0;
+    if (active && !stopLoop) {
+      stopLoop = subscribeFrame(tick);
+    } else if (!active && stopLoop) {
+      stopLoop();
+      stopLoop = null;
+    }
+  };
 
-    hub.listeners.add(updateLoop);
+  const sourceFor = <T>(
+    subscribers: Set<(frame: T) => void>
+  ): FrameSource<T> => ({
+    subscribe: (callback) => {
+      subscribers.add(callback);
+      updateLoop();
+      return () => {
+        subscribers.delete(callback);
+        updateLoop();
+      };
+    },
+  });
+
+  const dispose = () => {
+    disposed = true;
     updateLoop();
+    node.disconnect(mix);
+    if (splitter) {
+      node.disconnect(splitter);
+      splitter.disconnect();
+    }
+  };
+
+  return {
+    dispose,
+    meter: sourceFor(meterSubscribers),
+    visual: sourceFor(visualSubscribers),
+  };
+};
+
+/**
+ * Turns a `MediaStream`, media element or `AudioNode` into meter and visual
+ * frame sources. The sources stay the same when the input changes.
+ */
+export const useAudioAnalyser = (
+  input: AnalyserInput,
+  {
+    fftSize,
+    smoothing,
+    bands,
+    minHz,
+    maxHz,
+    historySize,
+    historyIntervalMs,
+    intervalMs,
+    channels,
+    enabled = true,
+  }: AudioAnalyserOptions = {}
+): AudioAnalyser => {
+  const { context, status: contextStatus } = useAudioContext();
+  const [relays] = useState(() => ({
+    meter: createFrameRelay<MeterFrame>(),
+    visual: createFrameRelay<VisualFrame>(),
+  }));
+
+  useEffect(() => {
+    if (!(context && input && enabled)) {
+      return;
+    }
+    const { node, owned } = createInputNode(context, input);
+    const tap = createAnalyserTap(context, node, {
+      bands,
+      channels,
+      fftSize,
+      historyIntervalMs,
+      historySize,
+      intervalMs,
+      maxHz,
+      minHz,
+      smoothing,
+    });
+    relays.meter.setSource(tap.meter);
+    relays.visual.setSource(tap.visual);
 
     return () => {
-      hub.listeners.delete(updateLoop);
-      stopLoop?.();
-      graph.dispose();
+      relays.meter.setSource(null);
+      relays.visual.setSource(null);
+      tap.dispose();
+      if (owned) {
+        node.disconnect();
+      }
     };
   }, [
     bands,
@@ -281,18 +304,18 @@ export const useAudioAnalyser = (
     fftSize,
     historyIntervalMs,
     historySize,
-    hub,
     input,
     intervalMs,
     maxHz,
     minHz,
+    relays,
     smoothing,
   ]);
 
   let status: AudioAnalyserStatus = "idle";
-  if (hasInput && enabled) {
+  if (input !== null && enabled) {
     status = contextStatus === "running" ? "running" : "suspended";
   }
 
-  return { meter: hub.meter, status, visual: hub.visual };
+  return { meter: relays.meter, status, visual: relays.visual };
 };
