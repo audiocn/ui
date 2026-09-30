@@ -359,3 +359,14 @@ The specs in plans 002–008 were written before any code. These are the places 
 - **Mixer channels** gained a `monitor` field: a per-channel send to the speakers, off by default for the microphone to avoid feedback.
 - **Demo audio** is synthesised in the browser with `OfflineAudioContext`, so no audio files ship. Blocks default to empty track and sound lists; the docs pass the generated audio in.
 - **Theme picker** offers four colour themes defined in `app/globals.css` rather than switching shadcn presets.
+- **Performance gate** runs in e2e: a 16-strip console example on the Mixer page is measured for two seconds and must hold over 50 fps with zero React commits (counted through a stand-in React DevTools hook).
+- **Install smoke test** (`pnpm test:install`) creates a Next.js app with the shadcn RC CLI (`--base base --preset nova`), installs all 43 items from a local registry server and type-checks the app.
+
+## Verification (2026-09-30)
+
+- `pnpm exec ultracite check`: clean.
+- `pnpm typecheck`: clean.
+- `pnpm test`: 99 unit tests pass.
+- `pnpm build`: registry and site build with no warnings (57 static pages).
+- `pnpm test:e2e`: 59 tests pass, including every docs page with no console errors and the performance gate.
+- `pnpm test:install`: 43 items (67 files) install into a fresh Base UI app and type-check.

@@ -110,6 +110,74 @@ test("the theme picker switches themes", async ({ page }) => {
   await expect(page.locator("html")).toHaveAttribute("data-theme", "ocean");
 });
 
+interface PerfWindow {
+  audiocnCommits: { count: number };
+  audiocnFrames: { commitsAtStart: number; count: number; start: number };
+}
+
+test("a 16-strip console meters at full frame rate with no React commits", async ({
+  page,
+}) => {
+  // A stand-in for React DevTools: React reports every commit to this hook.
+  await page.addInitScript(() => {
+    const commits = { count: 0 };
+    Object.assign(window, {
+      __REACT_DEVTOOLS_GLOBAL_HOOK__: {
+        inject: () => 1,
+        isDisabled: false,
+        onCommitFiberRoot: () => {
+          commits.count += 1;
+        },
+        supportsFiber: true,
+      },
+      audiocnCommits: commits,
+    });
+  });
+  await page.goto("/docs/components/mixer");
+  const meter = page.getByRole("meter", { name: "In 16 level" });
+  await meter.scrollIntoViewIfNeeded();
+  await expect(meter).toBeVisible();
+  await expect
+    .poll(async () => Number(await meter.getAttribute("aria-valuenow")), {
+      timeout: 10_000,
+    })
+    .toBeGreaterThan(-60);
+  // Let loading, scrolling and the table of contents settle.
+  await page.waitForTimeout(1500);
+
+  await page.evaluate(() => {
+    const perf = window as unknown as PerfWindow;
+    const frames = {
+      commitsAtStart: perf.audiocnCommits.count,
+      count: 0,
+      start: performance.now(),
+    };
+    perf.audiocnFrames = frames;
+    const tick = () => {
+      frames.count += 1;
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  });
+  await page.waitForTimeout(2000);
+  const result = await page.evaluate(() => {
+    const perf = window as unknown as PerfWindow;
+    const frames = perf.audiocnFrames;
+    return {
+      commits: perf.audiocnCommits.count - frames.commitsAtStart,
+      // Commits while the page loaded: proves React reports to the hook.
+      commitsBeforeMeasuring: frames.commitsAtStart,
+      fps: (frames.count * 1000) / (performance.now() - frames.start),
+      meters: document.querySelectorAll('[data-slot="level-meter"]').length,
+    };
+  });
+
+  expect(result.meters).toBeGreaterThanOrEqual(16);
+  expect(result.commitsBeforeMeasuring).toBeGreaterThan(0);
+  expect(result.commits).toBe(0);
+  expect(result.fps).toBeGreaterThan(50);
+});
+
 test("the registry serves built items", async ({ request }) => {
   const response = await request.get("/r/level-meter.json");
   expect(response.ok()).toBe(true);
