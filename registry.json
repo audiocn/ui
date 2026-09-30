@@ -585,6 +585,22 @@
           "type": "registry:hook"
         }
       ]
+    },
+    {
+      "name": "waveform",
+      "type": "registry:ui",
+      "title": "Waveform",
+      "description": "A static waveform of a clip with a smooth playhead, seeking by pointer and keyboard, hover time, draggable regions and markers.",
+      "registryDependencies": [
+        "@audiocn/core",
+        "@audiocn/use-frame-source"
+      ],
+      "files": [
+        {
+          "path": "components/ui/waveform.tsx",
+          "type": "registry:ui"
+        }
+      ]
     }
   ]
 }
