@@ -76,7 +76,11 @@ A strip provides its `orientation`, `size` and `disabled` state to the audiocn c
 
 ## Layout
 
-The strip is a CSS grid with named areas: `header`, `meter`, `fader`, `value`, `controls` and `notice`. Each part places itself in its area, so you can rearrange the strip by overriding `grid-template-areas` with a class.
+Parts place themselves on a CSS grid by area name: `header`, `meter`, `fader`, `value`, `controls` and `notice`. The grid is the strip's `channel-strip-layout` element, so you can rearrange a strip by overriding `grid-template-areas` there, for example with `*:data-[slot=channel-strip-layout]:[grid-template-areas:…]`.
+
+A row measures its own width with a container query. Below 36rem it puts the header on its own line, with the meter and fader full width underneath, so rows stay readable on phones and in narrow panels. From 36rem up the header sits beside the meter in a column `--channel-strip-header-width` wide. Set that variable on a mixer to align every row; the header wraps its status and actions onto a second line before it truncates the title.
+
+A vertical strip keeps its width inside a mixer. When the strips do not fit, the mixer's channels scroll instead of squeezing them.
 
 ## Theming
 
@@ -84,6 +88,7 @@ The strip is a CSS grid with named areas: `header`, `meter`, `fader`, `value`, `
 | --- | --- |
 | `--channel-accent` | Set by `accent`, drawn as a colour tag |
 | `--channel-strip-width` | Width of a vertical strip, default `6.5rem` |
+| `--channel-strip-header-width` | Header column of a wide row, default `12rem` |
 | `data-muted`, `data-solo`, `data-dimmed`, `data-selected`, `data-disabled` | Channel state |
 | `data-clipping` | A meter inside the strip is clipping |
 | `data-orientation`, `data-variant`, `data-size` | Current settings |

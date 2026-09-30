@@ -46,7 +46,7 @@ export const useChannelStrip = (): ChannelStripContextValue =>
   useChannelStripContext("useChannelStrip");
 
 const channelStripVariants = cva(
-  "group/channel-strip data-selected:ring-ring/40 relative grid min-w-0 gap-x-3 gap-y-1.5 transition-[opacity,box-shadow] outline-none data-disabled:opacity-60 data-selected:ring-2",
+  "group/channel-strip data-selected:ring-ring/40 relative min-w-0 transition-[opacity,box-shadow] outline-none data-disabled:opacity-60 data-selected:ring-2",
   {
     defaultVariants: {
       orientation: "horizontal",
@@ -54,10 +54,11 @@ const channelStripVariants = cva(
     },
     variants: {
       orientation: {
-        horizontal:
-          "w-full grid-cols-[minmax(7rem,11rem)_minmax(0,1fr)_auto_auto] items-center [grid-template-areas:'header_meter_value_controls'_'header_fader_value_controls'_'notice_notice_notice_notice']",
+        // A row measures itself, so it can stack its header on narrow widths.
+        horizontal: "@container/channel-strip w-full",
+        // Console strips keep their width and let the mixer scroll instead.
         vertical:
-          "h-full min-h-72 w-(--channel-strip-width) grid-cols-[1fr_auto_auto_1fr] grid-rows-[auto_minmax(0,1fr)_auto_auto_auto] justify-items-center [--channel-strip-width:6.5rem] [grid-template-areas:'header_header_header_header'_'._meter_fader_.'_'value_value_value_value'_'controls_controls_controls_controls'_'notice_notice_notice_notice']",
+          "flex h-full min-h-72 w-[var(--channel-strip-width,6.5rem)] shrink-0 flex-col",
       },
       variant: {
         card: "bg-card text-card-foreground rounded-xl border p-3 shadow-xs",
@@ -68,6 +69,22 @@ const channelStripVariants = cva(
     },
   }
 );
+
+/**
+ * The grid the parts place themselves on, by area name. A row stacks its
+ * header above the meter and fader until the strip is 36rem wide.
+ */
+const channelStripLayoutVariants = cva("grid gap-x-3 gap-y-1.5", {
+  defaultVariants: { orientation: "horizontal" },
+  variants: {
+    orientation: {
+      horizontal:
+        "w-full grid-cols-[minmax(0,1fr)_auto_auto] items-center [grid-template-areas:'header_header_header'_'meter_value_controls'_'fader_value_controls'_'notice_notice_notice'] @xl/channel-strip:grid-cols-[minmax(0,var(--channel-strip-header-width,12rem))_minmax(0,1fr)_auto_auto] @xl/channel-strip:[grid-template-areas:'header_meter_value_controls'_'header_fader_value_controls'_'notice_notice_notice_notice']",
+      vertical:
+        "flex-1 grid-cols-[1fr_auto_auto_1fr] grid-rows-[auto_minmax(0,1fr)_auto_auto_auto] justify-items-center [grid-template-areas:'header_header_header_header'_'._meter_fader_.'_'value_value_value_value'_'controls_controls_controls_controls'_'notice_notice_notice_notice']",
+    },
+  },
+});
 
 export interface ChannelStripProps
   extends
@@ -159,7 +176,12 @@ export const ChannelStrip = ({
             <AudioConfigProvider
               value={{ dimmed: muted || dimmed, disabled, orientation, size }}
             >
-              {children}
+              <div
+                className={channelStripLayoutVariants({ orientation })}
+                data-slot="channel-strip-layout"
+              >
+                {children}
+              </div>
             </AudioConfigProvider>
           </ChannelStripContext.Provider>
         ),
@@ -206,7 +228,9 @@ export const ChannelStripHeader = ({
     <div
       className={cn(
         "flex min-w-0 items-center gap-2 [grid-area:header]",
-        orientation === "vertical" && "w-full flex-col text-center",
+        orientation === "vertical"
+          ? "w-full flex-col text-center *:max-w-full"
+          : "flex-wrap",
         className
       )}
       data-slot="channel-strip-header"
@@ -265,7 +289,10 @@ export const ChannelStripText = ({
   ...props
 }: ComponentProps<"div">) => (
   <div
-    className={cn("flex min-w-0 flex-1 flex-col gap-0.5", className)}
+    className={cn(
+      "flex min-w-0 flex-1 flex-col gap-0.5 group-data-[orientation=horizontal]/channel-strip:min-w-20",
+      className
+    )}
     data-slot="channel-strip-text"
     {...props}
   />
@@ -362,7 +389,7 @@ export const ChannelStripValue = ({
 }: ComponentProps<"div">) => (
   <div
     className={cn(
-      "text-muted-foreground flex items-center justify-center font-mono text-xs tabular-nums [grid-area:value]",
+      "text-muted-foreground flex items-center justify-center font-mono text-xs whitespace-nowrap tabular-nums [grid-area:value]",
       className
     )}
     data-slot="channel-strip-value"
@@ -415,4 +442,4 @@ export const ChannelStripNotice = ({
   />
 );
 
-export { channelStripVariants };
+export { channelStripLayoutVariants, channelStripVariants };

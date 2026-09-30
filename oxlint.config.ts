@@ -86,7 +86,7 @@ export default defineConfig({
                   "^(BarVisualizer|LiveWaveform|Spectrum|Waveform|DbReadout|DbScale|ClipIndicator|LevelMeter.*|Knob.*|Fader.*)$",
               },
               {
-                allow: ["layout", "spacing", "shape", "color"],
+                allow: ["layout", "spacing", "shape", "color", "[--*"],
                 pattern:
                   "^(AudioPlayer|ChannelStrip|Mixer|TrackList|SoundPad|SoundPadGrid)$",
               },

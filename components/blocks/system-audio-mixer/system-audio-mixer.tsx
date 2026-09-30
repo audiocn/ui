@@ -57,6 +57,7 @@ import { useSystemAudio } from "@/hooks/use-system-audio";
 import type { UseSystemAudioResult } from "@/hooks/use-system-audio";
 import { useWebAudioMixer } from "@/hooks/use-web-audio-mixer";
 import type { FrameSource, MeterFrame, Orientation } from "@/lib/audio/types";
+import { cn } from "@/lib/utils";
 
 export type MixerSourceId = "microphone" | "system" | "music" | "sounds";
 
@@ -354,7 +355,7 @@ const SoundsChannel = ({
           <SquaresFourIcon />
         </PopoverTrigger>
         <PopoverContent className="w-80">
-          <SoundPadGrid columns={4} hotkeys>
+          <SoundPadGrid className="[--pad-min-width:4rem]" columns={4} hotkeys>
             {sounds.map((sound) => (
               <MixerPad bus={bus} key={sound.id} sound={sound} />
             ))}
@@ -420,7 +421,10 @@ export const SystemAudioMixer = ({
     graph.meters[id] ?? graph.master.meter;
 
   return (
-    <Mixer className={className} orientation={orientation}>
+    <Mixer
+      className={cn("[--channel-strip-header-width:16rem]", className)}
+      orientation={orientation}
+    >
       <MixerHeader>
         <MixerTitle>Audio mixer</MixerTitle>
         <MixerActions>

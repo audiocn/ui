@@ -27,7 +27,7 @@ export const ComponentPreviewTabs = ({
       <TabsContent value="preview">
         <div
           className={cn(
-            "bg-background flex min-h-72 w-full justify-center rounded-xl border p-6 sm:p-10",
+            "bg-background flex min-h-72 w-full justify-center rounded-xl border p-4 sm:p-10",
             align === "center" && "items-center",
             align === "start" && "items-start",
             align === "end" && "items-end",
