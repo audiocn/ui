@@ -46,8 +46,8 @@ The hook creates and owns an `<audio>` element. Pass `player.element` to
     ["currentTime", "number", null, "Updates about four times a second."],
     ["time", "FrameSource<number>", null, "The time on every animation frame while playing."],
     ["duration / buffered", "number", null, "Seconds."],
-    ["volume / muted / playbackRate / loop", null, null, "Current settings."],
-    ["play / pause / toggle / seek", null, null, null],
-    ["setVolume / setMuted / setPlaybackRate / setLoop", null, null, null],
+    ["volume / muted / playbackRate / loop", "number | boolean", null, "Current settings."],
+    ["play / pause / toggle / seek", "() => void | (seconds) => void", null, "toggle and play return a promise."],
+    ["setVolume / setMuted / setPlaybackRate / setLoop", "(value) => void", null, null],
   ]}
 />
