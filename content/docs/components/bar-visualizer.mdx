@@ -1,0 +1,79 @@
+---
+title: Bar Visualizer
+description: A row of bars driven by frequency bands, with idle, loading and mirrored modes.
+---
+
+<ComponentPreview name="bar-visualizer-demo" />
+
+## Installation
+
+```npm
+npx shadcn@latest add @audiocn/bar-visualizer
+```
+
+## Usage
+
+```tsx
+import { BarVisualizer } from "@/components/ui/bar-visualizer";
+```
+
+```tsx
+<BarVisualizer aria-label="Voice activity" source={analyser.visual} />
+```
+
+Bars take their color from the text color, so set it with a class such as
+`text-primary`. Bars paint on the animation frame without re-rendering React.
+
+## Examples
+
+### Alignment
+
+<ComponentPreview name="bar-visualizer-align" />
+
+### Idle and loading
+
+`idle` decides what bars do without a signal. `loading` runs a sweep, for
+connecting or thinking states.
+
+<ComponentPreview name="bar-visualizer-states" />
+
+### Mirrored
+
+<ComponentPreview name="bar-visualizer-mirrored" />
+
+### Inside a badge
+
+<ComponentPreview name="bar-visualizer-mini" />
+
+## Theming
+
+| Variable or attribute | Meaning |
+| --- | --- |
+| `--bar-width` | Maximum bar width, default `0.375rem` |
+| `--bar-gap` | Gap between bars, default `0.1875rem` |
+| `--bar-radius` | Bar corner radius, default fully rounded |
+| `data-loading` | The sweep is running |
+| `data-index` | On each bar, its position |
+
+## Accessibility
+
+The root has `role="img"` and the label "Audio visualizer". Pass `aria-label`
+to describe what it shows, or `aria-hidden` when it is decorative next to a
+labelled meter.
+
+## API reference
+
+<PropsTable
+  rows={[
+    ["source", "FrameSource<VisualFrame> | null", null, "Bars follow the frame's frequency bands."],
+    ["levels", "ArrayLike<number>", null, "Levels, 0..1, for declarative use."],
+    ["barCount", "number", "24", "Bands are resampled to fit."],
+    ["align", '"center" | "start" | "end"', '"center"', "Where bars grow from."],
+    ["mirrored", "boolean", "false", "Symmetric around the middle bar, lows in the centre."],
+    ["minLevel", "number", "0.08", "Resting bar size, 0..1."],
+    ["idle", '"static" | "pulse" | "wave"', '"static"', "What bars do without a signal."],
+    ["loading", "boolean", "false", "Run a sweep animation."],
+    ["orientation", '"horizontal" | "vertical"', '"horizontal"', "vertical grows bars sideways."],
+    ["actionsRef", "Ref<BarVisualizerActions>", null, "{ paint(levels) }."],
+  ]}
+/>

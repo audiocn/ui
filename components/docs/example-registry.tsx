@@ -5,6 +5,11 @@ import dynamic from "next/dynamic";
 import type { ComponentType } from "react";
 
 export const examples: Record<string, ComponentType | undefined> = {
+  "bar-visualizer-align": dynamic(() => import("@/components/examples/bar-visualizer-align")),
+  "bar-visualizer-demo": dynamic(() => import("@/components/examples/bar-visualizer-demo")),
+  "bar-visualizer-mini": dynamic(() => import("@/components/examples/bar-visualizer-mini")),
+  "bar-visualizer-mirrored": dynamic(() => import("@/components/examples/bar-visualizer-mirrored")),
+  "bar-visualizer-states": dynamic(() => import("@/components/examples/bar-visualizer-states")),
   "clip-indicator-demo": dynamic(() => import("@/components/examples/clip-indicator-demo")),
   "clip-indicator-latching": dynamic(() => import("@/components/examples/clip-indicator-latching")),
   "db-readout-demo": dynamic(() => import("@/components/examples/db-readout-demo")),
@@ -22,4 +27,8 @@ export const examples: Record<string, ComponentType | undefined> = {
   "level-meter-values": dynamic(() => import("@/components/examples/level-meter-values")),
   "level-meter-variants": dynamic(() => import("@/components/examples/level-meter-variants")),
   "level-meter-vertical": dynamic(() => import("@/components/examples/level-meter-vertical")),
+  "live-waveform-demo": dynamic(() => import("@/components/examples/live-waveform-demo")),
+  "live-waveform-idle": dynamic(() => import("@/components/examples/live-waveform-idle")),
+  "live-waveform-microphone": dynamic(() => import("@/components/examples/live-waveform-microphone")),
+  "live-waveform-variants": dynamic(() => import("@/components/examples/live-waveform-variants")),
 };
