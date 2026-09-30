@@ -32,7 +32,7 @@ const SHADCN_FILES = [
 export default defineConfig({
   extends: [core, react, next, shadcn],
   ignorePatterns: [
-    ...core.ignorePatterns,
+    ...(core.ignorePatterns ?? []),
     ".agents/**",
     ".claude/**",
     ".source/**",
