@@ -5,22 +5,17 @@ type PropRow = [
   name: string,
   type: string,
   defaultValue: string | null,
-  description: string,
+  description: string | null,
 ];
 
 interface PropsTableProps {
   rows: PropRow[];
 }
 
-const toTypeNode = ([
-  ,
-  type,
-  defaultValue,
-  description,
-]: PropRow): TypeNode => ({
-  default: defaultValue ?? undefined,
-  description,
-  type,
+const toTypeNode = (row: PropRow): TypeNode => ({
+  default: row[2] ?? undefined,
+  description: row[3] ?? undefined,
+  type: row[1],
 });
 
 export const PropsTable = ({ rows }: PropsTableProps) => (
