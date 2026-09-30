@@ -1,6 +1,6 @@
 import { defineConfig, devices } from "@playwright/test";
 
-const PORT = 3100;
+const PORT = Number(process.env.AUDIOCN_PORT ?? 3100);
 
 export default defineConfig({
   forbidOnly: Boolean(process.env.CI),
@@ -16,13 +16,13 @@ export default defineConfig({
   testDir: "./e2e",
   timeout: 60_000,
   use: {
-    baseURL: `http://localhost:${PORT}`,
+    baseURL: `http://127.0.0.1:${PORT}`,
     trace: "retain-on-failure",
   },
   webServer: {
-    command: `pnpm start --port ${PORT}`,
+    command: `pnpm start --hostname 127.0.0.1 --port ${PORT}`,
     reuseExistingServer: true,
     timeout: 120_000,
-    url: `http://localhost:${PORT}`,
+    url: `http://127.0.0.1:${PORT}`,
   },
 });

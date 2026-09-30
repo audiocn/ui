@@ -39,8 +39,8 @@ const features = [
 
 const Page = () => (
   <main className="mx-auto flex w-full max-w-6xl flex-col gap-20 px-4 py-16 sm:px-6 lg:py-24">
-    <section className="grid items-center gap-12 lg:grid-cols-[1fr_28rem]">
-      <div className="flex flex-col items-start gap-6">
+    <section className="grid grid-cols-[minmax(0,1fr)] items-center gap-12 lg:grid-cols-[minmax(0,1fr)_28rem]">
+      <div className="flex min-w-0 flex-col items-start gap-6">
         <span className="text-muted-foreground rounded-full border px-3 py-1 text-xs">
           Audio components for shadcn/ui
         </span>

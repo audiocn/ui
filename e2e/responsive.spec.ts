@@ -15,10 +15,11 @@ const pagesIn = (section: string) =>
       slug === "index" ? `/docs/${section}` : `/docs/${section}/${slug}`
     );
 
-const PAGES = [...pagesIn("components"), ...pagesIn("blocks")];
+const PAGES = ["/", ...pagesIn("components"), ...pagesIn("blocks")];
 
 const PHONE = { height: 667, width: 375 };
 const VIEWPORTS = [
+  { height: 820, width: 320 },
   PHONE,
   { height: 1024, width: 768 },
   { height: 900, width: 1440 },
