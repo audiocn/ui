@@ -9,7 +9,7 @@ import { useMicrophone } from "@/hooks/use-microphone";
 import { isChannelAudible, mixerReducer, useMixer } from "@/hooks/use-mixer";
 import type { MixerState } from "@/hooks/use-mixer";
 import { createFrameEmitter, createFrameRelay } from "@/lib/audio/frame-source";
-import type { MeterFrame } from "@/lib/audio/types";
+import type { MeterFrame, VisualFrame } from "@/lib/audio/types";
 import { advance, useFakeFrames } from "@/test/fake-frames";
 
 const baseState: MixerState = {
@@ -190,6 +190,21 @@ describe("frame sources over time", () => {
     listener.mockClear();
     advance(100);
     expect(listener).not.toHaveBeenCalled();
+  });
+
+  it("createDemoSignal can start with a full level history", () => {
+    const signal = createDemoSignal({
+      historySize: 40,
+      kind: "music",
+      prefill: true,
+    });
+    const listener = vi.fn();
+    const unsubscribe = signal.visual.subscribe(listener);
+    advance(20);
+    const frame = listener.mock.calls[0]?.[0] as VisualFrame;
+    expect(frame.historyLength).toBe(40);
+    expect(Math.max(...frame.history)).toBeGreaterThan(0);
+    unsubscribe();
   });
 
   it("createFrameRelay keeps subscribers across source changes", () => {

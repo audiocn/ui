@@ -23,6 +23,11 @@ export interface DemoSignalOptions {
   historyIntervalMs?: number;
   /** When false the signal falls silent. Default true. */
   playing?: boolean;
+  /**
+   * Starts with a full level history, as if the signal had already been
+   * running, so a scrolling waveform is full from its first frame. Default false.
+   */
+  prefill?: boolean;
 }
 
 export interface DemoSignal {
@@ -185,6 +190,7 @@ export const createDemoSignal = (
   let channels = 1;
   let seed = 1;
   let playing = true;
+  let prefill = false;
   let historyIntervalMs = 50;
   let bands = new Float32Array(32);
   let history = new Float32Array(60);
@@ -212,6 +218,7 @@ export const createDemoSignal = (
     channels = clamp(Math.round(options.channels ?? channels), 1, 8);
     seed = options.seed ?? seed;
     playing = options.playing ?? playing;
+    prefill = options.prefill ?? prefill;
     historyIntervalMs = options.historyIntervalMs ?? historyIntervalMs;
     if (options.bands !== undefined && options.bands !== bands.length) {
       bands = new Float32Array(options.bands);
@@ -239,8 +246,25 @@ export const createDemoSignal = (
     }
   };
 
+  /** Fills the history with the levels the signal had before it started. */
+  const fillHistory = () => {
+    const activeKind: DemoSignalKind = playing ? kind : "silence";
+    historyStart = 0;
+    historyLength = 0;
+    for (let index = history.length; index > 0; index -= 1) {
+      const seconds = (-index * historyIntervalMs) / MS_PER_SECOND;
+      const amplitude = Math.min(1, amplitudeFor(activeKind, seed, seconds));
+      pushHistory(dbToLevel(gainToDb(amplitude)));
+    }
+  };
+
   const produce = (nowMs: number) => {
-    startMs ??= nowMs;
+    if (startMs === null) {
+      startMs = nowMs;
+      if (prefill) {
+        fillHistory();
+      }
+    }
     const seconds = (nowMs - startMs) / MS_PER_SECOND;
     const activeKind: DemoSignalKind = playing ? kind : "silence";
     const amplitude = Math.min(1, amplitudeFor(activeKind, seed, seconds));
@@ -333,6 +357,7 @@ export const useDemoSignal = (options: DemoSignalOptions = {}): DemoSignal => {
     historySize,
     kind,
     playing,
+    prefill,
     seed,
   } = options;
 
@@ -344,6 +369,7 @@ export const useDemoSignal = (options: DemoSignalOptions = {}): DemoSignal => {
       historySize,
       kind,
       playing,
+      prefill,
       seed,
     });
   }, [
@@ -354,6 +380,7 @@ export const useDemoSignal = (options: DemoSignalOptions = {}): DemoSignal => {
     historySize,
     kind,
     playing,
+    prefill,
     seed,
   ]);
 
