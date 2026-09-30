@@ -1,10 +1,8 @@
-import {
-  ArrowSquareOutIcon,
-  WaveformIcon,
-} from "@phosphor-icons/react/dist/ssr";
+import { ArrowSquareOutIcon } from "@phosphor-icons/react/dist/ssr";
 import type { Metadata } from "next";
 import Image from "next/image";
 
+import { BrandLogo } from "@/components/brand-logo";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -118,9 +116,7 @@ const ContributorsPage = async () => {
   return (
     <div className="mx-auto w-full max-w-4xl px-4 pt-12 pb-24 sm:px-6 sm:pt-16">
       <header className="flex flex-col items-center gap-4 pb-12 text-center">
-        <span className="bg-muted flex size-16 items-center justify-center rounded-2xl">
-          <WaveformIcon aria-hidden="true" className="size-8" />
-        </span>
+        <BrandLogo className="size-16" size={64} />
         <h1 className="font-heading text-4xl font-medium">Contributors</h1>
         <p className="text-muted-foreground max-w-xl text-balance">
           audiocn is built in the open. Every meter, fader and block exists
