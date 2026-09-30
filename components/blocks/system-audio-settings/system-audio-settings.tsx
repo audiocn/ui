@@ -1,7 +1,7 @@
 "use client";
 
 import { DesktopIcon, InfoIcon, WarningIcon } from "@phosphor-icons/react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -69,27 +69,34 @@ export const SystemAudioSettings = ({
   const { context } = useAudioContext();
   const [gainState, setGainState] = useState(DEFAULT_GAIN_DB);
   const gainDb = gainDbProp ?? gainState;
-  const [gainNode, setGainNode] = useState<GainNode | null>(null);
-  const analyser = useAudioAnalyser(gainNode, { channels: "stereo" });
+  const gainNode = useMemo(() => context?.createGain() ?? null, [context]);
+  const output = useMemo(
+    () => context?.createMediaStreamDestination() ?? null,
+    [context]
+  );
+  const analyser = useAudioAnalyser(system.stream ? gainNode : null, {
+    channels: "stereo",
+  });
   const active = system.status === "active";
 
   useEffect(() => {
-    if (!(context && system.stream)) {
-      setGainNode(null);
+    if (!(gainNode && output)) {
+      return;
+    }
+    gainNode.connect(output);
+    return () => gainNode.disconnect(output);
+  }, [gainNode, output]);
+
+  useEffect(() => {
+    if (!(context && gainNode && output && system.stream)) {
       onStreamChange?.(null);
       return;
     }
     const source = context.createMediaStreamSource(system.stream);
-    const gain = context.createGain();
-    const output = context.createMediaStreamDestination();
-    source.connect(gain).connect(output);
-    setGainNode(gain);
+    source.connect(gainNode);
     onStreamChange?.(output.stream);
-    return () => {
-      source.disconnect();
-      gain.disconnect();
-    };
-  }, [context, onStreamChange, system.stream]);
+    return () => source.disconnect();
+  }, [context, gainNode, onStreamChange, output, system.stream]);
 
   useEffect(() => {
     if (gainNode && context) {

@@ -5,7 +5,7 @@ import {
   MicrophoneIcon,
   WarningCircleIcon,
 } from "@phosphor-icons/react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
@@ -127,26 +127,22 @@ export const MicSetup = ({
   const devices = useAudioDevices();
   const microphone = useMicrophone({ deviceId, enabled: started });
   const { context } = useAudioContext();
-  const [gainNode, setGainNode] = useState<GainNode | null>(null);
-  const analyser = useAudioAnalyser(gainNode, { historySize: 120 });
+  const gainNode = useMemo(() => context?.createGain() ?? null, [context]);
+  const analyser = useAudioAnalyser(microphone.stream ? gainNode : null, {
+    historySize: 120,
+  });
   const [checking, setChecking] = useState(false);
   const [result, setResult] = useState<CheckResult | null>(null);
   const peakRef = useRef(Number.NEGATIVE_INFINITY);
 
   useEffect(() => {
-    if (!(context && microphone.stream)) {
-      setGainNode(null);
+    if (!(context && gainNode && microphone.stream)) {
       return;
     }
     const source = context.createMediaStreamSource(microphone.stream);
-    const gain = context.createGain();
-    source.connect(gain);
-    setGainNode(gain);
-    return () => {
-      source.disconnect();
-      gain.disconnect();
-    };
-  }, [context, microphone.stream]);
+    source.connect(gainNode);
+    return () => source.disconnect();
+  }, [context, gainNode, microphone.stream]);
 
   useEffect(() => {
     if (gainNode && context) {

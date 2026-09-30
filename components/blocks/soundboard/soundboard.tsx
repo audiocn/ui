@@ -163,18 +163,20 @@ const Pad = ({ sound, bus, stopSignal, onChange, onRemove }: PadProps) => {
   );
 };
 
-const AUDIO_FILE = /^audio\//;
+const AUDIO_FILE = /^audio\//u;
+const FILE_EXTENSION = /\.[^.]+$/u;
+const NO_SOUNDS: SoundboardSound[] = [];
 
 const fileToSound = (file: File, index: number): SoundboardSound => ({
   hotkey: index < 9 ? String(index + 1) : undefined,
   id: `${file.name}-${file.lastModified}`,
-  label: file.name.replace(/\.[^.]+$/, ""),
+  label: file.name.replace(FILE_EXTENSION, ""),
   src: URL.createObjectURL(file),
 });
 
 export const Soundboard = ({
   sounds: soundsProp,
-  defaultSounds = [],
+  defaultSounds = NO_SOUNDS,
   onSoundsChange,
   output,
   columns = 4,
@@ -183,25 +185,13 @@ export const Soundboard = ({
   const [soundsState, setSoundsState] = useState(defaultSounds);
   const sounds = soundsProp ?? soundsState;
   const { context } = useAudioContext();
-  const [bus, setBus] = useState<GainNode | null>(null);
+  const bus = useMemo(() => context?.createGain() ?? null, [context]);
   const [volume, setVolume] = useState(1);
   const [muted, setMuted] = useState(false);
   const [hotkeys, setHotkeys] = useState(true);
   const [stopSignal, setStopSignal] = useState(0);
   const [dragging, setDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (!context) {
-      return;
-    }
-    const gain = context.createGain();
-    setBus(gain);
-    return () => {
-      gain.disconnect();
-      setBus(null);
-    };
-  }, [context]);
 
   useEffect(() => {
     if (!(bus && context)) {

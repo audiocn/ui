@@ -12,7 +12,7 @@ import {
   SquaresFourIcon,
   WaveformIcon,
 } from "@phosphor-icons/react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { MixerMasterStrip } from "@/components/blocks/system-audio-mixer/mixer-master-strip";
 import { MixerSourceStrip } from "@/components/blocks/system-audio-mixer/mixer-source-strip";
@@ -47,12 +47,16 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAudioContext } from "@/hooks/use-audio-context";
 import { useAudioDevices } from "@/hooks/use-audio-devices";
 import { useAudioPlayer } from "@/hooks/use-audio-player";
+import type { AudioPlayerController } from "@/hooks/use-audio-player";
 import { useMicrophone } from "@/hooks/use-microphone";
+import type { UseMicrophoneResult } from "@/hooks/use-microphone";
 import { useMixer } from "@/hooks/use-mixer";
+import type { Mixer as MixerController } from "@/hooks/use-mixer";
 import { useSound } from "@/hooks/use-sound";
 import { useSystemAudio } from "@/hooks/use-system-audio";
+import type { UseSystemAudioResult } from "@/hooks/use-system-audio";
 import { useWebAudioMixer } from "@/hooks/use-web-audio-mixer";
-import type { Orientation } from "@/lib/audio/types";
+import type { FrameSource, MeterFrame, Orientation } from "@/lib/audio/types";
 
 export type MixerSourceId = "microphone" | "system" | "music" | "sounds";
 
@@ -94,6 +98,9 @@ const ALL_SOURCES: MixerSourceId[] = [
   "sounds",
 ];
 
+const NO_TRACKS: MixerTrack[] = [];
+const NO_SOUNDS: MixerSound[] = [];
+
 const CHANNELS = [
   { id: "microphone" },
   { gainDb: -6, id: "system" },
@@ -130,13 +137,247 @@ const MixerPad = ({
   );
 };
 
+interface ChannelProps {
+  mixer: MixerController;
+  meter: FrameSource<MeterFrame>;
+}
+
+const microphoneStatus = (
+  microphone: UseMicrophoneResult,
+  audible: boolean
+): Status => {
+  if (microphone.status === "active") {
+    return audible
+      ? { label: "Live", tone: "live" }
+      : { label: "Muted", tone: "muted" };
+  }
+  if (microphone.status === "denied") {
+    return { label: "Blocked", tone: "error" };
+  }
+  return { label: "Off", tone: "default" };
+};
+
+const systemStatus = (system: UseSystemAudioResult): Status => {
+  if (system.status === "active") {
+    return { label: "On", tone: "live" };
+  }
+  if (system.status === "unsupported") {
+    return { label: "Unsupported", tone: "warning" };
+  }
+  return { label: "Off", tone: "default" };
+};
+
+const MicrophoneChannel = ({
+  microphone,
+  deviceId,
+  onDeviceChange,
+  mixer,
+  meter,
+}: ChannelProps & {
+  microphone: UseMicrophoneResult;
+  deviceId: string | null;
+  onDeviceChange: (deviceId: string | null) => void;
+}) => {
+  const devices = useAudioDevices();
+  const active = microphone.status === "active";
+  const deviceLabel =
+    devices.devices.find((device) => device.id === deviceId)?.label ??
+    "Default microphone";
+
+  return (
+    <MixerSourceStrip
+      accent="var(--chart-2)"
+      actions={
+        <>
+          <Popover>
+            <PopoverTrigger
+              render={
+                <Button
+                  aria-label="Microphone settings"
+                  size="icon-xs"
+                  variant="ghost"
+                />
+              }
+            >
+              <GearSixIcon />
+            </PopoverTrigger>
+            <PopoverContent className="w-72">
+              <AudioDeviceSelect
+                devices={devices.devices}
+                loading={devices.isLoading}
+                onRequestPermission={() => devices.requestPermission()}
+                onValueChange={onDeviceChange}
+                permission={
+                  devices.permission === "unsupported"
+                    ? "denied"
+                    : devices.permission
+                }
+                value={deviceId}
+              />
+            </PopoverContent>
+          </Popover>
+          <Button
+            onClick={active ? microphone.stop : microphone.start}
+            size="xs"
+            variant={active ? "secondary" : "outline"}
+          >
+            {active ? "Stop" : "Start"}
+          </Button>
+        </>
+      }
+      description={active ? deviceLabel : "Not listening"}
+      icon={<MicrophoneIcon />}
+      id="microphone"
+      meter={meter}
+      mixer={mixer}
+      notice={
+        microphone.status === "denied" ? (
+          <ChannelStripNotice variant="destructive">
+            Microphone access is blocked. Allow it in your browser&apos;s site
+            settings.
+          </ChannelStripNotice>
+        ) : null
+      }
+      status={microphoneStatus(microphone, mixer.isAudible("microphone"))}
+      title="Microphone"
+    />
+  );
+};
+
+const SystemChannel = ({
+  system,
+  mixer,
+  meter,
+}: ChannelProps & { system: UseSystemAudioResult }) => {
+  const active = system.status === "active";
+  return (
+    <MixerSourceStrip
+      accent="var(--chart-4)"
+      actions={
+        <Switch
+          aria-label="Capture system audio"
+          checked={active}
+          disabled={!system.isSupported}
+          onCheckedChange={(checked) =>
+            checked ? system.start() : system.stop()
+          }
+          size="sm"
+        />
+      }
+      description={active ? "Capturing" : "Share a screen or tab with audio"}
+      icon={<DesktopIcon />}
+      id="system"
+      meter={meter}
+      mixer={mixer}
+      monitorable={false}
+      notice={
+        system.status === "no-audio" ? (
+          <ChannelStripNotice variant="warning">
+            Nothing to hear: tick &quot;Share audio&quot; in the browser&apos;s
+            picker.
+          </ChannelStripNotice>
+        ) : null
+      }
+      status={systemStatus(system)}
+      title="System audio"
+    />
+  );
+};
+
+const MusicChannel = ({
+  player,
+  track,
+  trackCount,
+  onNext,
+  mixer,
+  meter,
+}: ChannelProps & {
+  player: AudioPlayerController;
+  track: MixerTrack | undefined;
+  trackCount: number;
+  onNext: () => void;
+}) => (
+  <MixerSourceStrip
+    accent="var(--chart-1)"
+    actions={
+      <>
+        <Button
+          aria-label={player.playing ? "Pause music" : "Play music"}
+          disabled={!track}
+          onClick={() => player.toggle()}
+          size="icon-xs"
+          variant="ghost"
+        >
+          {player.playing ? <PauseIcon /> : <PlayIcon />}
+        </Button>
+        <Button
+          aria-label="Next track"
+          disabled={trackCount < 2}
+          onClick={onNext}
+          size="icon-xs"
+          variant="ghost"
+        >
+          <SkipForwardIcon />
+        </Button>
+      </>
+    }
+    description={track ? track.title : "No tracks"}
+    icon={<MusicNotesIcon />}
+    id="music"
+    meter={meter}
+    mixer={mixer}
+    status={player.playing ? { label: "Playing", tone: "live" } : undefined}
+    title="Music"
+  />
+);
+
+const SoundsChannel = ({
+  sounds,
+  bus,
+  mixer,
+  meter,
+}: ChannelProps & { sounds: MixerSound[]; bus: AudioNode | null }) => (
+  <MixerSourceStrip
+    accent="var(--chart-3)"
+    actions={
+      <Popover>
+        <PopoverTrigger
+          render={
+            <Button
+              aria-label="Sound pads"
+              disabled={sounds.length === 0}
+              size="icon-xs"
+              variant="ghost"
+            />
+          }
+        >
+          <SquaresFourIcon />
+        </PopoverTrigger>
+        <PopoverContent className="w-80">
+          <SoundPadGrid columns={4} hotkeys>
+            {sounds.map((sound) => (
+              <MixerPad bus={bus} key={sound.id} sound={sound} />
+            ))}
+          </SoundPadGrid>
+        </PopoverContent>
+      </Popover>
+    }
+    description={`${sounds.length} pads`}
+    icon={<WaveformIcon />}
+    id="sounds"
+    meter={meter}
+    mixer={mixer}
+    title="Sounds"
+  />
+);
+
 export const SystemAudioMixer = ({
   defaultOrientation = "horizontal",
   sources = ALL_SOURCES,
   persistKey,
   onOutputChange,
-  tracks = [],
-  sounds = [],
+  tracks = NO_TRACKS,
+  sounds = NO_SOUNDS,
   className,
 }: SystemAudioMixerProps) => {
   const [orientation, setOrientation] =
@@ -144,33 +385,21 @@ export const SystemAudioMixer = ({
   const mixer = useMixer({ channels: CHANNELS, persistKey });
   const { context } = useAudioContext();
 
-  const devices = useAudioDevices();
   const [deviceId, setDeviceId] = useState<string | null>(null);
   const microphone = useMicrophone({ deviceId });
   const system = useSystemAudio();
 
   const [trackIndex, setTrackIndex] = useState(0);
   const track = tracks[trackIndex];
-  const player = useAudioPlayer({
-    onEnded: () =>
-      setTrackIndex((index) =>
-        tracks.length > 0 ? (index + 1) % tracks.length : 0
-      ),
-    src: track?.src,
-  });
+  const nextTrack = () =>
+    setTrackIndex((index) =>
+      tracks.length > 0 ? (index + 1) % tracks.length : 0
+    );
+  const player = useAudioPlayer({ onEnded: nextTrack, src: track?.src });
 
-  const [soundBus, setSoundBus] = useState<GainNode | null>(null);
-  useEffect(() => {
-    if (!context) {
-      return;
-    }
-    const bus = context.createGain();
-    setSoundBus(bus);
-    return () => {
-      bus.disconnect();
-      setSoundBus(null);
-    };
-  }, [context]);
+  // Sound pads play into one bus so the mixer sees them as a single source.
+  const soundBus = useMemo(() => context?.createGain() ?? null, [context]);
+  useEffect(() => () => soundBus?.disconnect(), [soundBus]);
 
   const graph = useWebAudioMixer(mixer, {
     ducking: { targets: ["music"], trigger: "microphone" },
@@ -187,28 +416,8 @@ export const SystemAudioMixer = ({
   }, [graph.output, onOutputChange]);
 
   const show = (id: MixerSourceId) => sources.includes(id);
-  const micActive = microphone.status === "active";
-  const systemActive = system.status === "active";
-
-  let micStatus: Status = { label: "Off", tone: "default" };
-  if (micActive) {
-    micStatus = mixer.isAudible("microphone")
-      ? { label: "Live", tone: "live" }
-      : { label: "Muted", tone: "muted" };
-  } else if (microphone.status === "denied") {
-    micStatus = { label: "Blocked", tone: "error" };
-  }
-
-  let systemStatus: Status = { label: "Off", tone: "default" };
-  if (systemActive) {
-    systemStatus = { label: "On", tone: "live" };
-  } else if (system.status === "unsupported") {
-    systemStatus = { label: "Unsupported", tone: "warning" };
-  }
-
-  const deviceLabel =
-    devices.devices.find((device) => device.id === deviceId)?.label ??
-    "Default microphone";
+  const meterFor = (id: MixerSourceId) =>
+    graph.meters[id] ?? graph.master.meter;
 
   return (
     <Mixer className={className} orientation={orientation}>
@@ -236,167 +445,37 @@ export const SystemAudioMixer = ({
       </MixerHeader>
       <MixerChannels>
         {show("microphone") ? (
-          <MixerSourceStrip
-            accent="var(--chart-2)"
-            actions={
-              <>
-                <Popover>
-                  <PopoverTrigger
-                    render={
-                      <Button
-                        aria-label="Microphone settings"
-                        size="icon-xs"
-                        variant="ghost"
-                      />
-                    }
-                  >
-                    <GearSixIcon />
-                  </PopoverTrigger>
-                  <PopoverContent className="w-72">
-                    <AudioDeviceSelect
-                      devices={devices.devices}
-                      loading={devices.isLoading}
-                      onRequestPermission={() => devices.requestPermission()}
-                      onValueChange={setDeviceId}
-                      permission={
-                        devices.permission === "unsupported"
-                          ? "denied"
-                          : devices.permission
-                      }
-                      value={deviceId}
-                    />
-                  </PopoverContent>
-                </Popover>
-                <Button
-                  onClick={micActive ? microphone.stop : microphone.start}
-                  size="xs"
-                  variant={micActive ? "secondary" : "outline"}
-                >
-                  {micActive ? "Stop" : "Start"}
-                </Button>
-              </>
-            }
-            description={micActive ? deviceLabel : "Not listening"}
-            icon={<MicrophoneIcon />}
-            id="microphone"
-            meter={graph.meters.microphone ?? graph.master.meter}
+          <MicrophoneChannel
+            deviceId={deviceId}
+            meter={meterFor("microphone")}
+            microphone={microphone}
             mixer={mixer}
-            notice={
-              microphone.status === "denied" ? (
-                <ChannelStripNotice variant="destructive">
-                  Microphone access is blocked. Allow it in your browser&apos;s
-                  site settings.
-                </ChannelStripNotice>
-              ) : null
-            }
-            status={micStatus}
-            title="Microphone"
+            onDeviceChange={setDeviceId}
           />
         ) : null}
         {show("system") ? (
-          <MixerSourceStrip
-            accent="var(--chart-4)"
-            actions={
-              <Switch
-                aria-label="Capture system audio"
-                checked={systemActive}
-                disabled={!system.isSupported}
-                onCheckedChange={(checked) =>
-                  checked ? system.start() : system.stop()
-                }
-                size="sm"
-              />
-            }
-            description={
-              systemActive ? "Capturing" : "Share a screen or tab with audio"
-            }
-            icon={<DesktopIcon />}
-            id="system"
-            meter={graph.meters.system ?? graph.master.meter}
+          <SystemChannel
+            meter={meterFor("system")}
             mixer={mixer}
-            monitorable={false}
-            notice={
-              system.status === "no-audio" ? (
-                <ChannelStripNotice variant="warning">
-                  Nothing to hear: tick &quot;Share audio&quot; in the
-                  browser&apos;s picker.
-                </ChannelStripNotice>
-              ) : null
-            }
-            status={systemStatus}
-            title="System audio"
+            system={system}
           />
         ) : null}
         {show("music") ? (
-          <MixerSourceStrip
-            accent="var(--chart-1)"
-            actions={
-              <>
-                <Button
-                  aria-label={player.playing ? "Pause music" : "Play music"}
-                  disabled={!track}
-                  onClick={() => player.toggle()}
-                  size="icon-xs"
-                  variant="ghost"
-                >
-                  {player.playing ? <PauseIcon /> : <PlayIcon />}
-                </Button>
-                <Button
-                  aria-label="Next track"
-                  disabled={tracks.length < 2}
-                  onClick={() =>
-                    setTrackIndex((trackIndex + 1) % tracks.length)
-                  }
-                  size="icon-xs"
-                  variant="ghost"
-                >
-                  <SkipForwardIcon />
-                </Button>
-              </>
-            }
-            description={track ? track.title : "No tracks"}
-            icon={<MusicNotesIcon />}
-            id="music"
-            meter={graph.meters.music ?? graph.master.meter}
+          <MusicChannel
+            meter={meterFor("music")}
             mixer={mixer}
-            status={
-              player.playing ? { label: "Playing", tone: "live" } : undefined
-            }
-            title="Music"
+            onNext={nextTrack}
+            player={player}
+            track={track}
+            trackCount={tracks.length}
           />
         ) : null}
         {show("sounds") ? (
-          <MixerSourceStrip
-            accent="var(--chart-3)"
-            actions={
-              <Popover>
-                <PopoverTrigger
-                  render={
-                    <Button
-                      aria-label="Sound pads"
-                      disabled={sounds.length === 0}
-                      size="icon-xs"
-                      variant="ghost"
-                    />
-                  }
-                >
-                  <SquaresFourIcon />
-                </PopoverTrigger>
-                <PopoverContent className="w-80">
-                  <SoundPadGrid columns={4} hotkeys>
-                    {sounds.map((sound) => (
-                      <MixerPad bus={soundBus} key={sound.id} sound={sound} />
-                    ))}
-                  </SoundPadGrid>
-                </PopoverContent>
-              </Popover>
-            }
-            description={`${sounds.length} pads`}
-            icon={<WaveformIcon />}
-            id="sounds"
-            meter={graph.meters.sounds ?? graph.master.meter}
+          <SoundsChannel
+            bus={soundBus}
+            meter={meterFor("sounds")}
             mixer={mixer}
-            title="Sounds"
+            sounds={sounds}
           />
         ) : null}
       </MixerChannels>

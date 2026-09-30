@@ -12,7 +12,7 @@ import {
   SpeakerHighIcon,
   SpeakerXIcon,
 } from "@phosphor-icons/react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import {
   AudioPlayer,
@@ -95,6 +95,7 @@ export interface MusicPlayerProps {
 
 type Repeat = "off" | "all" | "one";
 
+const NO_TRACKS: MusicTrack[] = [];
 const DUCK_THRESHOLD_DB = -35;
 const DUCK_ATTACK = 0.02;
 const DUCK_RELEASE = 0.15;
@@ -107,7 +108,7 @@ const nextRepeat: Record<Repeat, Repeat> = {
 
 export const MusicPlayer = ({
   tracks: tracksProp,
-  defaultTracks = [],
+  defaultTracks = NO_TRACKS,
   onTrackChange,
   duckingSource,
   output,
@@ -151,33 +152,32 @@ export const MusicPlayer = ({
   const waveform = useWaveformData(track?.src ?? null, { samples: 400 });
 
   const { context } = useAudioContext();
-  const [duckGain, setDuckGain] = useState<GainNode | null>(null);
+  const duckGain = useMemo(() => context?.createGain() ?? null, [context]);
   const routed = output !== undefined || duckingSource !== undefined;
 
   useEffect(() => {
-    if (!(context && player.element && routed)) {
+    if (!(context && duckGain && player.element && routed)) {
       return;
     }
     const source = getMediaElementSource(context, player.element);
-    const gain = context.createGain();
     try {
       source.disconnect(context.destination);
     } catch {
       // Not connected to the speakers.
     }
-    source.connect(gain);
+    source.connect(duckGain);
     const target = output === undefined ? context.destination : output;
     if (target) {
-      gain.connect(target);
+      duckGain.connect(target);
     }
-    setDuckGain(gain);
     return () => {
-      source.disconnect(gain);
-      gain.disconnect();
+      source.disconnect(duckGain);
+      if (target) {
+        duckGain.disconnect(target);
+      }
       source.connect(context.destination);
-      setDuckGain(null);
     };
-  }, [context, output, player.element, routed]);
+  }, [context, duckGain, output, player.element, routed]);
 
   useFrameSource(
     duckingSource,
@@ -196,7 +196,7 @@ export const MusicPlayer = ({
         active ? DUCK_ATTACK : DUCK_RELEASE
       );
     },
-    { enabled: Boolean(duckGain) }
+    { enabled: routed && Boolean(duckGain) }
   );
 
   if (tracks.length === 0) {
