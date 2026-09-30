@@ -117,6 +117,41 @@ test("sound pads play synthesised demo audio", async ({ page }) => {
   await expect(pad).toHaveAttribute("data-playing", "");
 });
 
+test("soundboard removal is reversible without losing pad order", async ({
+  page,
+}) => {
+  await page.goto("/docs/blocks/soundboard");
+  const board = page.locator('[data-slot="soundboard"]');
+  const pads = board.locator("[data-sound-pad]");
+  await expect(pads.first()).toBeVisible();
+  const before = await pads.allTextContents();
+  await pads.first().click({ button: "right" });
+  await page.getByRole("menuitem", { exact: true, name: "Remove" }).click();
+  await expect(pads).toHaveCount(before.length - 1);
+  await expect(board.getByRole("status")).toContainText("You can undo");
+  await board.getByRole("button", { name: "Undo removal" }).click();
+  await expect(pads).toHaveCount(before.length);
+  expect(await pads.allTextContents()).toEqual(before);
+  await expect(board.getByRole("status")).toContainText("Restored");
+});
+
+test("soundboard rejects non-audio files with inline feedback", async ({
+  page,
+}) => {
+  await page.goto("/docs/blocks/soundboard");
+  const board = page.locator('[data-slot="soundboard"]');
+  const pads = board.locator("[data-sound-pad]");
+  await expect(pads.first()).toBeVisible();
+  const count = await pads.count();
+  await board.getByLabel("Add audio files").setInputFiles({
+    buffer: Buffer.from("not audio"),
+    mimeType: "text/plain",
+    name: "notes.txt",
+  });
+  await expect(board.getByRole("status")).toContainText("No new sounds added");
+  await expect(pads).toHaveCount(count);
+});
+
 test("the theme picker switches themes", async ({ page }) => {
   await page.goto("/docs");
   await page.getByRole("combobox", { name: "Theme" }).first().click();

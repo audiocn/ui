@@ -730,6 +730,7 @@
       "description": "A grid of sound pads with global hotkeys, per-pad mode and volume in a context menu, master volume, stop all, and drag-and-drop to add sounds.",
       "dependencies": ["@phosphor-icons/react"],
       "registryDependencies": [
+        "alert",
         "button",
         "context-menu",
         "empty",

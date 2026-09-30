@@ -6,9 +6,10 @@ import {
   StopIcon,
   WaveformIcon,
 } from "@phosphor-icons/react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import type { DragEvent } from "react";
 
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
   ContextMenu,
@@ -191,6 +192,12 @@ export const Soundboard = ({
   const [hotkeys, setHotkeys] = useState(true);
   const [stopSignal, setStopSignal] = useState(0);
   const [dragging, setDragging] = useState(false);
+  const [feedback, setFeedback] = useState("");
+  const [removedSound, setRemovedSound] = useState<{
+    sound: SoundboardSound;
+    index: number;
+  } | null>(null);
+  const hotkeysId = useId();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -223,15 +230,52 @@ export const Soundboard = ({
   };
 
   const addFiles = (files: FileList | null) => {
-    if (!files) {
+    if (!files || files.length === 0) {
       return;
     }
+    const existingIds = new Set(sounds.map((sound) => sound.id));
     const added = [...files]
       .filter((file) => AUDIO_FILE.test(file.type))
+      .filter((file) => {
+        const id = `${file.name}-${file.lastModified}`;
+        if (existingIds.has(id)) {
+          return false;
+        }
+        existingIds.add(id);
+        return true;
+      })
       .map((file, index) => fileToSound(file, sounds.length + index));
-    if (added.length > 0) {
-      update([...sounds, ...added]);
+    if (added.length === 0) {
+      setFeedback(
+        "No new sounds added. Choose audio files that aren't already on the board."
+      );
+      return;
     }
+    update([...sounds, ...added]);
+    setFeedback(
+      `Added ${added.length} ${added.length === 1 ? "sound" : "sounds"}.`
+    );
+  };
+
+  const removeSound = (sound: SoundboardSound) => {
+    setRemovedSound({
+      index: sounds.findIndex((item) => item.id === sound.id),
+      sound,
+    });
+    update(sounds.filter((item) => item.id !== sound.id));
+    setFeedback(`Removed ${sound.label}. You can undo this removal.`);
+  };
+
+  const undoRemoval = () => {
+    if (!removedSound) {
+      return;
+    }
+    const { sound, index } = removedSound;
+    if (!sounds.some((item) => item.id === sound.id)) {
+      update([...sounds.slice(0, index), sound, ...sounds.slice(index)]);
+    }
+    setRemovedSound(null);
+    setFeedback(`Restored ${sound.label}.`);
   };
 
   const dropProps = useMemo(
@@ -262,11 +306,11 @@ export const Soundboard = ({
         <div className="flex items-center gap-2">
           <Switch
             checked={hotkeys}
-            id="soundboard-hotkeys"
+            id={hotkeysId}
             onCheckedChange={setHotkeys}
             size="sm"
           />
-          <Label htmlFor="soundboard-hotkeys">Hotkeys</Label>
+          <Label htmlFor={hotkeysId}>Hotkeys</Label>
         </div>
         <VolumeControl
           className="w-36"
@@ -281,7 +325,10 @@ export const Soundboard = ({
           <VolumeControlSlider />
         </VolumeControl>
         <Button
-          onClick={() => setStopSignal((signal) => signal + 1)}
+          onClick={() => {
+            setStopSignal((signal) => signal + 1);
+            setFeedback("Stopped all sounds.");
+          }}
           size="sm"
           variant="outline"
         >
@@ -289,6 +336,20 @@ export const Soundboard = ({
           Stop all
         </Button>
       </div>
+      {feedback && (
+        <output aria-live="polite" className="mb-3 block">
+          <Alert role="none">
+            <AlertDescription>{feedback}</AlertDescription>
+            {removedSound && (
+              <div className="mt-2">
+                <Button onClick={undoRemoval} size="sm" variant="outline">
+                  Undo removal
+                </Button>
+              </div>
+            )}
+          </Alert>
+        </output>
+      )}
       {sounds.length === 0 ? (
         <div className="rounded-xl border border-dashed">
           <Empty>
@@ -327,9 +388,7 @@ export const Soundboard = ({
                   sounds.map((item) => (item.id === sound.id ? next : item))
                 )
               }
-              onRemove={() =>
-                update(sounds.filter((item) => item.id !== sound.id))
-              }
+              onRemove={() => removeSound(sound)}
               sound={sound}
               stopSignal={stopSignal}
             />
@@ -347,6 +406,7 @@ export const Soundboard = ({
       )}
       <input
         accept="audio/*"
+        aria-label="Add audio files"
         className="hidden"
         multiple
         onChange={(event) => {

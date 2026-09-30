@@ -15,8 +15,10 @@ npx shadcn@latest add @audiocn/soundboard
 
 - Pads play on click or with hotkeys 1–9 anywhere on the page, except while typing in a field. Hotkeys can be turned off.
 - Right-click a pad to change its mode (one shot, toggle, hold, loop), its volume, or remove it.
+- Removing a pad shows an inline Undo action that restores it in its original position. The most recent removal stays undoable until another pad is removed.
 - A master volume and a "Stop all" button.
 - Drop audio files onto the board, or use the Add pad, to add sounds.
+- Inline status messages announce additions, rejected or duplicate files, removals and stopping playback. There is no global toast provider.
 
 Pass `output` to route the board into a mixer channel instead of the speakers.
 
