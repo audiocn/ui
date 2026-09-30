@@ -8,11 +8,12 @@ import {
   useContext,
   useEffect,
   useImperativeHandle,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
 } from "react";
-import type { ComponentProps, CSSProperties, Ref } from "react";
+import type { ComponentProps, Ref, RefObject } from "react";
 
 import { ClipIndicator } from "@/components/ui/clip-indicator";
 import type { ClipIndicatorProps } from "@/components/ui/clip-indicator";
@@ -21,6 +22,7 @@ import type { DbReadoutProps } from "@/components/ui/db-readout";
 import { DbScale } from "@/components/ui/db-scale";
 import type { DbScaleProps } from "@/components/ui/db-scale";
 import { useAudioConfig } from "@/hooks/use-audio-config";
+import type { AudioSize } from "@/hooks/use-audio-config";
 import { useFrameSource } from "@/hooks/use-frame-source";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { createBallistics, resolveBallistics } from "@/lib/audio/ballistics";
@@ -68,12 +70,9 @@ export interface LevelMeterActions {
 interface LevelMeterContextValue {
   orientation: Orientation;
   variant: LevelMeterVariant;
-  segments: number;
   minDb: number;
   maxDb: number;
   taper: Taper;
-  zoneFill: string;
-  segmentMask: string | undefined;
   frames: FrameSource<MeterFrame>;
   registerChannel: (index: number, element: HTMLElement | null) => void;
 }
@@ -120,72 +119,6 @@ const buildSegmentMask = (orientation: Orientation, segments: number) => {
   return `repeating-linear-gradient(${direction}, black 0 calc(${size} - 2px), transparent calc(${size} - 2px) ${size})`;
 };
 
-const levelMeterVariants = cva(
-  "group/level-meter flex gap-2 [--meter-gap:0.25rem] data-dimmed:opacity-50",
-  {
-    defaultVariants: {
-      orientation: "horizontal",
-      size: "default",
-    },
-    variants: {
-      orientation: {
-        horizontal: "w-full flex-row items-center",
-        vertical: "min-h-32 flex-col items-center",
-      },
-      size: {
-        default: "[--meter-thickness:0.5rem]",
-        lg: "[--meter-thickness:0.75rem]",
-        sm: "[--meter-thickness:0.25rem]",
-      },
-    },
-  }
-);
-
-export interface LevelMeterProps
-  extends
-    ComponentProps<"div">,
-    Omit<VariantProps<typeof levelMeterVariants>, "orientation"> {
-  /** A meter source; the meter subscribes and paints itself without re-rendering React. */
-  source?: FrameSource<MeterFrame> | null;
-  /** Mono peak level in dBFS, for declarative use. */
-  peakDb?: number;
-  /** Mono RMS level in dBFS, for declarative use. */
-  rmsDb?: number;
-  /** Levels per channel, for declarative multi-channel use. */
-  channels?: ChannelLevel[];
-  /** Tracks to render before data arrives. Default 1. */
-  channelCount?: number;
-  /** Bottom of the displayed range. Default −60. */
-  minDb?: number;
-  /** Top of the displayed range. Default 0. */
-  maxDb?: number;
-  /** Colour zones. Default ok / warn from −20 / clip from −9. */
-  zones?: MeterZone[];
-  /** How the meter moves. Default `peak`. */
-  ballistics?: BallisticsInput;
-  /** Scale law. Default `linear`. */
-  taper?: TaperInput;
-  orientation?: Orientation;
-  /** `segmented` is an LED ladder. Default `solid`. */
-  variant?: LevelMeterVariant;
-  /** Segments for the `segmented` variant. Default 24. */
-  segments?: number;
-  actionsRef?: Ref<LevelMeterActions>;
-}
-
-interface ChannelState {
-  element: HTMLElement;
-  peak: Ballistics;
-  rms: Ballistics;
-  level: number;
-  rmsLevel: number;
-  hold: number;
-  zone: string;
-  active: boolean;
-}
-
-const silentLevel: ChannelLevel = { peakDb: SILENCE_DB };
-
 const serializeLevels = (
   channels: ChannelLevel[] | undefined,
   peakDb: number | undefined,
@@ -220,316 +153,167 @@ const parseLevels = (key: string): MeterFrame | null => {
   };
 };
 
-export const LevelMeter = ({
-  source,
-  peakDb,
-  rmsDb,
-  channels,
-  channelCount: channelCountProp,
-  minDb: minDbProp,
-  maxDb: maxDbProp,
-  zones: zonesProp,
-  ballistics: ballisticsProp,
-  taper = "linear",
-  orientation: orientationProp,
-  variant = "solid",
-  segments = DEFAULT_SEGMENTS,
-  size: sizeProp,
-  actionsRef,
-  className,
-  children,
-  ref,
-  ...props
-}: LevelMeterProps) => {
-  const config = useAudioConfig();
-  const orientation = orientationProp ?? config.orientation ?? "horizontal";
-  const size = sizeProp ?? config.size ?? "default";
-  const minDb = minDbProp ?? config.minDb ?? DEFAULT_MIN_DB;
-  const maxDb = maxDbProp ?? config.maxDb ?? DEFAULT_MAX_DB;
-  const zones = zonesProp ?? config.zones ?? DEFAULT_ZONES;
-  const ballistics = ballisticsProp ?? config.ballistics ?? "peak";
-  const reducedMotion = useReducedMotion();
+interface ChannelState {
+  element: HTMLElement;
+  peak: Ballistics;
+  rms: Ballistics;
+  level: number;
+  rmsLevel: number;
+  hold: number;
+  zone: string;
+  active: boolean;
+}
 
-  const [frames] = useState(() => createFrameEmitter<MeterFrame>());
-  const latestRef = useRef<MeterFrame | null>(null);
-  const rootRef = useRef<HTMLDivElement | null>(null);
-  const visibleRef = useRef(true);
-  const channelsRef = useRef(new Map<number, HTMLElement>());
-  const [channelCount, setChannelCount] = useState(
-    channels?.length ?? channelCountProp ?? 1
-  );
-  const countRef = useRef(channelCount);
+interface PainterOptions {
+  ballistics: BallisticsInput;
+  channels: Map<number, HTMLElement>;
+  latest: RefObject<MeterFrame | null>;
+  maxDb: number;
+  minDb: number;
+  reducedMotion: boolean;
+  root: RefObject<HTMLElement | null>;
+  taper: Taper;
+  visible: RefObject<boolean>;
+  zones: MeterZone[];
+}
 
-  const accept = useCallback(
-    (frame: MeterFrame) => {
-      latestRef.current = frame;
-      frames.emit(frame);
-      if (
-        frame.channels.length > 0 &&
-        frame.channels.length !== countRef.current
-      ) {
-        countRef.current = frame.channels.length;
-        setChannelCount(frame.channels.length);
-      }
-    },
-    [frames]
-  );
+const silentLevel: ChannelLevel = { peakDb: SILENCE_DB };
 
-  useFrameSource(source, accept);
+const writePosition = (
+  element: HTMLElement,
+  property: string,
+  previous: number,
+  next: number
+) => {
+  if (Math.abs(previous - next) > POSITION_EPSILON) {
+    element.style.setProperty(property, next.toFixed(4));
+    return next;
+  }
+  return previous;
+};
 
-  const declarativeKey = serializeLevels(channels, peakDb, rmsDb);
+/**
+ * Paints a meter's channels outside React: steps ballistics, writes CSS
+ * variables and data attributes, and throttles ARIA updates.
+ */
+const createMeterPainter = (options: PainterOptions) => {
+  const ballisticsOptions: BallisticsInput = options.reducedMotion
+    ? "instant"
+    : options.ballistics;
+  const states = new Map<number, ChannelState>();
+  let clipUntil = 0;
+  let clippingShown = false;
+  let lastAriaMs = 0;
+  let lastPaintMs = 0;
 
-  useEffect(() => {
-    const frame = parseLevels(declarativeKey);
-    if (frame) {
-      accept(frame);
+  const stateFor = (index: number, element: HTMLElement) => {
+    const existing = states.get(index);
+    if (existing && existing.element === element) {
+      return existing;
     }
-  }, [accept, declarativeKey]);
-
-  const taperFn = useMemo(
-    () => resolveTaper(taper, minDb, maxDb),
-    [taper, minDb, maxDb]
-  );
-
-  const registerChannel = useCallback(
-    (index: number, element: HTMLElement | null) => {
-      if (element) {
-        channelsRef.current.set(index, element);
-      } else {
-        channelsRef.current.delete(index);
-      }
-    },
-    []
-  );
-
-  const ballisticsKey = JSON.stringify(
-    typeof ballistics === "string" ? ballistics : resolveBallistics(ballistics)
-  );
-
-  useEffect(() => {
-    const options: BallisticsInput = reducedMotion
-      ? "instant"
-      : (JSON.parse(ballisticsKey) as BallisticsInput);
-    const states = new Map<number, ChannelState>();
-    let clipUntil = 0;
-    let clippingShown = false;
-    let lastAriaMs = 0;
-    let lastPaintMs = 0;
-
-    const stateFor = (index: number, element: HTMLElement) => {
-      const existing = states.get(index);
-      if (existing && existing.element === element) {
-        return existing;
-      }
-      const created: ChannelState = {
-        active: false,
-        element,
-        hold: -1,
-        level: -1,
-        peak: createBallistics(options),
-        rms: createBallistics({ ...resolveBallistics(options), peakHoldMs: 0 }),
-        rmsLevel: -1,
-        zone: "",
-      };
-      states.set(index, created);
-      return created;
+    const created: ChannelState = {
+      active: false,
+      element,
+      hold: -1,
+      level: -1,
+      peak: createBallistics(ballisticsOptions),
+      rms: createBallistics({
+        ...resolveBallistics(ballisticsOptions),
+        peakHoldMs: 0,
+      }),
+      rmsLevel: -1,
+      zone: "",
     };
+    states.set(index, created);
+    return created;
+  };
 
-    const write = (
-      element: HTMLElement,
-      property: string,
-      previous: number,
-      next: number
-    ) => {
-      if (Math.abs(previous - next) > POSITION_EPSILON) {
-        element.style.setProperty(property, next.toFixed(4));
-        return next;
-      }
-      return previous;
-    };
+  const paintChannel = (
+    index: number,
+    element: HTMLElement,
+    input: ChannelLevel,
+    nowMs: number
+  ) => {
+    const state = stateFor(index, element);
+    const peak = state.peak.step(input.peakDb, nowMs);
+    const rms = state.rms.step(input.rmsDb ?? input.peakDb, nowMs);
+    const { taper } = options;
+    state.level = writePosition(
+      element,
+      "--meter-level",
+      state.level,
+      taper.toPosition(peak.db)
+    );
+    state.rmsLevel = writePosition(
+      element,
+      "--meter-rms",
+      state.rmsLevel,
+      taper.toPosition(rms.db)
+    );
+    state.hold = writePosition(
+      element,
+      "--meter-hold",
+      state.hold,
+      taper.toPosition(peak.holdDb)
+    );
 
-    const tick = (nowMs: number) => {
-      if (!visibleRef.current) {
-        return;
-      }
-      if (reducedMotion && nowMs - lastPaintMs < REDUCED_MOTION_INTERVAL_MS) {
-        return;
-      }
-      lastPaintMs = nowMs;
-      const frame = latestRef.current;
-      let loudest = SILENCE_DB;
+    const zone = zoneForDb(peak.db, options.zones);
+    if (zone !== state.zone) {
+      state.zone = zone;
+      element.dataset.zone = zone;
+    }
+    const active = state.level > 0;
+    if (active !== state.active) {
+      state.active = active;
+      element.toggleAttribute("data-active", active);
+    }
+    return peak.db;
+  };
 
-      for (const [index, element] of channelsRef.current) {
-        const input = frame?.channels[index] ?? silentLevel;
-        const state = stateFor(index, element);
-        const peak = state.peak.step(input.peakDb, nowMs);
-        const rms = state.rms.step(input.rmsDb ?? input.peakDb, nowMs);
-        loudest = Math.max(loudest, peak.db);
-        if (input.peakDb >= CLIP_THRESHOLD_DB) {
-          clipUntil = nowMs + CLIP_HOLD_MS;
-        }
-
-        state.level = write(
-          element,
-          "--meter-level",
-          state.level,
-          taperFn.toPosition(peak.db)
-        );
-        state.rmsLevel = write(
-          element,
-          "--meter-rms",
-          state.rmsLevel,
-          taperFn.toPosition(rms.db)
-        );
-        state.hold = write(
-          element,
-          "--meter-hold",
-          state.hold,
-          taperFn.toPosition(peak.holdDb)
-        );
-
-        const zone = zoneForDb(peak.db, zones);
-        if (zone !== state.zone) {
-          state.zone = zone;
-          element.dataset.zone = zone;
-        }
-        const active = state.level > 0;
-        if (active !== state.active) {
-          state.active = active;
-          element.toggleAttribute("data-active", active);
-        }
-      }
-
-      const root = rootRef.current;
-      if (!root) {
-        return;
-      }
-      const clipping = nowMs < clipUntil;
-      if (clipping !== clippingShown) {
-        clippingShown = clipping;
-        root.toggleAttribute("data-clipping", clipping);
-      }
-      if (nowMs - lastAriaMs >= ARIA_INTERVAL_MS) {
-        lastAriaMs = nowMs;
-        const clamped = Math.min(maxDb, Math.max(minDb, loudest));
-        root.setAttribute("aria-valuenow", clamped.toFixed(1));
-        root.setAttribute(
-          "aria-valuetext",
-          formatDb(loudest, { floorDb: minDb })
-        );
-        root.dataset.zone = zoneForDb(loudest, zones);
-      }
-    };
-
-    return subscribeFrame(tick);
-  }, [ballisticsKey, maxDb, minDb, reducedMotion, taperFn, zones]);
-
-  useEffect(() => {
-    const root = rootRef.current;
-    if (!root || typeof IntersectionObserver === "undefined") {
+  const paintRoot = (root: HTMLElement, loudest: number, nowMs: number) => {
+    const clipping = nowMs < clipUntil;
+    if (clipping !== clippingShown) {
+      clippingShown = clipping;
+      root.toggleAttribute("data-clipping", clipping);
+    }
+    if (nowMs - lastAriaMs < ARIA_INTERVAL_MS) {
       return;
     }
-    const observer = new IntersectionObserver((entries) => {
-      for (const entry of entries) {
-        visibleRef.current = entry.isIntersecting;
+    lastAriaMs = nowMs;
+    const clamped = Math.min(options.maxDb, Math.max(options.minDb, loudest));
+    root.setAttribute("aria-valuenow", clamped.toFixed(1));
+    root.setAttribute(
+      "aria-valuetext",
+      formatDb(loudest, { floorDb: options.minDb })
+    );
+    root.dataset.zone = zoneForDb(loudest, options.zones);
+  };
+
+  return (nowMs: number) => {
+    if (!options.visible.current) {
+      return;
+    }
+    if (
+      options.reducedMotion &&
+      nowMs - lastPaintMs < REDUCED_MOTION_INTERVAL_MS
+    ) {
+      return;
+    }
+    lastPaintMs = nowMs;
+    const frame = options.latest.current;
+    let loudest = SILENCE_DB;
+    for (const [index, element] of options.channels) {
+      const input = frame?.channels[index] ?? silentLevel;
+      if (input.peakDb >= CLIP_THRESHOLD_DB) {
+        clipUntil = nowMs + CLIP_HOLD_MS;
       }
-    });
-    observer.observe(root);
-    return () => {
-      observer.disconnect();
-    };
-  }, []);
-
-  useImperativeHandle(
-    actionsRef,
-    () => ({
-      paint: accept,
-      reset: () => {
-        accept({ channels: [] });
-      },
-    }),
-    [accept]
-  );
-
-  const zoneFill = useMemo(
-    () => buildZoneFill(zones, taperFn, orientation, variant),
-    [orientation, taperFn, variant, zones]
-  );
-  const segmentMask =
-    variant === "segmented"
-      ? buildSegmentMask(orientation, segments)
-      : undefined;
-
-  const contextValue = useMemo<LevelMeterContextValue>(
-    () => ({
-      frames,
-      maxDb,
-      minDb,
-      orientation,
-      registerChannel,
-      segmentMask,
-      segments,
-      taper: taperFn,
-      variant,
-      zoneFill,
-    }),
-    [
-      frames,
-      maxDb,
-      minDb,
-      orientation,
-      registerChannel,
-      segmentMask,
-      segments,
-      taperFn,
-      variant,
-      zoneFill,
-    ]
-  );
-
-  const setRootRef = useCallback(
-    (node: HTMLDivElement | null) => {
-      rootRef.current = node;
-      if (typeof ref === "function") {
-        ref(node);
-      } else if (ref) {
-        ref.current = node;
-      }
-    },
-    [ref]
-  );
-
-  return (
-    <LevelMeterContext.Provider value={contextValue}>
-      <div
-        aria-valuemax={maxDb}
-        aria-valuemin={minDb}
-        aria-valuenow={minDb}
-        className={cn(levelMeterVariants({ orientation, size }), className)}
-        data-dimmed={config.dimmed ? "" : undefined}
-        data-orientation={orientation}
-        data-size={size}
-        data-slot="level-meter"
-        data-variant={variant}
-        ref={setRootRef}
-        role="meter"
-        {...props}
-      >
-        {children ?? (
-          <LevelMeterChannels>
-            {Array.from({ length: channelCount }, (_, index) => (
-              <LevelMeterChannel index={index} key={`channel-${index}`}>
-                <LevelMeterTrack>
-                  <LevelMeterBar />
-                  <LevelMeterHold />
-                </LevelMeterTrack>
-              </LevelMeterChannel>
-            ))}
-          </LevelMeterChannels>
-        )}
-      </div>
-    </LevelMeterContext.Provider>
-  );
+      loudest = Math.max(loudest, paintChannel(index, element, input, nowMs));
+    }
+    const root = options.root.current;
+    if (root) {
+      paintRoot(root, loudest, nowMs);
+    }
+  };
 };
 
 export const LevelMeterChannels = ({
@@ -597,8 +381,7 @@ export const LevelMeterTrack = ({
   children,
   ...props
 }: ComponentProps<"div">) => {
-  const { orientation, segmentMask, zoneFill } =
-    useLevelMeter("LevelMeterTrack");
+  const { orientation, variant } = useLevelMeter("LevelMeterTrack");
   const horizontal = orientation === "horizontal";
 
   return (
@@ -614,12 +397,11 @@ export const LevelMeterTrack = ({
       data-slot="level-meter-track"
       {...props}
     >
-      {segmentMask ? (
+      {variant === "segmented" ? (
         <div
           aria-hidden
-          className="absolute inset-0 opacity-20"
+          className="absolute inset-0 bg-(image:--meter-fill) mask-(--meter-mask) opacity-20"
           data-slot="level-meter-segments"
-          style={{ backgroundImage: zoneFill, maskImage: segmentMask }}
         />
       ) : null}
       {children}
@@ -635,39 +417,36 @@ export interface LevelMeterBarProps extends ComponentProps<"div"> {
 export const LevelMeterBar = ({
   measure = "peak",
   className,
-  style,
   ...props
 }: LevelMeterBarProps) => {
-  const { orientation, segmentMask, zoneFill } = useLevelMeter("LevelMeterBar");
+  const { orientation } = useLevelMeter("LevelMeterBar");
   const horizontal = orientation === "horizontal";
-  const variable =
-    measure === "rms" ? "var(--meter-rms)" : "var(--meter-level)";
-  const outer: CSSProperties = {
-    transform: horizontal
-      ? `translateX(calc((${variable} - 1) * 100%))`
-      : `translateY(calc((1 - ${variable}) * 100%))`,
-  };
-  const inner: CSSProperties = {
-    backgroundImage: zoneFill,
-    maskImage: segmentMask,
-    transform: horizontal
-      ? `translateX(calc((1 - ${variable}) * 100%))`
-      : `translateY(calc((${variable} - 1) * 100%))`,
-  };
 
   return (
     <div
       aria-hidden
-      className={cn("absolute inset-0 overflow-hidden", className)}
+      className={cn(
+        "absolute inset-0 overflow-hidden",
+        measure === "rms"
+          ? "[--meter-bar-level:var(--meter-rms)]"
+          : "[--meter-bar-level:var(--meter-level)]",
+        horizontal
+          ? "translate-x-[calc((var(--meter-bar-level)_-_1)_*_100%)]"
+          : "translate-y-[calc((1_-_var(--meter-bar-level))_*_100%)]",
+        className
+      )}
       data-measure={measure}
       data-slot="level-meter-bar"
-      style={{ ...outer, ...style }}
       {...props}
     >
       <div
-        className="absolute inset-0"
+        className={cn(
+          "absolute inset-0 bg-(image:--meter-fill) mask-(--meter-mask)",
+          horizontal
+            ? "translate-x-[calc((1_-_var(--meter-bar-level))_*_100%)]"
+            : "translate-y-[calc((var(--meter-bar-level)_-_1)_*_100%)]"
+        )}
         data-slot="level-meter-fill"
-        style={inner}
       />
     </div>
   );
@@ -675,24 +454,21 @@ export const LevelMeterBar = ({
 
 export const LevelMeterHold = ({
   className,
-  style,
   ...props
 }: ComponentProps<"div">) => {
   const { orientation } = useLevelMeter("LevelMeterHold");
   const horizontal = orientation === "horizontal";
-  const position: CSSProperties = {
-    opacity: "calc(var(--meter-hold) * 50)",
-    transform: horizontal
-      ? "translateX(calc((var(--meter-hold) - 1) * 100%))"
-      : "translateY(calc((1 - var(--meter-hold)) * 100%))",
-  };
 
   return (
     <div
       aria-hidden
-      className="pointer-events-none absolute inset-0"
+      className={cn(
+        "pointer-events-none absolute inset-0 opacity-[calc(var(--meter-hold)_*_50)]",
+        horizontal
+          ? "translate-x-[calc((var(--meter-hold)_-_1)_*_100%)]"
+          : "translate-y-[calc((1_-_var(--meter-hold))_*_100%)]"
+      )}
       data-slot="level-meter-hold"
-      style={{ ...position, ...style }}
       {...props}
     >
       <div
@@ -743,6 +519,304 @@ export type LevelMeterClipProps = Omit<ClipIndicatorProps, "source">;
 export const LevelMeterClip = (props: LevelMeterClipProps) => {
   const { frames } = useLevelMeter("LevelMeterClip");
   return <ClipIndicator source={frames} {...props} />;
+};
+
+const levelMeterVariants = cva(
+  "group/level-meter flex gap-2 [--meter-gap:0.25rem] data-dimmed:opacity-50",
+  {
+    defaultVariants: {
+      orientation: "horizontal",
+      size: "default",
+    },
+    variants: {
+      orientation: {
+        horizontal: "w-full flex-row items-center",
+        vertical: "min-h-32 flex-col items-center",
+      },
+      size: {
+        default: "[--meter-thickness:0.5rem]",
+        lg: "[--meter-thickness:0.75rem]",
+        sm: "[--meter-thickness:0.25rem]",
+      },
+    },
+  }
+);
+
+export interface LevelMeterProps
+  extends
+    ComponentProps<"div">,
+    Omit<VariantProps<typeof levelMeterVariants>, "orientation"> {
+  /** A meter source; the meter subscribes and paints itself without re-rendering React. */
+  source?: FrameSource<MeterFrame> | null;
+  /** Mono peak level in dBFS, for declarative use. */
+  peakDb?: number;
+  /** Mono RMS level in dBFS, for declarative use. */
+  rmsDb?: number;
+  /** Levels per channel, for declarative multi-channel use. */
+  channels?: ChannelLevel[];
+  /** Tracks to render before data arrives. Default 1. */
+  channelCount?: number;
+  /** Bottom of the displayed range. Default −60. */
+  minDb?: number;
+  /** Top of the displayed range. Default 0. */
+  maxDb?: number;
+  /** Colour zones. Default ok / warn from −20 / clip from −9. */
+  zones?: MeterZone[];
+  /** How the meter moves. Default `peak`. */
+  ballistics?: BallisticsInput;
+  /** Scale law. Default `linear`. */
+  taper?: TaperInput;
+  orientation?: Orientation;
+  /** `segmented` is an LED ladder. Default `solid`. */
+  variant?: LevelMeterVariant;
+  /** Segments for the `segmented` variant. Default 24. */
+  segments?: number;
+  actionsRef?: Ref<LevelMeterActions>;
+}
+
+interface MeterSettings {
+  orientation: Orientation;
+  size: AudioSize;
+  minDb: number;
+  maxDb: number;
+  zones: MeterZone[];
+  ballistics: BallisticsInput;
+  dimmed: boolean;
+}
+
+/** Explicit props win over the surrounding mixer or strip. */
+const useMeterSettings = (props: Partial<MeterSettings>): MeterSettings => {
+  const config = useAudioConfig();
+  return {
+    ballistics: props.ballistics ?? config.ballistics ?? "peak",
+    dimmed: config.dimmed ?? false,
+    maxDb: props.maxDb ?? config.maxDb ?? DEFAULT_MAX_DB,
+    minDb: props.minDb ?? config.minDb ?? DEFAULT_MIN_DB,
+    orientation: props.orientation ?? config.orientation ?? "horizontal",
+    size: props.size ?? config.size ?? "default",
+    zones: props.zones ?? config.zones ?? DEFAULT_ZONES,
+  };
+};
+
+const useVisibility = (target: RefObject<HTMLElement | null>) => {
+  const visibleRef = useRef(true);
+  useEffect(() => {
+    const element = target.current;
+    if (!element || typeof IntersectionObserver === "undefined") {
+      return;
+    }
+    const observer = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        visibleRef.current = entry.isIntersecting;
+      }
+    });
+    observer.observe(element);
+    return () => {
+      observer.disconnect();
+    };
+  }, [target]);
+  return visibleRef;
+};
+
+export const LevelMeter = ({
+  source,
+  peakDb,
+  rmsDb,
+  channels,
+  channelCount: channelCountProp,
+  minDb: minDbProp,
+  maxDb: maxDbProp,
+  zones: zonesProp,
+  ballistics: ballisticsProp,
+  taper = "linear",
+  orientation: orientationProp,
+  variant = "solid",
+  segments = DEFAULT_SEGMENTS,
+  size: sizeProp,
+  actionsRef,
+  className,
+  children,
+  ref,
+  ...props
+}: LevelMeterProps) => {
+  const settings = useMeterSettings({
+    ballistics: ballisticsProp,
+    maxDb: maxDbProp,
+    minDb: minDbProp,
+    orientation: orientationProp,
+    size: sizeProp ?? undefined,
+    zones: zonesProp,
+  });
+  const { maxDb, minDb, orientation, zones } = settings;
+  const reducedMotion = useReducedMotion();
+  const frames = useMemo(() => createFrameEmitter<MeterFrame>(), []);
+  const latestRef = useRef<MeterFrame | null>(null);
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const channelsRef = useRef(new Map<number, HTMLElement>());
+  const visibleRef = useVisibility(rootRef);
+  const [observedCount, setObservedCount] = useState<number | null>(null);
+
+  const accept = useCallback(
+    (frame: MeterFrame) => {
+      latestRef.current = frame;
+      frames.emit(frame);
+    },
+    [frames]
+  );
+
+  const acceptAndCount = useCallback(
+    (frame: MeterFrame) => {
+      accept(frame);
+      const count = frame.channels.length;
+      if (count > 0) {
+        setObservedCount((previous) => (previous === count ? previous : count));
+      }
+    },
+    [accept]
+  );
+
+  useFrameSource(source, acceptAndCount);
+
+  const declarativeKey = serializeLevels(channels, peakDb, rmsDb);
+  let declaredCount: number | null = null;
+  if (channels) {
+    declaredCount = channels.length;
+  } else if (declarativeKey !== "") {
+    declaredCount = 1;
+  }
+  const channelCount = declaredCount ?? observedCount ?? channelCountProp ?? 1;
+
+  useEffect(() => {
+    const frame = parseLevels(declarativeKey);
+    if (frame) {
+      accept(frame);
+    }
+  }, [accept, declarativeKey]);
+
+  const taperFn = useMemo(
+    () => resolveTaper(taper, minDb, maxDb),
+    [taper, minDb, maxDb]
+  );
+
+  const registerChannel = useCallback(
+    (index: number, element: HTMLElement | null) => {
+      if (element) {
+        channelsRef.current.set(index, element);
+      } else {
+        channelsRef.current.delete(index);
+      }
+    },
+    []
+  );
+
+  const ballisticsKey = JSON.stringify(
+    typeof settings.ballistics === "string"
+      ? settings.ballistics
+      : resolveBallistics(settings.ballistics)
+  );
+
+  useEffect(
+    () =>
+      subscribeFrame(
+        createMeterPainter({
+          ballistics: JSON.parse(ballisticsKey) as BallisticsInput,
+          channels: channelsRef.current,
+          latest: latestRef,
+          maxDb,
+          minDb,
+          reducedMotion,
+          root: rootRef,
+          taper: taperFn,
+          visible: visibleRef,
+          zones,
+        })
+      ),
+    [ballisticsKey, maxDb, minDb, reducedMotion, taperFn, visibleRef, zones]
+  );
+
+  useImperativeHandle(
+    actionsRef,
+    () => ({
+      paint: acceptAndCount,
+      reset: () => {
+        accept({ channels: [] });
+      },
+    }),
+    [accept, acceptAndCount]
+  );
+
+  const zoneFill = useMemo(
+    () => buildZoneFill(zones, taperFn, orientation, variant),
+    [orientation, taperFn, variant, zones]
+  );
+  const segmentMask =
+    variant === "segmented" ? buildSegmentMask(orientation, segments) : "none";
+
+  useLayoutEffect(() => {
+    const root = rootRef.current;
+    root?.style.setProperty("--meter-fill", zoneFill);
+    root?.style.setProperty("--meter-mask", segmentMask);
+  }, [segmentMask, zoneFill]);
+
+  const contextValue = useMemo<LevelMeterContextValue>(
+    () => ({
+      frames,
+      maxDb,
+      minDb,
+      orientation,
+      registerChannel,
+      taper: taperFn,
+      variant,
+    }),
+    [frames, maxDb, minDb, orientation, registerChannel, taperFn, variant]
+  );
+
+  const setRootRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      rootRef.current = node;
+      if (typeof ref === "function") {
+        ref(node);
+      } else if (ref) {
+        ref.current = node;
+      }
+    },
+    [ref]
+  );
+
+  return (
+    <LevelMeterContext.Provider value={contextValue}>
+      <div
+        aria-valuemax={maxDb}
+        aria-valuemin={minDb}
+        aria-valuenow={minDb}
+        className={cn(
+          levelMeterVariants({ orientation, size: settings.size }),
+          className
+        )}
+        data-dimmed={settings.dimmed ? "" : undefined}
+        data-orientation={orientation}
+        data-size={settings.size}
+        data-slot="level-meter"
+        data-variant={variant}
+        ref={setRootRef}
+        role="meter"
+        {...props}
+      >
+        {children ?? (
+          <LevelMeterChannels>
+            {Array.from({ length: channelCount }, (_, index) => (
+              <LevelMeterChannel index={index} key={`channel-${index}`}>
+                <LevelMeterTrack>
+                  <LevelMeterBar />
+                  <LevelMeterHold />
+                </LevelMeterTrack>
+              </LevelMeterChannel>
+            ))}
+          </LevelMeterChannels>
+        )}
+      </div>
+    </LevelMeterContext.Provider>
+  );
 };
 
 export { levelMeterVariants };

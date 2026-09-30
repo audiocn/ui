@@ -11,7 +11,7 @@ const reportError = (error: unknown) => {
 
 const tick = (nowMs: number) => {
   handle = null;
-  for (const listener of Array.from(listeners)) {
+  for (const listener of [...listeners]) {
     try {
       listener(nowMs);
     } catch (error) {
