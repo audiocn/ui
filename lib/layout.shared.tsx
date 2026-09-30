@@ -1,5 +1,6 @@
 import type { BaseLayoutProps } from "fumadocs-ui/layouts/shared";
 
+import { ThemePicker } from "@/components/docs/theme-picker";
 import { siteConfig } from "@/lib/site";
 
 export const baseOptions = (): BaseLayoutProps => ({
@@ -7,6 +8,7 @@ export const baseOptions = (): BaseLayoutProps => ({
     { active: "nested-url", text: "Docs", url: "/docs" },
     { active: "nested-url", text: "Components", url: "/docs/components" },
     { active: "nested-url", text: "Blocks", url: "/docs/blocks" },
+    { children: <ThemePicker />, secondary: true, type: "custom" },
   ],
   nav: {
     title: (
