@@ -52,6 +52,7 @@ export interface PanControlProps extends Omit<
   | "min"
   | "max"
   | "orientation"
+  | "format"
 > {
   /** −1 (left) to 1 (right). */
   value?: number;
