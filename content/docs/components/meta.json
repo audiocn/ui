@@ -8,6 +8,7 @@
     "db-readout",
     "clip-indicator",
     "bar-visualizer",
+    "electric-bar-visualizer",
     "live-waveform",
     "waveform",
     "spectrum",

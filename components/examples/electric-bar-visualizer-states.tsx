@@ -1,0 +1,39 @@
+import { ElectricBarVisualizer } from "@/components/ui/electric-bar-visualizer";
+
+const ElectricBarVisualizerStates = () => (
+  <div className="grid w-full max-w-md gap-6 sm:grid-cols-3">
+    <div className="grid gap-2">
+      <ElectricBarVisualizer
+        aria-label="Idle pulse"
+        barCount={9}
+        className="text-primary h-16"
+        idle="pulse"
+      />
+      <span className="text-muted-foreground text-center text-xs">
+        idle pulse
+      </span>
+    </div>
+    <div className="grid gap-2">
+      <ElectricBarVisualizer
+        aria-label="Idle wave"
+        barCount={9}
+        className="text-primary h-16"
+        idle="wave"
+      />
+      <span className="text-muted-foreground text-center text-xs">
+        idle wave
+      </span>
+    </div>
+    <div className="grid gap-2">
+      <ElectricBarVisualizer
+        aria-label="Connecting"
+        barCount={9}
+        className="text-primary h-16"
+        loading
+      />
+      <span className="text-muted-foreground text-center text-xs">loading</span>
+    </div>
+  </div>
+);
+
+export default ElectricBarVisualizerStates;

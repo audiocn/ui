@@ -7,7 +7,7 @@
       "name": "core",
       "type": "registry:lib",
       "title": "Audio core",
-      "description": "Decibel maths, meter ballistics, zones, fader tapers, band resampling, time formatting, the shared frame loop, frame emitters, shared types and the audio theme tokens. Every audiocn component depends on it.",
+      "description": "Decibel maths, meter ballistics, zones, fader tapers, band resampling, bar level smoothing, time formatting, the shared frame loop, frame emitters, shared types and the audio theme tokens. Every audiocn component depends on it.",
       "files": [
         {
           "path": "lib/audio/types.ts",
@@ -31,6 +31,10 @@
         },
         {
           "path": "lib/audio/bands.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "lib/audio/bar-levels.ts",
           "type": "registry:lib"
         },
         {
@@ -309,6 +313,24 @@
       "files": [
         {
           "path": "components/ui/bar-visualizer.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "electric-bar-visualizer",
+      "type": "registry:ui",
+      "title": "Electric Bar Visualizer",
+      "description": "Frequency-band bars drawn as crackling filaments, with arcs between loud neighbours and sparks on sudden rises. Takes its colour from the theme.",
+      "registryDependencies": [
+        "@audiocn/core",
+        "@audiocn/use-audio-config",
+        "@audiocn/use-frame-source",
+        "@audiocn/use-reduced-motion"
+      ],
+      "files": [
+        {
+          "path": "components/ui/electric-bar-visualizer.tsx",
           "type": "registry:ui"
         }
       ]

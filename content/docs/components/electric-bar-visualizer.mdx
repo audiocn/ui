@@ -1,0 +1,136 @@
+---
+title: Electric Bar Visualizer
+description: Frequency-band bars drawn as crackling filaments, with arcs between loud neighbours and sparks on sudden rises.
+---
+
+<ComponentPreview name="electric-bar-visualizer-demo" />
+
+## Installation
+
+```npm
+npx shadcn@latest add @audiocn/electric-bar-visualizer
+```
+
+## Usage
+
+```tsx
+import { ElectricBarVisualizer } from "@/components/ui/electric-bar-visualizer";
+```
+
+```tsx
+<ElectricBarVisualizer
+  aria-label="Voice activity"
+  className="text-primary h-24"
+  source={analyser.visual}
+/>
+```
+
+It takes the same data and props as the [bar visualizer](/docs/components/bar-visualizer), so you can swap one for the other. The electric look comes from the shape and the motion, not from a fixed colour: the bars follow the text colour, so they turn with your theme. In dark mode the core runs white-hot.
+
+The visualizer fills its container, so size it with classes. It paints on the animation frame without re-rendering React, redraws on resize and picks up theme changes on its own.
+
+## Examples
+
+### Colors
+
+Set the text color, or `--electric`, to any theme color.
+
+<ComponentPreview name="electric-bar-visualizer-colors" />
+
+### Intensity, arcs and sparks
+
+`intensity` sets how jagged and restless the filaments are. `arcs` jump between loud neighbouring bars and `sparks` fly off the tips when a level rises quickly.
+
+<ComponentPreview name="electric-bar-visualizer-intensity" />
+
+### Idle and loading
+
+`idle` decides what bars do without a signal. `loading` runs an arc along the bars, for connecting or thinking states.
+
+<ComponentPreview name="electric-bar-visualizer-states" />
+
+### Mirrored
+
+<ComponentPreview name="electric-bar-visualizer-mirrored" />
+
+### Microphone
+
+<ComponentPreview name="electric-bar-visualizer-microphone" />
+
+## Theming
+
+| Variable or attribute | Meaning |
+| --- | --- |
+| `--electric` | Filament color, default `currentColor` |
+| `--electric-core` | Core and tip color, default `--electric` mixed toward white by `--electric-heat` |
+| `--electric-heat` | How white-hot the core runs, default `0%` in light mode and `70%` in dark mode |
+| `--electric-glow` | Glow color, default `--electric` |
+| `--electric-glow-size` | Glow blur, default `0.5rem` |
+| `data-active` | The signal is above the floor |
+| `data-loading` | The loading arc is running |
+| `data-align` | Where bars grow from |
+
+The variables can be set from a class, such as `[--electric-heat:40%]`, or globally.
+
+## Accessibility
+
+The root has `role="img"` and the label "Audio visualizer". Pass `aria-label` to describe what it shows, or `aria-hidden` when it is decorative next to a labelled meter.
+
+The flicker changes brightness by at most 12%, only on thin strokes, and each jagged shape holds for at least 40 ms, so nothing flashes across a large area. With reduced motion the bars are straight and still, with no arcs, sparks or flicker, and redraw four times a second.
+
+## API reference
+
+<PropsTable
+  rows={[
+    [
+      "source",
+      "FrameSource<VisualFrame> | null",
+      null,
+      "Bars follow the frame's frequency bands.",
+    ],
+    ["levels", "ArrayLike<number>", null, "Levels, 0..1, for declarative use."],
+    ["barCount", "number", "16", "Bands are resampled to fit."],
+    [
+      "align",
+      '"center" | "start" | "end"',
+      '"center"',
+      "Where bars grow from.",
+    ],
+    [
+      "mirrored",
+      "boolean",
+      "false",
+      "Symmetric around the middle bar, lows in the centre.",
+    ],
+    ["minLevel", "number", "0.08", "Resting bar size, 0..1."],
+    [
+      "idle",
+      '"static" | "pulse" | "wave"',
+      '"static"',
+      "What bars do without a signal.",
+    ],
+    ["loading", "boolean", "false", "Run an arc along the bars."],
+    [
+      "intensity",
+      "number",
+      "0.6",
+      "How jagged and restless the filaments are, 0..1.",
+    ],
+    ["arcs", "boolean", "true", "Arcs jump between loud neighbouring bars."],
+    ["sparks", "boolean", "true", "Sparks fly off the tips on sudden rises."],
+    ["barWidth", "number", "6", "Widest bar, in pixels."],
+    ["barGap", "number", "4", "Pixels."],
+    [
+      "orientation",
+      '"horizontal" | "vertical"',
+      '"horizontal"',
+      "vertical grows bars sideways.",
+    ],
+    [
+      "actionsRef",
+      "Ref<ElectricBarVisualizerActions>",
+      null,
+      "{ paint(levels) }.",
+    ],
+  ]}
+/>

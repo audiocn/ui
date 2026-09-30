@@ -63,6 +63,24 @@ export const examples: Record<string, ComponentType | undefined> = {
   "db-scale-vertical": dynamic(
     () => import("@/components/examples/db-scale-vertical")
   ),
+  "electric-bar-visualizer-colors": dynamic(
+    () => import("@/components/examples/electric-bar-visualizer-colors")
+  ),
+  "electric-bar-visualizer-demo": dynamic(
+    () => import("@/components/examples/electric-bar-visualizer-demo")
+  ),
+  "electric-bar-visualizer-intensity": dynamic(
+    () => import("@/components/examples/electric-bar-visualizer-intensity")
+  ),
+  "electric-bar-visualizer-microphone": dynamic(
+    () => import("@/components/examples/electric-bar-visualizer-microphone")
+  ),
+  "electric-bar-visualizer-mirrored": dynamic(
+    () => import("@/components/examples/electric-bar-visualizer-mirrored")
+  ),
+  "electric-bar-visualizer-states": dynamic(
+    () => import("@/components/examples/electric-bar-visualizer-states")
+  ),
   "fader-bipolar": dynamic(() => import("@/components/examples/fader-bipolar")),
   "fader-demo": dynamic(() => import("@/components/examples/fader-demo")),
   "fader-silence": dynamic(() => import("@/components/examples/fader-silence")),
