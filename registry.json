@@ -538,6 +538,53 @@
           "type": "registry:ui"
         }
       ]
+    },
+    {
+      "name": "use-audio-player",
+      "type": "registry:hook",
+      "title": "useAudioPlayer",
+      "description": "Playback state for an audio element the hook owns: status, time, duration, buffering, volume, rate and loop, plus a smooth time source.",
+      "registryDependencies": [
+        "@audiocn/core"
+      ],
+      "files": [
+        {
+          "path": "hooks/use-audio-player.ts",
+          "type": "registry:hook"
+        }
+      ]
+    },
+    {
+      "name": "use-sound",
+      "type": "registry:hook",
+      "title": "useSound",
+      "description": "Low-latency playback of short sounds decoded into memory, with voices, looping, progress and a routable output node.",
+      "registryDependencies": [
+        "@audiocn/core",
+        "@audiocn/use-audio-context"
+      ],
+      "files": [
+        {
+          "path": "hooks/use-sound.ts",
+          "type": "registry:hook"
+        }
+      ]
+    },
+    {
+      "name": "use-waveform-data",
+      "type": "registry:hook",
+      "title": "useWaveformData",
+      "description": "Decode an audio file, or take an AudioBuffer, and reduce it to cached waveform peaks.",
+      "registryDependencies": [
+        "@audiocn/use-audio-context",
+        "@audiocn/use-sound"
+      ],
+      "files": [
+        {
+          "path": "hooks/use-waveform-data.ts",
+          "type": "registry:hook"
+        }
+      ]
     }
   ]
 }
