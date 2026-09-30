@@ -601,6 +601,63 @@
           "type": "registry:ui"
         }
       ]
+    },
+    {
+      "name": "audio-player",
+      "type": "registry:ui",
+      "title": "Audio Player",
+      "description": "A composable audio player: transport, seek bar with buffering, time, volume, playback rate, loop and keyboard shortcuts.",
+      "dependencies": [
+        "@base-ui/react"
+      ],
+      "registryDependencies": [
+        "@audiocn/core",
+        "@audiocn/use-audio-player",
+        "@audiocn/use-frame-source",
+        "@audiocn/volume-control"
+      ],
+      "files": [
+        {
+          "path": "components/ui/audio-player.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "track-list",
+      "type": "registry:ui",
+      "title": "Track List",
+      "description": "A list of tracks with active and playing states, arrow-key navigation and slots for artwork, duration and actions.",
+      "dependencies": [
+        "@base-ui/react",
+        "class-variance-authority"
+      ],
+      "files": [
+        {
+          "path": "components/ui/track-list.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "sound-pad",
+      "type": "registry:ui",
+      "title": "Sound Pad",
+      "description": "A trigger pad with one-shot, toggle, hold and loop modes, a hotkey, playback progress and an accent colour, plus a grid with hotkeys and arrow navigation.",
+      "dependencies": [
+        "class-variance-authority"
+      ],
+      "registryDependencies": [
+        "kbd",
+        "@audiocn/core",
+        "@audiocn/use-frame-source"
+      ],
+      "files": [
+        {
+          "path": "components/ui/sound-pad.tsx",
+          "type": "registry:ui"
+        }
+      ]
     }
   ]
 }
