@@ -5,183 +5,71 @@ import dynamic from "next/dynamic";
 import type { ComponentType } from "react";
 
 export const examples: Record<string, ComponentType | undefined> = {
-  "audio-device-select-demo": dynamic(
-    () => import("@/components/examples/audio-device-select-demo")
-  ),
-  "audio-device-select-states": dynamic(
-    () => import("@/components/examples/audio-device-select-states")
-  ),
-  "audio-player-compact": dynamic(
-    () => import("@/components/examples/audio-player-compact")
-  ),
-  "audio-player-demo": dynamic(
-    () => import("@/components/examples/audio-player-demo")
-  ),
-  "bar-visualizer-align": dynamic(
-    () => import("@/components/examples/bar-visualizer-align")
-  ),
-  "bar-visualizer-demo": dynamic(
-    () => import("@/components/examples/bar-visualizer-demo")
-  ),
-  "bar-visualizer-mini": dynamic(
-    () => import("@/components/examples/bar-visualizer-mini")
-  ),
-  "bar-visualizer-mirrored": dynamic(
-    () => import("@/components/examples/bar-visualizer-mirrored")
-  ),
-  "bar-visualizer-states": dynamic(
-    () => import("@/components/examples/bar-visualizer-states")
-  ),
-  "channel-strip-console": dynamic(
-    () => import("@/components/examples/channel-strip-console")
-  ),
-  "channel-strip-demo": dynamic(
-    () => import("@/components/examples/channel-strip-demo")
-  ),
-  "channel-strip-notices": dynamic(
-    () => import("@/components/examples/channel-strip-notices")
-  ),
-  "channel-toggle-demo": dynamic(
-    () => import("@/components/examples/channel-toggle-demo")
-  ),
-  "channel-toggle-variants": dynamic(
-    () => import("@/components/examples/channel-toggle-variants")
-  ),
-  "clip-indicator-demo": dynamic(
-    () => import("@/components/examples/clip-indicator-demo")
-  ),
-  "clip-indicator-latching": dynamic(
-    () => import("@/components/examples/clip-indicator-latching")
-  ),
-  "db-readout-demo": dynamic(
-    () => import("@/components/examples/db-readout-demo")
-  ),
-  "db-readout-zones": dynamic(
-    () => import("@/components/examples/db-readout-zones")
-  ),
+  "audio-device-select-demo": dynamic(() => import("@/components/examples/audio-device-select-demo")),
+  "audio-device-select-states": dynamic(() => import("@/components/examples/audio-device-select-states")),
+  "audio-player-compact": dynamic(() => import("@/components/examples/audio-player-compact")),
+  "audio-player-demo": dynamic(() => import("@/components/examples/audio-player-demo")),
+  "bar-visualizer-align": dynamic(() => import("@/components/examples/bar-visualizer-align")),
+  "bar-visualizer-demo": dynamic(() => import("@/components/examples/bar-visualizer-demo")),
+  "bar-visualizer-mini": dynamic(() => import("@/components/examples/bar-visualizer-mini")),
+  "bar-visualizer-mirrored": dynamic(() => import("@/components/examples/bar-visualizer-mirrored")),
+  "bar-visualizer-states": dynamic(() => import("@/components/examples/bar-visualizer-states")),
+  "channel-strip-console": dynamic(() => import("@/components/examples/channel-strip-console")),
+  "channel-strip-demo": dynamic(() => import("@/components/examples/channel-strip-demo")),
+  "channel-strip-notices": dynamic(() => import("@/components/examples/channel-strip-notices")),
+  "channel-toggle-demo": dynamic(() => import("@/components/examples/channel-toggle-demo")),
+  "channel-toggle-variants": dynamic(() => import("@/components/examples/channel-toggle-variants")),
+  "clip-indicator-demo": dynamic(() => import("@/components/examples/clip-indicator-demo")),
+  "clip-indicator-latching": dynamic(() => import("@/components/examples/clip-indicator-latching")),
+  "db-readout-demo": dynamic(() => import("@/components/examples/db-readout-demo")),
+  "db-readout-zones": dynamic(() => import("@/components/examples/db-readout-zones")),
   "db-scale-demo": dynamic(() => import("@/components/examples/db-scale-demo")),
-  "db-scale-vertical": dynamic(
-    () => import("@/components/examples/db-scale-vertical")
-  ),
+  "db-scale-vertical": dynamic(() => import("@/components/examples/db-scale-vertical")),
   "fader-bipolar": dynamic(() => import("@/components/examples/fader-bipolar")),
   "fader-demo": dynamic(() => import("@/components/examples/fader-demo")),
   "fader-silence": dynamic(() => import("@/components/examples/fader-silence")),
   "fader-sizes": dynamic(() => import("@/components/examples/fader-sizes")),
-  "fader-vertical": dynamic(
-    () => import("@/components/examples/fader-vertical")
-  ),
-  "fader-with-meter": dynamic(
-    () => import("@/components/examples/fader-with-meter")
-  ),
-  "frame-source-demo": dynamic(
-    () => import("@/components/examples/frame-source-demo")
-  ),
+  "fader-vertical": dynamic(() => import("@/components/examples/fader-vertical")),
+  "fader-with-meter": dynamic(() => import("@/components/examples/fader-with-meter")),
+  "frame-source-demo": dynamic(() => import("@/components/examples/frame-source-demo")),
   "knob-demo": dynamic(() => import("@/components/examples/knob-demo")),
   "knob-sizes": dynamic(() => import("@/components/examples/knob-sizes")),
-  "level-meter-ballistics": dynamic(
-    () => import("@/components/examples/level-meter-ballistics")
-  ),
-  "level-meter-css-level": dynamic(
-    () => import("@/components/examples/level-meter-css-level")
-  ),
-  "level-meter-custom-colors": dynamic(
-    () => import("@/components/examples/level-meter-custom-colors")
-  ),
-  "level-meter-demo": dynamic(
-    () => import("@/components/examples/level-meter-demo")
-  ),
-  "level-meter-dual": dynamic(
-    () => import("@/components/examples/level-meter-dual")
-  ),
-  "level-meter-microphone": dynamic(
-    () => import("@/components/examples/level-meter-microphone")
-  ),
-  "level-meter-simple": dynamic(
-    () => import("@/components/examples/level-meter-simple")
-  ),
-  "level-meter-values": dynamic(
-    () => import("@/components/examples/level-meter-values")
-  ),
-  "level-meter-variants": dynamic(
-    () => import("@/components/examples/level-meter-variants")
-  ),
-  "level-meter-vertical": dynamic(
-    () => import("@/components/examples/level-meter-vertical")
-  ),
-  "live-waveform-demo": dynamic(
-    () => import("@/components/examples/live-waveform-demo")
-  ),
-  "live-waveform-idle": dynamic(
-    () => import("@/components/examples/live-waveform-idle")
-  ),
-  "live-waveform-microphone": dynamic(
-    () => import("@/components/examples/live-waveform-microphone")
-  ),
-  "live-waveform-variants": dynamic(
-    () => import("@/components/examples/live-waveform-variants")
-  ),
-  "mic-setup-demo": dynamic(
-    () => import("@/components/examples/mic-setup-demo")
-  ),
+  "level-meter-ballistics": dynamic(() => import("@/components/examples/level-meter-ballistics")),
+  "level-meter-css-level": dynamic(() => import("@/components/examples/level-meter-css-level")),
+  "level-meter-custom-colors": dynamic(() => import("@/components/examples/level-meter-custom-colors")),
+  "level-meter-demo": dynamic(() => import("@/components/examples/level-meter-demo")),
+  "level-meter-dual": dynamic(() => import("@/components/examples/level-meter-dual")),
+  "level-meter-microphone": dynamic(() => import("@/components/examples/level-meter-microphone")),
+  "level-meter-simple": dynamic(() => import("@/components/examples/level-meter-simple")),
+  "level-meter-values": dynamic(() => import("@/components/examples/level-meter-values")),
+  "level-meter-variants": dynamic(() => import("@/components/examples/level-meter-variants")),
+  "level-meter-vertical": dynamic(() => import("@/components/examples/level-meter-vertical")),
+  "live-waveform-demo": dynamic(() => import("@/components/examples/live-waveform-demo")),
+  "live-waveform-idle": dynamic(() => import("@/components/examples/live-waveform-idle")),
+  "live-waveform-microphone": dynamic(() => import("@/components/examples/live-waveform-microphone")),
+  "live-waveform-variants": dynamic(() => import("@/components/examples/live-waveform-variants")),
+  "mic-setup-demo": dynamic(() => import("@/components/examples/mic-setup-demo")),
   "mixer-demo": dynamic(() => import("@/components/examples/mixer-demo")),
   "mixer-empty": dynamic(() => import("@/components/examples/mixer-empty")),
-  "music-player-demo": dynamic(
-    () => import("@/components/examples/music-player-demo")
-  ),
-  "music-player-ducking": dynamic(
-    () => import("@/components/examples/music-player-ducking")
-  ),
-  "pan-control-demo": dynamic(
-    () => import("@/components/examples/pan-control-demo")
-  ),
-  "parameter-slider-demo": dynamic(
-    () => import("@/components/examples/parameter-slider-demo")
-  ),
-  "parameter-slider-frequency": dynamic(
-    () => import("@/components/examples/parameter-slider-frequency")
-  ),
-  "quick-audio-popover-demo": dynamic(
-    () => import("@/components/examples/quick-audio-popover-demo")
-  ),
-  "sound-pad-demo": dynamic(
-    () => import("@/components/examples/sound-pad-demo")
-  ),
-  "sound-pad-grid": dynamic(
-    () => import("@/components/examples/sound-pad-grid")
-  ),
-  "soundboard-demo": dynamic(
-    () => import("@/components/examples/soundboard-demo")
-  ),
+  "music-player-demo": dynamic(() => import("@/components/examples/music-player-demo")),
+  "music-player-ducking": dynamic(() => import("@/components/examples/music-player-ducking")),
+  "pan-control-demo": dynamic(() => import("@/components/examples/pan-control-demo")),
+  "parameter-slider-demo": dynamic(() => import("@/components/examples/parameter-slider-demo")),
+  "parameter-slider-frequency": dynamic(() => import("@/components/examples/parameter-slider-frequency")),
+  "quick-audio-popover-demo": dynamic(() => import("@/components/examples/quick-audio-popover-demo")),
+  "sound-pad-demo": dynamic(() => import("@/components/examples/sound-pad-demo")),
+  "sound-pad-grid": dynamic(() => import("@/components/examples/sound-pad-grid")),
+  "soundboard-demo": dynamic(() => import("@/components/examples/soundboard-demo")),
   "spectrum-demo": dynamic(() => import("@/components/examples/spectrum-demo")),
-  "spectrum-microphone": dynamic(
-    () => import("@/components/examples/spectrum-microphone")
-  ),
-  "spectrum-variants": dynamic(
-    () => import("@/components/examples/spectrum-variants")
-  ),
-  "system-audio-mixer-console": dynamic(
-    () => import("@/components/examples/system-audio-mixer-console")
-  ),
-  "system-audio-mixer-demo": dynamic(
-    () => import("@/components/examples/system-audio-mixer-demo")
-  ),
-  "system-audio-settings-demo": dynamic(
-    () => import("@/components/examples/system-audio-settings-demo")
-  ),
-  "track-list-demo": dynamic(
-    () => import("@/components/examples/track-list-demo")
-  ),
-  "volume-control-demo": dynamic(
-    () => import("@/components/examples/volume-control-demo")
-  ),
-  "volume-control-popover": dynamic(
-    () => import("@/components/examples/volume-control-popover")
-  ),
+  "spectrum-microphone": dynamic(() => import("@/components/examples/spectrum-microphone")),
+  "spectrum-variants": dynamic(() => import("@/components/examples/spectrum-variants")),
+  "system-audio-mixer-console": dynamic(() => import("@/components/examples/system-audio-mixer-console")),
+  "system-audio-mixer-demo": dynamic(() => import("@/components/examples/system-audio-mixer-demo")),
+  "system-audio-settings-demo": dynamic(() => import("@/components/examples/system-audio-settings-demo")),
+  "track-list-demo": dynamic(() => import("@/components/examples/track-list-demo")),
+  "volume-control-demo": dynamic(() => import("@/components/examples/volume-control-demo")),
+  "volume-control-popover": dynamic(() => import("@/components/examples/volume-control-popover")),
   "waveform-demo": dynamic(() => import("@/components/examples/waveform-demo")),
-  "waveform-regions": dynamic(
-    () => import("@/components/examples/waveform-regions")
-  ),
-  "waveform-variants": dynamic(
-    () => import("@/components/examples/waveform-variants")
-  ),
+  "waveform-regions": dynamic(() => import("@/components/examples/waveform-regions")),
+  "waveform-variants": dynamic(() => import("@/components/examples/waveform-variants")),
 };
