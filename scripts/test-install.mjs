@@ -1,6 +1,7 @@
 // Installs every audiocn registry item into a fresh shadcn app and type-checks
 // it. Run `pnpm registry:build` first.
 import { execFileSync, spawnSync } from "node:child_process";
+import { once } from "node:events";
 import {
   createReadStream,
   existsSync,
@@ -36,9 +37,8 @@ const server = createServer((request, response) => {
   createReadStream(file).pipe(response);
 });
 
-await new Promise((resolve) => {
-  server.listen(port, resolve);
-});
+server.listen(port);
+await once(server, "listening");
 
 const run = (command, args, cwd) => {
   console.log(`$ ${command} ${args.join(" ")}`);

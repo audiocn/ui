@@ -14,7 +14,7 @@ const collectPages = (dir: string, prefix = "/docs"): string[] =>
     if (!entry.endsWith(".mdx")) {
       return [];
     }
-    const slug = entry.replace(/\.mdx$/, "");
+    const slug = entry.replace(/\.mdx$/u, "");
     return [slug === "index" ? prefix : `${prefix}/${slug}`];
   });
 
@@ -56,7 +56,7 @@ test("level meters move with the demo signal", async ({ page }) => {
   const meter = page.getByRole("meter", { name: "Program level" }).first();
   const first = await meter.getAttribute("aria-valuenow");
   await expect
-    .poll(async () => meter.getAttribute("aria-valuenow"), { timeout: 10_000 })
+    .poll(() => meter.getAttribute("aria-valuenow"), { timeout: 10_000 })
     .not.toBe(first);
   const level = await page
     .locator('[data-slot="level-meter-channel"]')
@@ -78,17 +78,14 @@ test("faders respond to the keyboard", async ({ page }) => {
 
 test("the mixer block renders its strips", async ({ page }) => {
   await page.goto("/docs/blocks/system-audio-mixer");
-  for (const name of [
-    "Microphone",
-    "System audio",
-    "Music",
-    "Sounds",
-    "Master",
-  ]) {
-    await expect(
-      page.getByRole("group", { exact: true, name }).first()
-    ).toBeVisible();
-  }
+  const strips = ["Microphone", "System audio", "Music", "Sounds", "Master"];
+  await Promise.all(
+    strips.map((name) =>
+      expect(
+        page.getByRole("group", { exact: true, name }).first()
+      ).toBeVisible()
+    )
+  );
   await page.getByRole("tab", { name: "Console" }).first().click();
   await expect(page.locator('[data-slot="mixer"]').first()).toHaveAttribute(
     "data-orientation",
@@ -98,7 +95,7 @@ test("the mixer block renders its strips", async ({ page }) => {
 
 test("sound pads play synthesised demo audio", async ({ page }) => {
   await page.goto("/docs/components/sound-pad");
-  const pad = page.getByRole("button", { name: /Airhorn/ }).first();
+  const pad = page.getByRole("button", { name: /Airhorn/u }).first();
   await expect(pad).not.toHaveAttribute("data-loading", "", {
     timeout: 15_000,
   });

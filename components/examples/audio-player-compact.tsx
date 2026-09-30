@@ -13,7 +13,7 @@ import { useDemoTracks } from "@/lib/docs/use-demo-audio";
 
 const AudioPlayerCompact = () => {
   const tracks = useDemoTracks();
-  const track = tracks[1];
+  const track = tracks.at(1);
 
   return (
     <AudioPlayer

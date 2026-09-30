@@ -480,7 +480,7 @@ const encodeWav = (buffer: AudioBuffer): Blob => {
   const view = new DataView(new ArrayBuffer(44 + dataSize));
   const writeText = (offset: number, text: string) => {
     for (let index = 0; index < text.length; index += 1) {
-      view.setUint8(offset + index, text.charCodeAt(index));
+      view.setUint8(offset + index, text.codePointAt(index) ?? 0);
     }
   };
   writeText(0, "RIFF");
@@ -551,9 +551,11 @@ export const renderDemoTrackUrl = (id: string): Promise<string> => {
   if (!recipe) {
     return Promise.reject(new Error(`Unknown demo track: ${id}`));
   }
-  const url = renderBuffer(`track:${id}`, recipe).then((buffer) =>
-    URL.createObjectURL(encodeWav(buffer))
-  );
+  const render = async () => {
+    const buffer = await renderBuffer(`track:${id}`, recipe);
+    return URL.createObjectURL(encodeWav(buffer));
+  };
+  const url = render();
   urlCache.set(id, url);
   return url;
 };

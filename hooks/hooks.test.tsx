@@ -219,27 +219,29 @@ describe("browser device hooks", () => {
       configurable: true,
       value: {
         addEventListener: vi.fn(),
-        enumerateDevices: vi.fn(async () => [
-          {
-            deviceId: "default",
-            groupId: "g",
-            kind: "audioinput",
-            label: "Default - Built-in",
-          },
-          {
-            deviceId: "usb",
-            groupId: "u",
-            kind: "audioinput",
-            label: "USB mic",
-          },
-          {
-            deviceId: "cam",
-            groupId: "c",
-            kind: "videoinput",
-            label: "Camera",
-          },
-        ]),
-        getUserMedia: vi.fn(async () => stream),
+        enumerateDevices: vi.fn(() =>
+          Promise.resolve([
+            {
+              deviceId: "default",
+              groupId: "g",
+              kind: "audioinput",
+              label: "Default - Built-in",
+            },
+            {
+              deviceId: "usb",
+              groupId: "u",
+              kind: "audioinput",
+              label: "USB mic",
+            },
+            {
+              deviceId: "cam",
+              groupId: "c",
+              kind: "videoinput",
+              label: "Camera",
+            },
+          ])
+        ),
+        getUserMedia: vi.fn(() => Promise.resolve(stream)),
         removeEventListener: vi.fn(),
       },
     });

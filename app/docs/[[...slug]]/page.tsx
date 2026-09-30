@@ -22,14 +22,14 @@ const Page = async ({ params }: PageProps) => {
     notFound();
   }
 
-  const MDX = page.data.body;
+  const MdxContent = page.data.body;
 
   return (
     <DocsPage full={page.data.full} toc={page.data.toc}>
       <DocsTitle>{page.data.title}</DocsTitle>
       <DocsDescription>{page.data.description}</DocsDescription>
       <DocsBody>
-        <MDX components={getMDXComponents()} />
+        <MdxContent components={getMDXComponents()} />
       </DocsBody>
     </DocsPage>
   );

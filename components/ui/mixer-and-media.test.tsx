@@ -19,6 +19,37 @@ import { TrackList, TrackListItem } from "@/components/ui/track-list";
 import { Waveform } from "@/components/ui/waveform";
 import type { AudioPlayerController } from "@/hooks/use-audio-player";
 
+const SoloProbe = () => {
+  const { solo } = useChannelStrip();
+  return <span>{solo ? "soloed" : "not soloed"}</span>;
+};
+
+const controller = (
+  overrides: Partial<AudioPlayerController> = {}
+): AudioPlayerController => ({
+  buffered: 0,
+  currentTime: 84,
+  duration: 220,
+  element: null,
+  error: null,
+  loop: false,
+  muted: false,
+  pause: vi.fn(),
+  play: vi.fn(async () => {}),
+  playbackRate: 1,
+  playing: false,
+  seek: vi.fn(),
+  setLoop: vi.fn(),
+  setMuted: vi.fn(),
+  setPlaybackRate: vi.fn(),
+  setVolume: vi.fn(),
+  status: "paused",
+  time: { subscribe: () => () => {} },
+  toggle: vi.fn(async () => {}),
+  volume: 1,
+  ...overrides,
+});
+
 describe("ChannelStrip", () => {
   it("is a named group that passes its orientation down", () => {
     render(
@@ -35,13 +66,9 @@ describe("ChannelStrip", () => {
   });
 
   it("exposes its state to custom parts", () => {
-    const Probe = () => {
-      const { solo } = useChannelStrip();
-      return <span>{solo ? "soloed" : "not soloed"}</span>;
-    };
     render(
       <ChannelStrip solo>
-        <Probe />
+        <SoloProbe />
       </ChannelStrip>
     );
     expect(screen.getByText("soloed")).toBeInTheDocument();
@@ -187,32 +214,6 @@ describe("SoundPad", () => {
 });
 
 describe("AudioPlayer", () => {
-  const controller = (
-    overrides: Partial<AudioPlayerController> = {}
-  ): AudioPlayerController => ({
-    buffered: 0,
-    currentTime: 84,
-    duration: 220,
-    element: null,
-    error: null,
-    loop: false,
-    muted: false,
-    pause: vi.fn(),
-    play: vi.fn(async () => {}),
-    playbackRate: 1,
-    playing: false,
-    seek: vi.fn(),
-    setLoop: vi.fn(),
-    setMuted: vi.fn(),
-    setPlaybackRate: vi.fn(),
-    setVolume: vi.fn(),
-    status: "paused",
-    time: { subscribe: () => () => {} },
-    toggle: vi.fn(async () => {}),
-    volume: 1,
-    ...overrides,
-  });
-
   it("renders parts bound to an external player", () => {
     const player = controller();
     render(

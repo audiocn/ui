@@ -25,58 +25,49 @@ export interface DemoSoundSource {
   src: AudioBuffer;
 }
 
-/** Docs only: synthesised demo tracks with object URLs. */
-export const useDemoTracks = (): DemoTrackSource[] => {
-  const [tracks, setTracks] = useState<DemoTrackSource[]>([]);
+const renderTracks = () =>
+  Promise.all(
+    DEMO_TRACKS.map(async (track) => ({
+      ...track,
+      src: await renderDemoTrackUrl(track.id),
+    }))
+  );
+
+const renderSounds = () =>
+  Promise.all(
+    DEMO_SOUNDS.map(async (sound) => ({
+      ...sound,
+      src: await renderDemoSound(sound.id),
+    }))
+  );
+
+/** Runs `render` once on the client and keeps its result. */
+const useRendered = <T>(render: () => Promise<T[]>): T[] => {
+  const [items, setItems] = useState<T[]>([]);
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all(
-      DEMO_TRACKS.map(async (track) => ({
-        ...track,
-        src: await renderDemoTrackUrl(track.id),
-      }))
-    )
-      .then((rendered) => {
+    const load = async () => {
+      try {
+        const rendered = await render();
         if (!cancelled) {
-          setTracks(rendered);
+          setItems(rendered);
         }
-      })
-      .catch(() => {
+      } catch {
         // Demo audio needs OfflineAudioContext; without it the preview stays empty.
-      });
+      }
+    };
+    load();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [render]);
 
-  return tracks;
+  return items;
 };
+
+/** Docs only: synthesised demo tracks with object URLs. */
+export const useDemoTracks = (): DemoTrackSource[] => useRendered(renderTracks);
 
 /** Docs only: synthesised demo sound effects as AudioBuffers. */
-export const useDemoSounds = (): DemoSoundSource[] => {
-  const [sounds, setSounds] = useState<DemoSoundSource[]>([]);
-
-  useEffect(() => {
-    let cancelled = false;
-    Promise.all(
-      DEMO_SOUNDS.map(async (sound) => ({
-        ...sound,
-        src: await renderDemoSound(sound.id),
-      }))
-    )
-      .then((rendered) => {
-        if (!cancelled) {
-          setSounds(rendered);
-        }
-      })
-      .catch(() => {
-        // Demo audio needs OfflineAudioContext; without it the preview stays empty.
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  return sounds;
-};
+export const useDemoSounds = (): DemoSoundSource[] => useRendered(renderSounds);

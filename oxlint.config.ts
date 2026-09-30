@@ -93,6 +93,7 @@ export default defineConfig({
             ],
           },
         ],
+        "shadcn/no-unknown-classes": ["error", { allow: ["not-prose"] }],
       },
     },
   ],

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useSyncExternalStore } from "react";
+import type { CSSProperties } from "react";
 
 import {
   Select,
@@ -12,6 +13,7 @@ import {
 } from "@/components/ui/select";
 
 const STORAGE_KEY = "audiocn-theme";
+const CHANGE_EVENT = "audiocn-theme-change";
 
 const THEMES = [
   { label: "Stone", swatch: "oklch(0.216 0.006 56.043)", value: "stone" },
@@ -22,6 +24,9 @@ const THEMES = [
 
 type ThemeName = (typeof THEMES)[number]["value"];
 
+const isTheme = (value: unknown): value is ThemeName =>
+  THEMES.some((theme) => theme.value === value);
+
 const applyTheme = (theme: ThemeName) => {
   if (theme === "stone") {
     delete document.documentElement.dataset.theme;
@@ -30,43 +35,55 @@ const applyTheme = (theme: ThemeName) => {
   }
 };
 
-const isTheme = (value: unknown): value is ThemeName =>
-  THEMES.some((theme) => theme.value === value);
+const readTheme = (): ThemeName => {
+  try {
+    const stored = window.localStorage.getItem(STORAGE_KEY);
+    return isTheme(stored) ? stored : "stone";
+  } catch {
+    return "stone";
+  }
+};
+
+const subscribe = (onChange: () => void) => {
+  window.addEventListener(CHANGE_EVENT, onChange);
+  window.addEventListener("storage", onChange);
+  return () => {
+    window.removeEventListener(CHANGE_EVENT, onChange);
+    window.removeEventListener("storage", onChange);
+  };
+};
+
+const getServerTheme = (): ThemeName => "stone";
+
+const saveTheme = (theme: ThemeName) => {
+  try {
+    window.localStorage.setItem(STORAGE_KEY, theme);
+  } catch {
+    // Not persisted; the theme still applies for this visit.
+  }
+  applyTheme(theme);
+  window.dispatchEvent(new Event(CHANGE_EVENT));
+};
 
 /** Docs only: switches the colour theme so every preview can be seen in it. */
 export const ThemePicker = () => {
-  const [theme, setTheme] = useState<ThemeName>("stone");
+  const theme = useSyncExternalStore(subscribe, readTheme, getServerTheme);
 
   useEffect(() => {
-    try {
-      const stored = window.localStorage.getItem(STORAGE_KEY);
-      if (isTheme(stored)) {
-        setTheme(stored);
-        applyTheme(stored);
-      }
-    } catch {
-      // Storage is unavailable; keep the default theme.
-    }
-  }, []);
+    applyTheme(theme);
+  }, [theme]);
 
   return (
     <Select
       items={THEMES.map(({ label, value }) => ({ label, value }))}
       onValueChange={(next) => {
-        if (!isTheme(next)) {
-          return;
-        }
-        setTheme(next);
-        applyTheme(next);
-        try {
-          window.localStorage.setItem(STORAGE_KEY, next);
-        } catch {
-          // Not persisted; the theme still applies for this visit.
+        if (isTheme(next)) {
+          saveTheme(next);
         }
       }}
       value={theme}
     >
-      <SelectTrigger aria-label="Theme" className="h-8 w-28" size="sm">
+      <SelectTrigger aria-label="Theme" className="w-28" size="sm">
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
@@ -75,8 +92,8 @@ export const ThemePicker = () => {
             <SelectItem key={option.value} value={option.value}>
               <span
                 aria-hidden
-                className="size-3 rounded-full"
-                style={{ background: option.swatch }}
+                className="size-3 rounded-full bg-(--swatch)"
+                style={{ "--swatch": option.swatch } as CSSProperties}
               />
               {option.label}
             </SelectItem>

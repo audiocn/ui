@@ -5,8 +5,8 @@ const root = process.cwd();
 const examplesDir = path.join(root, "components/examples");
 const outFile = path.join(root, "components/docs/example-registry.tsx");
 
-const entries = await readdir(examplesDir);
-const files = entries.filter((file) => file.endsWith(".tsx")).toSorted();
+const names = await readdir(examplesDir);
+const files = names.filter((file) => file.endsWith(".tsx")).toSorted();
 
 const entries = files
   .map((file) => {
