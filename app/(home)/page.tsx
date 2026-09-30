@@ -63,7 +63,7 @@ const Page = () => (
             See the mixer
           </Button>
         </div>
-        <code className="bg-muted rounded-lg px-3 py-2 font-mono text-sm">
+        <code className="bg-muted max-w-full overflow-x-auto rounded-lg px-3 py-2 font-mono text-xs whitespace-nowrap sm:text-sm">
           npx shadcn@latest add @audiocn/level-meter
         </code>
       </div>

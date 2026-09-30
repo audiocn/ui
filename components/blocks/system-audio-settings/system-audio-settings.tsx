@@ -151,17 +151,19 @@ export const SystemAudioSettings = ({
         <FieldGroup>
           <Field orientation="horizontal">
             <FieldContent>
-              <FieldLabel htmlFor="system-audio-enabled">
-                Capture system audio
-              </FieldLabel>
+              <div className="flex flex-wrap items-center gap-2">
+                <FieldLabel htmlFor="system-audio-enabled">
+                  Capture system audio
+                </FieldLabel>
+                <Badge variant={active ? "default" : "secondary"}>
+                  {STATE_LABELS[system.status]}
+                </Badge>
+              </div>
               <FieldDescription>
                 Your browser asks what to share. Choose a screen or tab and turn
                 on its audio.
               </FieldDescription>
             </FieldContent>
-            <Badge variant={active ? "default" : "secondary"}>
-              {STATE_LABELS[system.status]}
-            </Badge>
             <Switch
               checked={active || system.status === "prompting"}
               disabled={!system.isSupported}
