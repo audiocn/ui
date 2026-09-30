@@ -177,6 +177,18 @@ export const examples: Record<string, ComponentType | undefined> = {
   "quick-audio-popover-demo": dynamic(
     () => import("@/components/examples/quick-audio-popover-demo")
   ),
+  "smooth-waveform-demo": dynamic(
+    () => import("@/components/examples/smooth-waveform-demo")
+  ),
+  "smooth-waveform-microphone": dynamic(
+    () => import("@/components/examples/smooth-waveform-microphone")
+  ),
+  "smooth-waveform-modes": dynamic(
+    () => import("@/components/examples/smooth-waveform-modes")
+  ),
+  "smooth-waveform-states": dynamic(
+    () => import("@/components/examples/smooth-waveform-states")
+  ),
   "sound-pad-demo": dynamic(
     () => import("@/components/examples/sound-pad-demo")
   ),

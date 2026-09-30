@@ -1,0 +1,85 @@
+---
+title: Smooth Waveform
+description: One clean line across the width that follows the sound, as a flowing wave or an oscilloscope trace.
+---
+
+<ComponentPreview name="smooth-waveform-demo" />
+
+## Installation
+
+```npm
+npx shadcn@latest add @audiocn/smooth-waveform
+```
+
+## Usage
+
+```tsx
+import { SmoothWaveform } from "@/components/ui/smooth-waveform";
+```
+
+```tsx
+<SmoothWaveform
+  aria-label="Voice activity"
+  className="text-primary h-24"
+  source={analyser.visual}
+/>
+```
+
+The line takes its color from the text color. It is the plain version of the [electric waveform](/docs/components/electric-waveform): the same shape, with no crackle, glow or sparks.
+
+The waveform fills its container, so size it with classes. It paints on the animation frame without re-rendering React, redraws on resize and picks up theme changes on its own.
+
+## Examples
+
+### Wave and scope
+
+`wave` draws a smooth wave shaped by the frequency bands, calm enough for a voice assistant. `scope` draws the signal itself, like an oscilloscope, and starts each frame on a rising zero crossing so steady tones stand still.
+
+<ComponentPreview name="smooth-waveform-modes" />
+
+### Idle and loading
+
+With no signal the line rests flat. `loading` runs a pulse along it, for connecting or thinking states.
+
+<ComponentPreview name="smooth-waveform-states" />
+
+### Microphone
+
+<ComponentPreview name="smooth-waveform-microphone" />
+
+## Theming
+
+| Variable or attribute | Meaning                            |
+| --------------------- | ---------------------------------- |
+| `--waveform`          | Line color, default `currentColor` |
+| `data-mode`           | `wave` or `scope`                  |
+| `data-active`         | The signal is above the floor      |
+| `data-loading`        | The loading pulse is running       |
+
+## Accessibility
+
+The root has `role="img"` and the label "Audio waveform". Pass `aria-label` to describe what it shows, or `aria-hidden` when it is decorative next to a labelled meter. With reduced motion the wave stops drifting and the line redraws four times a second.
+
+## API reference
+
+<PropsTable
+  rows={[
+    ["source", "FrameSource<VisualFrame> | null", null, null],
+    [
+      "mode",
+      '"wave" | "scope"',
+      '"wave"',
+      "wave follows the frequency bands; scope draws the signal.",
+    ],
+    ["loading", "boolean", "false", "Run a pulse along the line."],
+    ["sensitivity", "number", "1", "Visual gain."],
+    ["lineWidth", "number", "2", "Pixels."],
+    ["fadeEdges", "boolean", "true", "Fade the left and right ends."],
+    [
+      "actionsRef",
+      "Ref<SmoothWaveformActions>",
+      null,
+      "{ paint(frame), clear() }.",
+    ],
+  ]}
+/>

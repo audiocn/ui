@@ -372,6 +372,23 @@
       ]
     },
     {
+      "name": "smooth-waveform",
+      "type": "registry:ui",
+      "title": "Smooth Waveform",
+      "description": "One clean line across the width that follows the sound, as a smooth wave shaped by the frequency bands or a triggered oscilloscope trace.",
+      "registryDependencies": [
+        "@audiocn/core",
+        "@audiocn/use-frame-source",
+        "@audiocn/use-reduced-motion"
+      ],
+      "files": [
+        {
+          "path": "components/ui/smooth-waveform.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
       "name": "live-waveform",
       "type": "registry:ui",
       "title": "Live Waveform",
