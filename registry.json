@@ -722,6 +722,40 @@
       "categories": [
         "mixer"
       ]
+    },
+    {
+      "name": "mic-setup",
+      "type": "registry:block",
+      "title": "Microphone Setup",
+      "description": "Choose and check a microphone: device select with a live preview, a level meter, gain, mute and a level check that says whether you sound right.",
+      "dependencies": [
+        "@phosphor-icons/react"
+      ],
+      "registryDependencies": [
+        "alert",
+        "button",
+        "card",
+        "field",
+        "switch",
+        "@audiocn/audio-device-select",
+        "@audiocn/db-readout",
+        "@audiocn/level-meter",
+        "@audiocn/live-waveform",
+        "@audiocn/parameter-slider",
+        "@audiocn/use-audio-analyser",
+        "@audiocn/use-audio-context",
+        "@audiocn/use-audio-devices",
+        "@audiocn/use-microphone"
+      ],
+      "files": [
+        {
+          "path": "components/blocks/mic-setup/mic-setup.tsx",
+          "type": "registry:block"
+        }
+      ],
+      "categories": [
+        "microphone"
+      ]
     }
   ]
 }
