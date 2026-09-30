@@ -16,6 +16,18 @@ const TILES = {
     Component: lazy(() => import("@/components/home/tiles/mixer-tile")),
     placeholder: <Skeleton className="h-75 w-full" />,
   },
+  music: {
+    Component: lazy(() => import("@/components/home/tiles/music-tile")),
+    placeholder: <Skeleton className="h-82 w-full @lg:h-40" />,
+  },
+  "sound-pads": {
+    Component: lazy(() => import("@/components/home/tiles/sound-pads-tile")),
+    placeholder: <Skeleton className="h-76 w-full @sm:h-50" />,
+  },
+  waveform: {
+    Component: lazy(() => import("@/components/home/tiles/waveform-tile")),
+    placeholder: <Skeleton className="h-36 w-full" />,
+  },
 } satisfies Record<string, Tile>;
 
 export type ShowcaseTileName = keyof typeof TILES;
@@ -58,7 +70,7 @@ export const ShowcaseTile = ({ name }: ShowcaseTileProps) => {
   const { Component, placeholder } = TILES[name];
 
   return (
-    <div className="flex w-full min-w-0 justify-center" ref={ref}>
+    <div className="@container flex w-full min-w-0 justify-center" ref={ref}>
       {near ? (
         <Suspense fallback={placeholder}>
           <Component />

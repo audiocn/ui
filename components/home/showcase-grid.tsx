@@ -15,6 +15,21 @@ const WIDE: ShowcaseItem[] = [
     label: "Mixer",
     tile: "mixer",
   },
+  {
+    href: "/docs/components/waveform",
+    label: "Waveform",
+    tile: "waveform",
+  },
+  {
+    href: "/docs/blocks/music-player",
+    label: "Music player",
+    tile: "music",
+  },
+  {
+    href: "/docs/components/sound-pad",
+    label: "Sound pads",
+    tile: "sound-pads",
+  },
 ];
 
 const LEFT: ShowcaseItem[] = [];
