@@ -46,7 +46,7 @@ const SocialImage = async () => {
         </div>
       </div>
       <img
-        alt="audiocn knob logo"
+        alt="audiocn visualizer logo"
         height={320}
         src={`data:image/png;base64,${logo.toString("base64")}`}
         width={320}

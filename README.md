@@ -1,4 +1,4 @@
-<img src="public/brand/logo.png" alt="audiocn knob logo" width="96" height="96" />
+<img src="public/brand/logo.png" alt="audiocn visualizer logo" width="96" height="96" />
 
 # audiocn
 

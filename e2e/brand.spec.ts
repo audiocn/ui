@@ -5,7 +5,7 @@ for (const width of [320, 1440]) {
     test.describe(`brand ${colorScheme} at ${width}px`, () => {
       test.use({ colorScheme, viewport: { height: 900, width } });
       for (const url of ["/", "/docs"]) {
-        test(`the approved dial brands ${url}`, async ({ page }) => {
+        test(`the approved visualizer brands ${url}`, async ({ page }) => {
           await page.goto(url);
           const logo = page
             .locator('[data-slot="brand-logo"]')
