@@ -204,7 +204,7 @@ export const VolumeControlValue = ({
   return (
     <span
       className={cn(
-        "text-muted-foreground w-9 text-end font-mono text-xs tabular-nums",
+        "text-muted-foreground w-9 shrink-0 text-end font-mono text-xs tabular-nums",
         className
       )}
       data-slot="volume-control-value"

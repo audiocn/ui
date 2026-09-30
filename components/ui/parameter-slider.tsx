@@ -79,6 +79,23 @@ const decimalsOf = (step: number) => {
 
 const roundValue = (value: number) => Math.round(value * PRECISION) / PRECISION;
 
+/** Points along the range sampled to find the widest value text. */
+const WIDTH_SAMPLES = 24;
+
+/** Characters in the widest value along the range, so the value keeps one width. */
+const widestValue = (
+  format: (value: number) => string,
+  taper: Taper,
+  snap: (value: number) => number
+) => {
+  let widest = 0;
+  for (let index = 0; index <= WIDTH_SAMPLES; index += 1) {
+    const sample = snap(taper.toValue(index / WIDTH_SAMPLES));
+    widest = Math.max(widest, format(sample).length);
+  }
+  return widest;
+};
+
 export interface ParameterSliderProps extends Omit<
   ComponentProps<"div">,
   "defaultValue" | "onChange"
@@ -426,16 +443,34 @@ export const ParameterSliderInput = ({
 
 export const ParameterSliderValue = ({
   className,
+  style,
   ...props
 }: ComponentProps<"span">) => {
-  const { format, value } = useParameterSlider("ParameterSliderValue");
+  const { format, max, min, step, taper, value } = useParameterSlider(
+    "ParameterSliderValue"
+  );
+  const valueWidth = useMemo(
+    () =>
+      widestValue(format, taper, (next) =>
+        roundValue(
+          clamp(min + Math.round((next - min) / step) * step, min, max)
+        )
+      ),
+    [format, max, min, step, taper]
+  );
   return (
     <span
       className={cn(
-        "text-muted-foreground font-mono text-xs tabular-nums",
+        "text-muted-foreground inline-block min-w-(--parameter-value-width) text-end font-mono text-xs whitespace-nowrap tabular-nums",
         className
       )}
       data-slot="parameter-slider-value"
+      style={
+        {
+          "--parameter-value-width": `${valueWidth}ch`,
+          ...style,
+        } as CSSProperties
+      }
       {...props}
     >
       {format(value)}

@@ -290,13 +290,39 @@ export interface FaderValueProps extends ComponentProps<"span"> {
   editable?: boolean;
 }
 
+/** Levels whose text is as wide as any a fader shows: two digits either side of 0. */
+const WIDTH_SAMPLES_DB = [-88.8, -8.8, 8.8, 88.8];
+
+/** Characters in the widest value this fader can show. */
+const widestValue = (
+  format: (db: number) => string,
+  min: number,
+  max: number
+) =>
+  Math.max(
+    ...[
+      SILENCE_DB,
+      min,
+      min + 0.1,
+      max,
+      max - 0.1,
+      ...WIDTH_SAMPLES_DB.filter((db) => db > min && db < max),
+    ].map((db) => format(db).length)
+  );
+
 export const FaderValue = ({
   editable = false,
   className,
+  style,
   ...props
 }: FaderValueProps) => {
   const { change, commit, disabled, format, max, min, value } =
     useFader("FaderValue");
+  // A fixed width, so moving the fader never shifts the layout around it.
+  const widthStyle = {
+    "--fader-value-width": `${widestValue(format, min, max)}ch`,
+    ...style,
+  } as CSSProperties;
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
   const focusInput = useCallback((node: HTMLInputElement | null) => {
@@ -323,7 +349,7 @@ export const FaderValue = ({
       <input
         aria-label="Value in dB"
         className={cn(
-          "bg-background focus-visible:ring-ring/30 h-6 w-20 rounded-md border px-1.5 text-end font-mono text-xs tabular-nums outline-none focus-visible:ring-3",
+          "bg-background focus-visible:ring-ring/30 h-6 w-[calc(var(--fader-value-width)+0.75rem)] rounded-md border px-[calc(0.375rem-1px)] text-end font-mono text-xs tabular-nums outline-none focus-visible:ring-3",
           className
         )}
         data-slot="fader-value-input"
@@ -337,6 +363,7 @@ export const FaderValue = ({
           }
         }}
         ref={focusInput}
+        style={widthStyle}
         value={draft}
       />
     );
@@ -348,7 +375,8 @@ export const FaderValue = ({
     return (
       <button
         className={cn(
-          "text-muted-foreground hover:bg-muted focus-visible:ring-ring/30 h-6 rounded-md px-1.5 text-end font-mono text-xs tabular-nums outline-none focus-visible:ring-3",
+          "text-muted-foreground hover:bg-muted focus-visible:ring-ring/30 h-6 w-[calc(var(--fader-value-width)+0.75rem)] shrink-0 rounded-md text-end font-mono text-xs tabular-nums outline-none focus-visible:ring-3",
+          "px-1.5",
           className
         )}
         data-slot="fader-value"
@@ -357,6 +385,7 @@ export const FaderValue = ({
           setDraft(value === SILENCE_DB ? "-inf" : String(value));
           setEditing(true);
         }}
+        style={widthStyle}
         type="button"
       >
         {text}
@@ -367,10 +396,11 @@ export const FaderValue = ({
   return (
     <span
       className={cn(
-        "text-muted-foreground font-mono text-xs tabular-nums",
+        "text-muted-foreground inline-block w-(--fader-value-width) shrink-0 text-end font-mono text-xs whitespace-nowrap tabular-nums",
         className
       )}
       data-slot="fader-value"
+      style={widthStyle}
       {...props}
     >
       {text}

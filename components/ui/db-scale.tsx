@@ -159,7 +159,14 @@ export const DbScaleTick = ({
         data-slot="db-scale-mark"
       />
       {labels ? (
-        <span className="data-hidden:invisible" data-slot="db-scale-label">
+        <span
+          className={cn(
+            "data-hidden:invisible",
+            // Right-aligned so the last digits of a vertical scale line up.
+            !horizontal && "flex-1 text-end"
+          )}
+          data-slot="db-scale-label"
+        >
           {children ?? format(value)}
         </span>
       ) : null}

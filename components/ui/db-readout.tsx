@@ -11,7 +11,8 @@ import { cn } from "@/lib/utils";
 
 const DEFAULT_INTERVAL_MS = 250;
 const DEFAULT_FLOOR_DB = -60;
-const WIDEST_VALUE_DB = -88.8;
+/** Two-digit levels, the widest a meter usually shows, on either side of 0. */
+const WIDEST_MAGNITUDE_DB = 88.8;
 
 export interface DbReadoutProps extends Omit<
   ComponentProps<"span">,
@@ -88,9 +89,18 @@ export const DbReadout = ({
     format ? format(db) : formatDb(db, { decimals, floorDb, unit });
 
   const initialDb = value ?? SILENCE_DB;
+  // Size for the widest text the readout can show, so it never changes width.
+  // Values at or below the floor read as −∞, so measure just above it too.
+  const justAboveFloor = Number.isFinite(floorDb)
+    ? floorDb + 10 ** -decimals
+    : -WIDEST_MAGNITUDE_DB;
   const widest = Math.max(
-    render(WIDEST_VALUE_DB).length,
-    render(SILENCE_DB).length
+    ...[
+      SILENCE_DB,
+      justAboveFloor,
+      -WIDEST_MAGNITUDE_DB,
+      WIDEST_MAGNITUDE_DB,
+    ].map((db) => render(db).length)
   );
 
   useFrameSource(source, (frame) => {

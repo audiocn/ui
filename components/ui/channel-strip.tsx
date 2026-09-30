@@ -389,7 +389,8 @@ export const ChannelStripValue = ({
 }: ComponentProps<"div">) => (
   <div
     className={cn(
-      "text-muted-foreground flex items-center justify-center font-mono text-xs whitespace-nowrap tabular-nums [grid-area:value]",
+      // Wide enough for "−60.0 dB", so dragging a fader never resizes the row.
+      "text-muted-foreground flex min-w-[8ch] items-center justify-end font-mono text-xs whitespace-nowrap tabular-nums [grid-area:value]",
       className
     )}
     data-slot="channel-strip-value"

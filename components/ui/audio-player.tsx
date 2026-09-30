@@ -526,9 +526,15 @@ export const AudioPlayerTime = ({
   type = "current",
   format = defaultTimeFormat,
   className,
+  style,
   ...props
 }: AudioPlayerTimeProps) => {
   const { player } = useAudioPlayerPart("AudioPlayerTime");
+  // As wide as the longest time this track can show, so it never shifts.
+  const timeWidth = Math.max(
+    format(0, type).length,
+    format(player.duration, type).length
+  );
   let seconds = player.currentTime;
   if (type === "duration") {
     seconds = player.duration;
@@ -538,11 +544,17 @@ export const AudioPlayerTime = ({
   return (
     <span
       className={cn(
-        "text-muted-foreground font-mono text-xs tabular-nums",
+        "text-muted-foreground inline-block min-w-(--audio-player-time-width) text-end font-mono text-xs whitespace-nowrap tabular-nums",
         className
       )}
       data-slot="audio-player-time"
       data-type={type}
+      style={
+        {
+          "--audio-player-time-width": `${timeWidth}ch`,
+          ...style,
+        } as CSSProperties
+      }
       {...props}
     >
       {format(seconds, type)}
@@ -604,7 +616,14 @@ export const AudioPlayerRate = ({
     () => player.setPlaybackRate(next),
     {
       children: children ?? (
-        <span className="font-mono text-xs tabular-nums">
+        <span
+          className="inline-block min-w-(--rate-width) text-center font-mono text-xs tabular-nums"
+          style={
+            {
+              "--rate-width": `${Math.max(...rates.map((rate) => `${rate}×`.length))}ch`,
+            } as CSSProperties
+          }
+        >
           {player.playbackRate}×
         </span>
       ),
