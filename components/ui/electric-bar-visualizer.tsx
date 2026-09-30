@@ -11,6 +11,24 @@ import type { BarIdle } from "@/lib/audio/bar-levels";
 import { clamp } from "@/lib/audio/decibels";
 import { subscribeFrame } from "@/lib/audio/frame-loop";
 import type { FrameSource, Orientation, VisualFrame } from "@/lib/audio/types";
+import {
+  ELECTRIC_CANVAS_CLASS,
+  ELECTRIC_GLOW_CLASS,
+  clearElectricCanvas,
+  createElectricSparks,
+  createRandom,
+  displace,
+  emitSpark,
+  fitElectricCanvases,
+  moveSparks,
+  readElectricColors,
+  strokeSparks,
+} from "@/lib/electric";
+import type {
+  ElectricCanvasSize,
+  ElectricColors,
+  ElectricSparks,
+} from "@/lib/electric";
 import { cn } from "@/lib/utils";
 
 const DEFAULT_BAR_COUNT = 16;
@@ -23,7 +41,6 @@ const COLOR_REFRESH_FRAMES = 30;
 const MS_PER_SECOND = 1000;
 const FRAME_SECONDS = 1 / 60;
 const MAX_STEP_SECONDS = 0.05;
-const RANDOM_PERIOD = 1_000_003;
 
 /** A filament has 2^4 segments, so every split halves one cleanly. */
 const FILAMENT_DEPTH = 4;
@@ -207,43 +224,6 @@ const jitterAmplitude = (
     level * layout.span * MAX_BEND
   );
 
-const fract = (value: number) => value - Math.floor(value);
-
-/** A repeatable pseudo-random sequence, 0..1. */
-const createRandom = (seed: number) => {
-  let counter = 0;
-  return () => {
-    counter = (counter + 1) % RANDOM_PERIOD;
-    return fract(Math.sin(seed * 12.9898 + counter * 78.233) * 43_758.5453);
-  };
-};
-
-/**
- * Midpoint displacement: fills `count` offsets (`count - 1` a power of two)
- * with a jagged profile, big bends first and finer ones on top.
- */
-const displace = (
-  out: Float32Array,
-  start: number,
-  count: number,
-  ends: [number, number],
-  random: () => number
-) => {
-  const last = count - 1;
-  [out[start], out[start + last]] = ends;
-  let amplitude = 1;
-  for (let step = last; step > 1; step /= 2) {
-    const half = step / 2;
-    for (let index = half; index < last; index += step) {
-      const before = out[start + index - half] ?? 0;
-      const after = out[start + index + half] ?? 0;
-      out[start + index] =
-        (before + after) / 2 + (random() * 2 - 1) * amplitude;
-    }
-    amplitude *= ROUGHNESS;
-  }
-};
-
 export interface ElectricArc {
   /** The arc joins this bar and the one `reach` bars on. */
   index: number;
@@ -255,16 +235,6 @@ export interface ElectricArc {
   lifeMs: number;
   /** Bend at each point, in units of the arc's bow. */
   jitter: Float32Array;
-}
-
-/** A fixed pool of sparks, in canvas pixels. A spark with `life` 0 is gone. */
-export interface ElectricSparks {
-  x: Float32Array;
-  y: Float32Array;
-  vx: Float32Array;
-  vy: Float32Array;
-  age: Float32Array;
-  life: Float32Array;
 }
 
 export interface ElectricSceneOptions {
@@ -328,17 +298,9 @@ export const createElectricScene = ({
     reach: 1,
     tip: "to" as Tip,
   }));
-  const pool: ElectricSparks = {
-    age: new Float32Array(MAX_SPARKS),
-    life: new Float32Array(MAX_SPARKS),
-    vx: new Float32Array(MAX_SPARKS),
-    vy: new Float32Array(MAX_SPARKS),
-    x: new Float32Array(MAX_SPARKS),
-    y: new Float32Array(MAX_SPARKS),
-  };
+  const pool = createElectricSparks(MAX_SPARKS);
   const previous = new Float32Array(barCount);
   const lastEmitMs = new Float64Array(barCount).fill(-Infinity);
-  let nextSpark = 0;
   let lastMs = 0;
   let lastJitterMs = -Infinity;
   let primed = false;
@@ -351,7 +313,8 @@ export const createElectricScene = ({
         index * FILAMENT_POINTS,
         FILAMENT_POINTS,
         [from, signed() * FREE_TIP],
-        random
+        random,
+        ROUGHNESS
       );
       flicker[index] = 1 - FLICKER * random();
     }
@@ -428,7 +391,7 @@ export const createElectricScene = ({
     }
     for (const arc of arcList) {
       if (arc.lifeMs > 0) {
-        displace(arc.jitter, 0, ARC_POINTS, [0, 0], random);
+        displace(arc.jitter, 0, ARC_POINTS, [0, 0], random, ROUGHNESS);
       }
     }
   };
@@ -441,7 +404,11 @@ export const createElectricScene = ({
     }
   };
 
-  const emitSpark = (index: number, level: number, layout: ElectricLayout) => {
+  const launchSpark = (
+    index: number,
+    level: number,
+    layout: ElectricLayout
+  ) => {
     const tip: Tip =
       layout.align === "center" && random() < 0.5 ? "from" : "to";
     const along = tip === "to" ? barTo(layout, level) : barFrom(layout, level);
@@ -449,14 +416,13 @@ export const createElectricScene = ({
     const speed = SPARK_SPEED * (0.5 + random()) * (0.5 + intensity);
     const alongVelocity = tipDirection(layout, tip) * speed;
     const acrossVelocity = signed() * SPARK_SPREAD;
-    const slot = nextSpark;
-    nextSpark = (nextSpark + 1) % MAX_SPARKS;
-    pool.x[slot] = layout.horizontal ? across : along;
-    pool.y[slot] = layout.horizontal ? along : across;
-    pool.vx[slot] = layout.horizontal ? acrossVelocity : alongVelocity;
-    pool.vy[slot] = layout.horizontal ? alongVelocity : acrossVelocity;
-    pool.age[slot] = 0;
-    pool.life[slot] = SPARK_MIN_MS + random() * (SPARK_MAX_MS - SPARK_MIN_MS);
+    emitSpark(pool, {
+      lifeMs: SPARK_MIN_MS + random() * (SPARK_MAX_MS - SPARK_MIN_MS),
+      vx: layout.horizontal ? acrossVelocity : alongVelocity,
+      vy: layout.horizontal ? alongVelocity : acrossVelocity,
+      x: layout.horizontal ? across : along,
+      y: layout.horizontal ? along : across,
+    });
   };
 
   const emitSparks = (
@@ -471,25 +437,7 @@ export const createElectricScene = ({
         lastEmitMs[index] = nowMs;
         const count = 2 + Math.floor(random() * 3);
         for (let spark = 0; spark < count; spark += 1) {
-          emitSpark(index, level, layout);
-        }
-      }
-    }
-  };
-
-  const moveSparks = (seconds: number) => {
-    for (let slot = 0; slot < MAX_SPARKS; slot += 1) {
-      const life = pool.life[slot] ?? 0;
-      if (life > 0) {
-        const age = (pool.age[slot] ?? 0) + seconds * MS_PER_SECOND;
-        pool.age[slot] = age;
-        if (age >= life) {
-          pool.life[slot] = 0;
-        } else {
-          const vy = (pool.vy[slot] ?? 0) + SPARK_GRAVITY * seconds;
-          pool.vy[slot] = vy;
-          pool.x[slot] = (pool.x[slot] ?? 0) + (pool.vx[slot] ?? 0) * seconds;
-          pool.y[slot] = (pool.y[slot] ?? 0) + vy * seconds;
+          launchSpark(index, level, layout);
         }
       }
     }
@@ -521,32 +469,13 @@ export const createElectricScene = ({
       if (primed) {
         emitSparks(nowMs, levels, layout);
       }
-      moveSparks(seconds);
+      moveSparks(pool, seconds, SPARK_GRAVITY);
     }
     previous.set(levels);
     primed = true;
   };
 
   return { arcs: arcList, flicker, jitter, sparks: pool, step };
-};
-
-interface ElectricColors {
-  body: string;
-  core: string;
-  glow: string;
-}
-
-/** The core colour rides on the canvas's border colour, so the browser resolves `currentColor` and `color-mix()`. */
-const readColors = (
-  main: HTMLCanvasElement,
-  glow: HTMLCanvasElement
-): ElectricColors => {
-  const style = getComputedStyle(main);
-  return {
-    body: style.color,
-    core: style.borderTopColor || style.color,
-    glow: getComputedStyle(glow).color,
-  };
 };
 
 interface PaintInput {
@@ -751,29 +680,6 @@ const strokeArcs = (
   }
 };
 
-const strokeSparks = (
-  context: CanvasRenderingContext2D,
-  sparks: ElectricSparks,
-  lineWidth: number
-) => {
-  context.lineWidth = lineWidth;
-  for (let slot = 0; slot < MAX_SPARKS; slot += 1) {
-    const life = sparks.life[slot] ?? 0;
-    if (life > 0) {
-      const x = sparks.x[slot] ?? 0;
-      const y = sparks.y[slot] ?? 0;
-      context.globalAlpha = clamp(1 - (sparks.age[slot] ?? 0) / life, 0, 1);
-      context.beginPath();
-      context.moveTo(
-        x - (sparks.vx[slot] ?? 0) * SPARK_TRAIL_SECONDS,
-        y - (sparks.vy[slot] ?? 0) * SPARK_TRAIL_SECONDS
-      );
-      context.lineTo(x, y);
-      context.stroke();
-    }
-  }
-};
-
 /** Wide, soft strokes. The canvas is blurred with CSS, which is far cheaper than `shadowBlur`. */
 const paintGlow = (context: CanvasRenderingContext2D, input: PaintInput) => {
   const { barWidth } = input.layout;
@@ -796,29 +702,13 @@ const paintMain = (context: CanvasRenderingContext2D, input: PaintInput) => {
   strokeFilaments(context, input, CORE_PASS);
   strokeArcs(context, input, 1, 1);
   fillTips(context, input, Math.max(1, barWidth * 0.35));
-  strokeSparks(context, input.scene.sparks, Math.max(1, barWidth * 0.25));
+  strokeSparks(
+    context,
+    input.scene.sparks,
+    Math.max(1, barWidth * 0.25),
+    SPARK_TRAIL_SECONDS
+  );
 };
-
-interface CanvasSize {
-  width: number;
-  height: number;
-  ratio: number;
-}
-
-const prepare = (
-  context: CanvasRenderingContext2D,
-  size: CanvasSize,
-  ratio: number
-) => {
-  context.setTransform(ratio, 0, 0, ratio, 0, 0);
-  context.clearRect(0, 0, size.width, size.height);
-  context.globalAlpha = 1;
-  context.lineCap = "round";
-  context.lineJoin = "round";
-};
-
-/** The glow canvas is blurred, so it never needs more than one pixel per CSS pixel. */
-const glowRatioFor = (ratio: number) => Math.min(1, ratio);
 
 export const ElectricBarVisualizer = ({
   source,
@@ -908,24 +798,21 @@ export const ElectricBarVisualizer = ({
       reducedMotion,
       sparks,
     });
-    const size: CanvasSize = { height: 0, ratio: 1, width: 0 };
+    let size: ElectricCanvasSize = {
+      glowRatio: 1,
+      height: 0,
+      ratio: 1,
+      width: 0,
+    };
     let layout = layoutElectricBars(0, 0, geometry);
-    let colors = readColors(main, glow);
+    let colors = readElectricColors(main, glow);
     let framesSinceColor = 0;
     let lastPaintMs = 0;
     let active = false;
 
     const resize = () => {
-      const rect = main.getBoundingClientRect();
-      size.ratio = window.devicePixelRatio || 1;
-      size.width = rect.width;
-      size.height = rect.height;
-      const glowRatio = glowRatioFor(size.ratio);
-      main.width = Math.max(1, Math.round(rect.width * size.ratio));
-      main.height = Math.max(1, Math.round(rect.height * size.ratio));
-      glow.width = Math.max(1, Math.round(rect.width * glowRatio));
-      glow.height = Math.max(1, Math.round(rect.height * glowRatio));
-      layout = layoutElectricBars(rect.width, rect.height, geometry);
+      size = fitElectricCanvases(main, glow);
+      layout = layoutElectricBars(size.width, size.height, geometry);
     };
     resize();
     const observer = new ResizeObserver(resize);
@@ -938,7 +825,7 @@ export const ElectricBarVisualizer = ({
       framesSinceColor += 1;
       if (framesSinceColor >= COLOR_REFRESH_FRAMES) {
         framesSinceColor = 0;
-        colors = readColors(main, glow);
+        colors = readElectricColors(main, glow);
       }
       if (reducedMotion && nowMs - lastPaintMs < REDUCED_MOTION_INTERVAL_MS) {
         return;
@@ -958,9 +845,9 @@ export const ElectricBarVisualizer = ({
         nowMs,
         scene,
       };
-      prepare(glowContext, size, glowRatioFor(size.ratio));
+      clearElectricCanvas(glowContext, size, size.glowRatio);
       paintGlow(glowContext, input);
-      prepare(mainContext, size, size.ratio);
+      clearElectricCanvas(mainContext, size, size.ratio);
       paintMain(mainContext, input);
     };
 
@@ -1016,13 +903,13 @@ export const ElectricBarVisualizer = ({
     >
       <canvas
         aria-hidden
-        className="pointer-events-none absolute inset-0 size-full [color:var(--electric-glow,var(--electric,currentColor))] opacity-70 blur-[var(--electric-glow-size,0.5rem)] dark:opacity-100"
+        className={ELECTRIC_GLOW_CLASS}
         data-slot="electric-bar-visualizer-glow"
         ref={glowRef}
       />
       <canvas
         aria-hidden
-        className="absolute inset-0 size-full [border-color:var(--electric-core,color-mix(in_oklch,currentColor,white_var(--electric-heat,0%)))] [color:var(--electric,currentColor)] dark:[border-color:var(--electric-core,color-mix(in_oklch,currentColor,white_var(--electric-heat,70%)))]"
+        className={ELECTRIC_CANVAS_CLASS}
         data-slot="electric-bar-visualizer-canvas"
         ref={mainRef}
       />

@@ -318,12 +318,26 @@
       ]
     },
     {
+      "name": "electric",
+      "type": "registry:lib",
+      "title": "Electric drawing",
+      "description": "Shared drawing for the electric visualizers: repeatable crackle, a spark pool, canvas sizing and theme colours read from CSS.",
+      "registryDependencies": ["@audiocn/core"],
+      "files": [
+        {
+          "path": "lib/electric.ts",
+          "type": "registry:lib"
+        }
+      ]
+    },
+    {
       "name": "electric-bar-visualizer",
       "type": "registry:ui",
       "title": "Electric Bar Visualizer",
       "description": "Frequency-band bars drawn as crackling filaments, with arcs between loud neighbours and sparks on sudden rises. Takes its colour from the theme.",
       "registryDependencies": [
         "@audiocn/core",
+        "@audiocn/electric",
         "@audiocn/use-audio-config",
         "@audiocn/use-frame-source",
         "@audiocn/use-reduced-motion"
