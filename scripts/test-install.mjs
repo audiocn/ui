@@ -1,6 +1,6 @@
 // Installs every audiocn registry item into a fresh shadcn app and type-checks
 // it. Run `pnpm registry:build` first.
-import { execFileSync, spawnSync } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { once } from "node:events";
 import {
   createReadStream,
@@ -40,14 +40,14 @@ const server = createServer((request, response) => {
 server.listen(port);
 await once(server, "listening");
 
-const run = (command, args, cwd) => {
+// Async on purpose: the registry server shares this process, so a blocking
+// spawn would stop it from answering the CLI.
+const run = async (command, args, cwd) => {
   console.log(`$ ${command} ${args.join(" ")}`);
-  const result = spawnSync(command, args, { cwd, stdio: "inherit" });
-  if (result.status !== 0) {
-    server.close();
-    throw new Error(
-      `${command} ${args.join(" ")} failed with ${result.status}`
-    );
+  const child = spawn(command, args, { cwd, stdio: "inherit" });
+  const [code] = await once(child, "close");
+  if (code !== 0) {
+    throw new Error(`${command} ${args.join(" ")} failed with ${code}`);
   }
 };
 
@@ -57,18 +57,20 @@ const workspace = mkdtempSync(
 const app = path.join(workspace, "fixture");
 
 try {
-  run(
+  await run(
     "pnpm",
     [
       "dlx",
-      "shadcn@latest",
+      "shadcn@rc",
       "init",
       "--name",
       "fixture",
       "--template",
       "next",
+      "--base",
+      "base",
       "--preset",
-      "base-nova",
+      "nova",
       "--yes",
     ],
     workspace
@@ -82,11 +84,11 @@ try {
   };
   writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`);
 
-  run(
+  await run(
     "pnpm",
     [
       "dlx",
-      "shadcn@latest",
+      "shadcn@rc",
       "add",
       ...names.map((name) => `@audiocn/${name}`),
       "--yes",
@@ -94,7 +96,7 @@ try {
     ],
     app
   );
-  run("pnpm", ["exec", "tsc", "--noEmit"], app);
+  await run("pnpm", ["exec", "tsc", "--noEmit"], app);
   console.log(`\nInstalled and type-checked ${names.length} items in ${app}`);
   execFileSync("ls", ["components/ui", "hooks", "lib/audio"], {
     cwd: app,
