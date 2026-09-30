@@ -10,6 +10,7 @@ import {
   useContext,
   useId,
   useMemo,
+  useLayoutEffect,
   useRef,
   useState,
 } from "react";
@@ -139,7 +140,9 @@ export const ParameterSlider = ({
   );
   const value = valueProp ?? uncontrolled;
   const latestRef = useRef(value);
-  latestRef.current = value;
+  useLayoutEffect(() => {
+    latestRef.current = value;
+  }, [value]);
   const decimals = decimalsProp ?? decimalsOf(step);
   const labelId = useId();
   const descriptionId = useId();
@@ -521,7 +524,10 @@ export const ParameterSliderControl = ({
   } = useSliderBindings();
   const start = Math.min(originPosition, position) * 100;
   const end = Math.max(originPosition, position) * 100;
-  const range: CSSProperties = { left: `${start}%`, width: `${end - start}%` };
+  const range = {
+    "--parameter-range-size": `${end - start}%`,
+    "--parameter-range-start": `${start}%`,
+  } as CSSProperties;
 
   return (
     <SliderPrimitive.Root
@@ -550,7 +556,7 @@ export const ParameterSliderControl = ({
           data-slot="parameter-slider-track"
         >
           <div
-            className="bg-primary absolute inset-y-0 rounded-full"
+            className="bg-primary absolute inset-y-0 left-(--parameter-range-start) w-(--parameter-range-size) rounded-full"
             data-slot="parameter-slider-range"
             style={range}
           />
@@ -592,9 +598,13 @@ export const ParameterSliderMarks = ({
     >
       {marks.map((mark) => (
         <span
-          className="absolute top-0 -translate-x-1/2 whitespace-nowrap tabular-nums"
+          className="absolute top-0 left-(--mark-position) -translate-x-1/2 whitespace-nowrap tabular-nums"
           key={mark.value}
-          style={{ left: `${taper.toPosition(mark.value) * 100}%` }}
+          style={
+            {
+              "--mark-position": `${taper.toPosition(mark.value) * 100}%`,
+            } as CSSProperties
+          }
         >
           {mark.label ?? format(mark.value)}
         </span>

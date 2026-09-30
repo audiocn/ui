@@ -34,6 +34,72 @@ const useDbScale = () => {
   return context;
 };
 
+/** Keeps labels at the ends of the scale inside it. */
+const alignClass = (orientation: Orientation, position: number) => {
+  if (orientation === "vertical") {
+    if (position < EDGE) {
+      return "translate-y-0";
+    }
+    return position > 1 - EDGE ? "translate-y-full" : "translate-y-1/2";
+  }
+  if (position < EDGE) {
+    return "translate-x-0";
+  }
+  return position > 1 - EDGE ? "-translate-x-full" : "-translate-x-1/2";
+};
+
+const markClass = (horizontal: boolean, major: boolean) => {
+  if (horizontal) {
+    return major ? "h-1.5 w-px" : "h-1 w-px";
+  }
+  return major ? "h-px w-1.5" : "h-px w-1";
+};
+
+export interface DbScaleTickProps extends ComponentProps<"div"> {
+  value: number;
+  /** Major ticks are longer. Default true. */
+  major?: boolean;
+}
+
+export const DbScaleTick = ({
+  value,
+  major = true,
+  className,
+  children,
+  ...props
+}: DbScaleTickProps) => {
+  const { format, labels, orientation, side, taper } = useDbScale();
+  const position = taper.toPosition(value);
+  const horizontal = orientation === "horizontal";
+  const reversed = side === "start";
+
+  return (
+    <div
+      className={cn(
+        "absolute flex items-center gap-0.5",
+        horizontal
+          ? "top-0 left-(--tick-position) h-full flex-col"
+          : "bottom-(--tick-position) left-0 w-full flex-row",
+        reversed && (horizontal ? "flex-col-reverse" : "flex-row-reverse"),
+        alignClass(orientation, position),
+        className
+      )}
+      data-major={major ? "" : undefined}
+      data-slot="db-scale-tick"
+      style={{ "--tick-position": `${position * 100}%` } as CSSProperties}
+      {...props}
+    >
+      <span
+        className={cn("bg-border shrink-0", markClass(horizontal, major))}
+        data-slot="db-scale-mark"
+      />
+      {labels ? (
+        <span data-slot="db-scale-label">{children ?? format(value)}</span>
+      ) : null}
+    </div>
+  );
+};
+
 export interface DbScaleProps extends ComponentProps<"div"> {
   /** Bottom of the range. Default −60, or the surrounding meter's range. */
   minDb?: number;
@@ -101,79 +167,5 @@ export const DbScale = ({
           values.map((tick) => <DbScaleTick key={tick} value={tick} />)}
       </div>
     </DbScaleContext.Provider>
-  );
-};
-
-export interface DbScaleTickProps extends ComponentProps<"div"> {
-  value: number;
-  /** Major ticks are longer. Default true. */
-  major?: boolean;
-}
-
-const labelTransform = (orientation: Orientation, position: number) => {
-  if (orientation === "vertical") {
-    if (position < EDGE) {
-      return "translateY(0)";
-    }
-    if (position > 1 - EDGE) {
-      return "translateY(100%)";
-    }
-    return "translateY(50%)";
-  }
-  if (position < EDGE) {
-    return "translateX(0)";
-  }
-  if (position > 1 - EDGE) {
-    return "translateX(-100%)";
-  }
-  return "translateX(-50%)";
-};
-
-export const DbScaleTick = ({
-  value,
-  major = true,
-  className,
-  style,
-  children,
-  ...props
-}: DbScaleTickProps) => {
-  const { format, labels, orientation, side, taper } = useDbScale();
-  const position = taper.toPosition(value);
-  const horizontal = orientation === "horizontal";
-  const placement: CSSProperties = horizontal
-    ? { left: `${position * 100}%` }
-    : { bottom: `${position * 100}%` };
-
-  return (
-    <div
-      className={cn(
-        "absolute flex items-center gap-0.5",
-        horizontal ? "top-0 h-full flex-col" : "left-0 w-full flex-row",
-        side === "start" &&
-          (horizontal ? "flex-col-reverse" : "flex-row-reverse"),
-        className
-      )}
-      data-major={major ? "" : undefined}
-      data-slot="db-scale-tick"
-      style={{
-        ...placement,
-        transform: labelTransform(orientation, position),
-        ...style,
-      }}
-      {...props}
-    >
-      <span
-        className={cn(
-          "bg-border shrink-0",
-          horizontal ? "w-px" : "h-px",
-          horizontal && (major ? "h-1.5" : "h-1"),
-          !horizontal && (major ? "w-1.5" : "w-1")
-        )}
-        data-slot="db-scale-mark"
-      />
-      {labels ? (
-        <span data-slot="db-scale-label">{children ?? format(value)}</span>
-      ) : null}
-    </div>
   );
 };

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import type { ComponentProps } from "react";
+import type { ComponentProps, CSSProperties } from "react";
 
 import { useFrameSource } from "@/hooks/use-frame-source";
 import { formatDb, SILENCE_DB } from "@/lib/audio/decibels";
@@ -76,7 +76,6 @@ export const DbReadout = ({
   zones = DEFAULT_ZONES,
   format,
   className,
-  style,
   ...props
 }: DbReadoutProps) => {
   const elementRef = useRef<HTMLSpanElement>(null);
@@ -137,12 +136,15 @@ export const DbReadout = ({
 
   return (
     <span
-      className={cn("inline-block text-end font-mono tabular-nums", className)}
+      className={cn(
+        "inline-block min-w-(--db-readout-width) text-end font-mono tabular-nums",
+        className
+      )}
       data-silent={initialDb <= floorDb ? "" : undefined}
       data-slot="db-readout"
       data-zone={zoneForDb(initialDb, zones)}
       ref={elementRef}
-      style={{ minWidth: `${widest}ch`, ...style }}
+      style={{ "--db-readout-width": `${widest}ch` } as CSSProperties}
       {...props}
     >
       {render(initialDb)}

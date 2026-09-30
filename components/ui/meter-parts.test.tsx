@@ -107,7 +107,7 @@ describe("BarVisualizer", () => {
     const bars = container.querySelectorAll<HTMLElement>(
       '[data-slot="bar-visualizer-bar"]'
     );
-    expect(bars[0]?.style.height).toBe("50%");
-    expect(bars[1]?.style.height).toBe("100%");
+    expect(bars[0]?.style.getPropertyValue("--bar-level")).toBe("0.5000");
+    expect(bars[1]?.style.getPropertyValue("--bar-level")).toBe("1.0000");
   });
 });

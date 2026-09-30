@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useImperativeHandle, useRef } from "react";
-import type { ComponentProps, Ref } from "react";
+import type { ComponentProps, CSSProperties, Ref, RefObject } from "react";
 
 import { useAudioConfig } from "@/hooks/use-audio-config";
 import { useFrameSource } from "@/hooks/use-frame-source";
@@ -72,6 +72,101 @@ const sweepLevel = (index: number, count: number, seconds: number) => {
   return 0.55 * Math.exp(-((index - position) ** 2) / 3);
 };
 
+interface BarPainterOptions {
+  barCount: number;
+  bars: (HTMLSpanElement | null)[];
+  idle: "static" | "pulse" | "wave";
+  input: RefObject<ArrayLike<number> | null>;
+  loading: boolean;
+  minLevel: number;
+  mirrored: boolean;
+  reducedMotion: boolean;
+  visible: RefObject<boolean>;
+}
+
+const targetIndexFor = (
+  index: number,
+  count: number,
+  half: number,
+  mirrored: boolean
+) => {
+  if (!mirrored) {
+    return index;
+  }
+  return Math.min(half - 1, Math.floor(Math.abs(index - (count - 1) / 2)));
+};
+
+const loudestOf = (values: Float32Array) => {
+  let loudest = 0;
+  for (const value of values) {
+    loudest = Math.max(loudest, value);
+  }
+  return loudest;
+};
+
+/** Paints bars outside React, with release smoothing and idle animations. */
+const createBarPainter = (options: BarPainterOptions) => {
+  const { barCount, bars, minLevel, mirrored, reducedMotion } = options;
+  const half = mirrored ? Math.ceil(barCount / 2) : barCount;
+  const targets = new Float32Array(half);
+  const current = new Float32Array(barCount);
+  const shown = new Float32Array(barCount).fill(-1);
+  let lastMs = 0;
+  let lastPaintMs = 0;
+
+  const extraLevel = (index: number, seconds: number, quiet: boolean) => {
+    if (options.loading && !reducedMotion) {
+      return sweepLevel(index, barCount, seconds);
+    }
+    return quiet ? idleLevel(options.idle, index, seconds) : 0;
+  };
+
+  const readInput = () => {
+    const input = options.input.current;
+    if (input && input.length > 0) {
+      resampleLevels(input, 0, input.length, targets);
+    } else {
+      targets.fill(0);
+    }
+  };
+
+  return (nowMs: number) => {
+    if (!options.visible.current) {
+      return;
+    }
+    if (reducedMotion && nowMs - lastPaintMs < REDUCED_MOTION_INTERVAL_MS) {
+      return;
+    }
+    lastPaintMs = nowMs;
+    const elapsed = lastMs === 0 ? FRAME_MS : nowMs - lastMs;
+    lastMs = nowMs;
+    const release = reducedMotion
+      ? 0
+      : RELEASE_PER_FRAME ** (elapsed / FRAME_MS);
+    const seconds = nowMs / MS_PER_SECOND;
+    readInput();
+    const quiet = !reducedMotion && loudestOf(targets) < SIGNAL_THRESHOLD;
+
+    for (let index = 0; index < barCount; index += 1) {
+      const target = Math.max(
+        targets[targetIndexFor(index, barCount, half, mirrored)] ?? 0,
+        extraLevel(index, seconds, quiet)
+      );
+      const previous = current[index] ?? 0;
+      const next =
+        target >= previous
+          ? target
+          : previous * release + target * (1 - release);
+      current[index] = next;
+      const value = clamp(Math.max(minLevel, next), 0, 1);
+      if (Math.abs(value - (shown[index] ?? -1)) > 0.002) {
+        shown[index] = value;
+        bars[index]?.style.setProperty("--bar-level", value.toFixed(4));
+      }
+    }
+  };
+};
+
 export const BarVisualizer = ({
   source,
   levels,
@@ -127,76 +222,23 @@ export const BarVisualizer = ({
     };
   }, []);
 
-  useEffect(() => {
-    const half = mirrored ? Math.ceil(barCount / 2) : barCount;
-    const targets = new Float32Array(half);
-    const current = new Float32Array(barCount);
-    const shown = new Float32Array(barCount).fill(-1);
-    const property = orientation === "horizontal" ? "height" : "width";
-    let lastMs = 0;
-    let lastPaintMs = 0;
-
-    const tick = (nowMs: number) => {
-      if (!visibleRef.current) {
-        return;
-      }
-      if (reducedMotion && nowMs - lastPaintMs < REDUCED_MOTION_INTERVAL_MS) {
-        return;
-      }
-      lastPaintMs = nowMs;
-      const elapsed = lastMs === 0 ? FRAME_MS : nowMs - lastMs;
-      lastMs = nowMs;
-      const release = reducedMotion
-        ? 0
-        : RELEASE_PER_FRAME ** (elapsed / FRAME_MS);
-      const seconds = nowMs / MS_PER_SECOND;
-
-      const input = inputRef.current;
-      if (input && input.length > 0) {
-        resampleLevels(input, 0, input.length, targets);
-      } else {
-        targets.fill(0);
-      }
-
-      let signal = 0;
-      for (const value of targets) {
-        signal = Math.max(signal, value);
-      }
-      const animateIdle = !reducedMotion && signal < SIGNAL_THRESHOLD;
-
-      for (let index = 0; index < barCount; index += 1) {
-        const distance = mirrored
-          ? Math.abs(index - (barCount - 1) / 2)
-          : index;
-        const targetIndex = mirrored
-          ? Math.min(half - 1, Math.floor(distance))
-          : index;
-        let target = targets[targetIndex] ?? 0;
-        if (loading && !reducedMotion) {
-          target = Math.max(target, sweepLevel(index, barCount, seconds));
-        } else if (animateIdle) {
-          target = Math.max(target, idleLevel(idle, index, seconds));
-        }
-        const previous = current[index] ?? 0;
-        const next =
-          target >= previous
-            ? target
-            : previous * release + target * (1 - release);
-        current[index] = next;
-
-        const value = clamp(Math.max(minLevel, next), 0, 1);
-        if (Math.abs(value - (shown[index] ?? -1)) > 0.002) {
-          shown[index] = value;
-          const bar = barsRef.current[index];
-          if (bar) {
-            bar.style[property] = `${(value * 100).toFixed(2)}%`;
-          }
-        }
-      }
-    };
-
-    return subscribeFrame(tick);
-  }, [barCount, idle, loading, minLevel, mirrored, orientation, reducedMotion]);
+  useEffect(
+    () =>
+      subscribeFrame(
+        createBarPainter({
+          barCount,
+          bars: barsRef.current,
+          idle,
+          input: inputRef,
+          loading,
+          minLevel,
+          mirrored,
+          reducedMotion,
+          visible: visibleRef,
+        })
+      ),
+    [barCount, idle, loading, minLevel, mirrored, reducedMotion]
+  );
 
   const setRootRef = useCallback(
     (node: HTMLDivElement | null) => {
@@ -233,8 +275,8 @@ export const BarVisualizer = ({
           className={cn(
             "rounded-(--bar-radius) bg-current",
             horizontal
-              ? "max-w-(--bar-width) min-w-0 flex-1"
-              : "max-h-(--bar-width) min-h-0 flex-1"
+              ? "h-[calc(var(--bar-level)*100%)] max-w-(--bar-width) min-w-0 flex-1"
+              : "max-h-(--bar-width) min-h-0 w-[calc(var(--bar-level)*100%)] flex-1"
           )}
           data-index={index}
           data-slot="bar-visualizer-bar"
@@ -242,7 +284,7 @@ export const BarVisualizer = ({
           ref={(node) => {
             barsRef.current[index] = node;
           }}
-          style={{ [horizontal ? "height" : "width"]: `${minLevel * 100}%` }}
+          style={{ "--bar-level": minLevel } as CSSProperties}
         />
       ))}
     </div>

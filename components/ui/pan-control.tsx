@@ -3,6 +3,7 @@
 import { Slider as SliderPrimitive } from "@base-ui/react/slider";
 import { cva } from "class-variance-authority";
 import { useState } from "react";
+import type { CSSProperties } from "react";
 
 import { useAudioConfig } from "@/hooks/use-audio-config";
 import type { AudioSize } from "@/hooks/use-audio-config";
@@ -134,12 +135,14 @@ export const PanControl = ({
             data-slot="pan-control-center"
           />
           <div
-            className="bg-primary absolute inset-y-0 rounded-full"
+            className="bg-primary absolute inset-y-0 left-(--pan-range-start) w-(--pan-range-size) rounded-full"
             data-slot="pan-control-range"
-            style={{
-              left: `${((start + 1) / 2) * PERCENT}%`,
-              width: `${((end - start) / 2) * PERCENT}%`,
-            }}
+            style={
+              {
+                "--pan-range-size": `${((end - start) / 2) * PERCENT}%`,
+                "--pan-range-start": `${((start + 1) / 2) * PERCENT}%`,
+              } as CSSProperties
+            }
           />
           <SliderPrimitive.Thumb
             aria-label="Pan"
