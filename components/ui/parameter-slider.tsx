@@ -78,8 +78,10 @@ const decimalsOf = (step: number) => {
 
 const roundValue = (value: number) => Math.round(value * PRECISION) / PRECISION;
 
-export interface ParameterSliderProps
-  extends Omit<ComponentProps<"div">, "defaultValue" | "onChange"> {
+export interface ParameterSliderProps extends Omit<
+  ComponentProps<"div">,
+  "defaultValue" | "onChange"
+> {
   value?: number;
   defaultValue?: number;
   onValueChange?: (value: number, details: ParameterChangeDetails) => void;
@@ -194,7 +196,7 @@ export const ParameterSlider = ({
   const handleKeyDown = useCallback(
     (event: KeyboardEvent<HTMLInputElement>) => {
       const increment = event.shiftKey ? largeStep : step;
-      const current = latestRef.current;
+      const { current } = latestRef;
       let next: number | null = null;
       switch (event.key) {
         case "ArrowUp":
@@ -264,7 +266,28 @@ export const ParameterSlider = ({
       unit,
       value,
     }),
-    [change, commit, commitLatest, decimals, descriptionId, disabled, format, handleKeyDown, labelId, largeStep, marks, max, min, originPosition, position, resetValue, step, taper, unit, value]
+    [
+      change,
+      commit,
+      commitLatest,
+      decimals,
+      descriptionId,
+      disabled,
+      format,
+      handleKeyDown,
+      labelId,
+      largeStep,
+      marks,
+      max,
+      min,
+      originPosition,
+      position,
+      resetValue,
+      step,
+      taper,
+      unit,
+      value,
+    ]
   );
 
   return (
@@ -305,7 +328,7 @@ export const ParameterSliderLabel = ({
   const { labelId } = useParameterSlider("ParameterSliderLabel");
   return (
     <span
-      className={cn("mr-auto font-medium text-sm", className)}
+      className={cn("mr-auto text-sm font-medium", className)}
       data-slot="parameter-slider-label"
       id={labelId}
       {...props}
@@ -313,8 +336,10 @@ export const ParameterSliderLabel = ({
   );
 };
 
-export interface ParameterSliderInputProps
-  extends Omit<NumberFieldPrimitive.Input.Props, "value" | "defaultValue"> {
+export interface ParameterSliderInputProps extends Omit<
+  NumberFieldPrimitive.Input.Props,
+  "value" | "defaultValue"
+> {
   /** Drag the unit to change the value. Default true. */
   scrub?: boolean;
 }
@@ -339,7 +364,10 @@ export const ParameterSliderInput = ({
   } = useParameterSlider("ParameterSliderInput");
 
   const suffix = unit ? (
-    <span className="px-1.5 text-muted-foreground text-xs" data-slot="parameter-slider-unit">
+    <span
+      className="text-muted-foreground px-1.5 text-xs"
+      data-slot="parameter-slider-unit"
+    >
       {unit}
     </span>
   ) : null;
@@ -348,7 +376,10 @@ export const ParameterSliderInput = ({
     <NumberFieldPrimitive.Root
       className="shrink-0"
       disabled={disabled}
-      format={{ maximumFractionDigits: decimals, minimumFractionDigits: decimals }}
+      format={{
+        maximumFractionDigits: decimals,
+        minimumFractionDigits: decimals,
+      }}
       largeStep={largeStep}
       max={max}
       min={min}
@@ -366,7 +397,7 @@ export const ParameterSliderInput = ({
       value={value}
     >
       <NumberFieldPrimitive.Group
-        className="flex h-7 items-center rounded-lg bg-input/50 focus-within:ring-3 focus-within:ring-ring/30"
+        className="bg-input/50 focus-within:ring-ring/30 flex h-7 items-center rounded-lg focus-within:ring-3"
         data-slot="parameter-slider-input-group"
       >
         <NumberFieldPrimitive.Input
@@ -397,7 +428,10 @@ export const ParameterSliderValue = ({
   const { format, value } = useParameterSlider("ParameterSliderValue");
   return (
     <span
-      className={cn("font-mono text-muted-foreground text-xs tabular-nums", className)}
+      className={cn(
+        "text-muted-foreground font-mono text-xs tabular-nums",
+        className
+      )}
       data-slot="parameter-slider-value"
       {...props}
     >
@@ -414,8 +448,9 @@ export const ParameterSliderReset = ({
   children,
   ...props
 }: ParameterSliderResetProps) => {
-  const { change, commit, disabled, resetValue, value } =
-    useParameterSlider("ParameterSliderReset");
+  const { change, commit, disabled, resetValue, value } = useParameterSlider(
+    "ParameterSliderReset"
+  );
   const modified = value !== resetValue;
 
   return useRender({
@@ -425,7 +460,7 @@ export const ParameterSliderReset = ({
         "aria-label": "Reset",
         children: children ?? "Reset",
         className: cn(
-          "inline-flex h-6 items-center rounded-md px-1.5 text-muted-foreground text-xs outline-none hover:bg-muted hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/30 disabled:pointer-events-none disabled:opacity-0",
+          "text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring/30 inline-flex h-6 items-center rounded-md px-1.5 text-xs outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-0",
           className
         ),
         disabled: disabled || !modified,
@@ -461,7 +496,13 @@ export const ParameterSliderControl = ({
   ...props
 }: Omit<
   SliderPrimitive.Root.Props<number>,
-  "value" | "defaultValue" | "onValueChange" | "onValueCommitted" | "min" | "max" | "step"
+  | "value"
+  | "defaultValue"
+  | "onValueChange"
+  | "onValueCommitted"
+  | "min"
+  | "max"
+  | "step"
 >) => {
   const {
     change,
@@ -484,13 +525,19 @@ export const ParameterSliderControl = ({
 
   return (
     <SliderPrimitive.Root
-      className={cn("relative flex w-full touch-none select-none items-center", className)}
+      className={cn(
+        "relative flex w-full touch-none items-center select-none",
+        className
+      )}
       data-slot="parameter-slider-control"
       disabled={disabled}
       max={1}
       min={0}
       onValueChange={(next, details) => {
-        change(quantizeFromPosition(next), { event: details.event, reason: "drag" });
+        change(quantizeFromPosition(next), {
+          event: details.event,
+          reason: "drag",
+        });
       }}
       onValueCommitted={commitLatest}
       step={POSITION_STEP}
@@ -499,18 +546,18 @@ export const ParameterSliderControl = ({
     >
       <SliderPrimitive.Control className="relative flex h-4 w-full items-center px-2">
         <SliderPrimitive.Track
-          className="relative h-1 w-full grow rounded-full bg-input/90"
+          className="bg-input/90 relative h-1 w-full grow rounded-full"
           data-slot="parameter-slider-track"
         >
           <div
-            className="absolute inset-y-0 rounded-full bg-primary"
+            className="bg-primary absolute inset-y-0 rounded-full"
             data-slot="parameter-slider-range"
             style={range}
           />
           <SliderPrimitive.Thumb
             aria-describedby={descriptionId}
             aria-labelledby={labelId}
-            className="block size-4 shrink-0 rounded-full bg-background shadow-sm outline-hidden ring-1 ring-foreground/15 transition-[box-shadow] hover:ring-4 hover:ring-ring/30 focus-visible:ring-4 focus-visible:ring-ring/40 data-dragging:ring-4 data-dragging:ring-ring/30"
+            className="bg-background ring-foreground/15 hover:ring-ring/30 focus-visible:ring-ring/40 data-dragging:ring-ring/30 block size-4 shrink-0 rounded-full shadow-sm ring-1 outline-hidden transition-[box-shadow] hover:ring-4 focus-visible:ring-4 data-dragging:ring-4"
             data-slot="parameter-slider-thumb"
             getAriaValueText={() => format(value)}
             onDoubleClick={() => {
@@ -536,7 +583,10 @@ export const ParameterSliderMarks = ({
   return (
     <div
       aria-hidden
-      className={cn("relative mx-2 h-4 text-[0.625rem] text-muted-foreground", className)}
+      className={cn(
+        "text-muted-foreground relative mx-2 h-4 text-[0.625rem]",
+        className
+      )}
       data-slot="parameter-slider-marks"
       {...props}
     >

@@ -212,7 +212,10 @@ const parseLevels = (key: string): MeterFrame | null => {
   return {
     channels: key.split("|").map((entry) => {
       const [peak, rms] = entry.split(":");
-      return { peakDb: parseNumber(peak) ?? SILENCE_DB, rmsDb: parseNumber(rms) };
+      return {
+        peakDb: parseNumber(peak) ?? SILENCE_DB,
+        rmsDb: parseNumber(rms),
+      };
     }),
   };
 };

@@ -7,7 +7,12 @@ const SystemAudioMixerConsole = () => {
   const tracks = useDemoTracks();
   const sounds = useDemoSounds();
   return (
-    <SystemAudioMixer className="h-[30rem] w-full" defaultOrientation="vertical" sounds={sounds} tracks={tracks} />
+    <SystemAudioMixer
+      className="h-[30rem] w-full"
+      defaultOrientation="vertical"
+      sounds={sounds}
+      tracks={tracks}
+    />
   );
 };
 

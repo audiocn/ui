@@ -29,9 +29,7 @@ const { devices, permission, requestPermission } = useAudioDevices();
 />;
 ```
 
-Devices come in as a prop, so the select works with
-[`useAudioDevices`](/docs/hooks/use-audio-devices) or with any device list,
-such as one from a native backend.
+Devices come in as a prop, so the select works with [`useAudioDevices`](/docs/hooks/use-audio-devices) or with any device list, such as one from a native backend.
 
 ## Anatomy
 
@@ -47,8 +45,7 @@ such as one from a native backend.
 </AudioDeviceSelect>
 ```
 
-`AudioDeviceSelectContent` renders one item per device. Pass children to
-render items yourself with `AudioDeviceSelectItem`.
+`AudioDeviceSelectContent` renders one item per device. Pass children to render items yourself with `AudioDeviceSelectItem`.
 
 ## Examples
 
@@ -60,32 +57,46 @@ Selected device, a "None" option, a device that was unplugged, and loading.
 
 ## Behaviour
 
-- A selected device that disappears is kept and shown as "(disconnected)", so
-  the selection is never lost silently.
+- A selected device that disappears is kept and shown as "(disconnected)", so the selection is never lost silently.
 - Devices with `status` `unavailable` or `permission-required` are disabled.
 - The default device is marked.
 
 ## Theming
 
-| Data attribute | On | Meaning |
-| --- | --- | --- |
-| `data-loading` | trigger | Devices are loading |
+| Data attribute    | On      | Meaning                         |
+| ----------------- | ------- | ------------------------------- |
+| `data-loading`    | trigger | Devices are loading             |
 | `data-permission` | trigger | `granted`, `prompt` or `denied` |
-| `data-missing` | trigger | The selected device is gone |
+| `data-missing`    | trigger | The selected device is gone     |
 
 ## API reference
 
 <PropsTable
   rows={[
-    ["devices", "AudioDevice[]", null, "{ id, label, isDefault?, status?, description? }."],
-    ["value", "string | null", null, "The device id. null is no selection, or None with allowNone."],
+    [
+      "devices",
+      "AudioDevice[]",
+      null,
+      "{ id, label, isDefault?, status?, description? }.",
+    ],
+    [
+      "value",
+      "string | null",
+      null,
+      "The device id. null is no selection, or None with allowNone.",
+    ],
     ["defaultValue", "string | null", "null", null],
     ["onValueChange", "(id: string | null) => void", null, null],
     ["allowNone", "boolean", "false", "Adds a None item."],
     ["noneLabel", "string", '"None"', null],
-    ["loading", "boolean", "false", "Shows \"Finding devices…\"."],
+    ["loading", "boolean", "false", 'Shows "Finding devices…".'],
     ["permission", '"granted" | "prompt" | "denied"', '"granted"', null],
-    ["onRequestPermission", "() => void", null, "Shows an \"Allow access\" button when permission is needed."],
+    [
+      "onRequestPermission",
+      "() => void",
+      null,
+      'Shows an "Allow access" button when permission is needed.',
+    ],
     ["disabled", "boolean", "false", null],
   ]}
 />

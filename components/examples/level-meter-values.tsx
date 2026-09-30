@@ -10,7 +10,10 @@ const levels = [
 const LevelMeterValues = () => (
   <div className="grid w-full max-w-sm gap-3">
     {levels.map((level) => (
-      <div className="grid grid-cols-[4.5rem_1fr] items-center gap-3" key={level.label}>
+      <div
+        className="grid grid-cols-[4.5rem_1fr] items-center gap-3"
+        key={level.label}
+      >
         <span className="text-muted-foreground text-sm">{level.label}</span>
         <LevelMeter aria-label={`${level.label} level`} peakDb={level.peakDb} />
       </div>

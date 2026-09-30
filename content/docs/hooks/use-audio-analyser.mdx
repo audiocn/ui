@@ -3,9 +3,7 @@ title: useAudioAnalyser
 description: Meter and visual frame sources from a MediaStream, media element or AudioNode.
 ---
 
-`useAudioAnalyser` connects any audio to audiocn's meters and visualizers. It
-measures peak and RMS per channel and reduces the spectrum to frequency bands,
-and only runs while a component is subscribed.
+`useAudioAnalyser` connects any audio to audiocn's meters and visualizers. It measures peak and RMS per channel and reduces the spectrum to frequency bands, and only runs while a component is subscribed.
 
 ```npm
 npx shadcn@latest add @audiocn/use-audio-analyser
@@ -35,15 +33,35 @@ return (
 
 <PropsTable
   rows={[
-    ["input", "MediaStream | HTMLMediaElement | AudioNode | null", null, "What to analyse."],
+    [
+      "input",
+      "MediaStream | HTMLMediaElement | AudioNode | null",
+      null,
+      "What to analyse.",
+    ],
     ["fftSize", "number", "2048", "Analyser FFT size."],
     ["smoothing", "number", "0.3", "Analyser smoothing constant, 0..1."],
     ["bands", "number", "32", "Frequency bands per visual frame."],
-    ["minHz / maxHz", "number", "40 / 16000", "Band range, spaced on a log scale."],
+    [
+      "minHz / maxHz",
+      "number",
+      "40 / 16000",
+      "Band range, spaced on a log scale.",
+    ],
     ["historySize", "number", "60", "Entries in the level history ring."],
     ["historyIntervalMs", "number", "50", "Time between history entries."],
-    ["intervalMs", "number", "0", "Minimum time between frames. 0 sends one every animation frame."],
-    ["channels", '"mono" | "stereo"', '"mono"', "stereo measures left and right separately."],
+    [
+      "intervalMs",
+      "number",
+      "0",
+      "Minimum time between frames. 0 sends one every animation frame.",
+    ],
+    [
+      "channels",
+      '"mono" | "stereo"',
+      '"mono"',
+      "stereo measures left and right separately.",
+    ],
     ["enabled", "boolean", "true", "Pause analysis without tearing it down."],
   ]}
 />
@@ -53,10 +71,19 @@ return (
 <PropsTable
   rows={[
     ["meter", "FrameSource<MeterFrame>", null, "Peak and RMS per channel."],
-    ["visual", "FrameSource<VisualFrame>", null, "Bands, history, time-domain samples and peak."],
-    ["status", '"idle" | "running" | "suspended"', null, "idle with no input; suspended until the context resumes."],
+    [
+      "visual",
+      "FrameSource<VisualFrame>",
+      null,
+      "Bands, history, time-domain samples and peak.",
+    ],
+    [
+      "status",
+      '"idle" | "running" | "suspended"',
+      null,
+      "idle with no input; suspended until the context resumes.",
+    ],
   ]}
 />
 
-Frames are reused between updates to avoid allocating. Copy a frame if you need
-to keep it.
+Frames are reused between updates to avoid allocating. Copy a frame if you need to keep it.

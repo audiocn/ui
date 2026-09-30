@@ -13,10 +13,8 @@ npx shadcn@latest add @audiocn/soundboard
 
 ## What it does
 
-- Pads play on click or with hotkeys 1–9 anywhere on the page, except while
-  typing in a field. Hotkeys can be turned off.
-- Right-click a pad to change its mode (one shot, toggle, hold, loop), its
-  volume, or remove it.
+- Pads play on click or with hotkeys 1–9 anywhere on the page, except while typing in a field. Hotkeys can be turned off.
+- Right-click a pad to change its mode (one shot, toggle, hold, loop), its volume, or remove it.
 - A master volume and a "Stop all" button.
 - Drop audio files onto the board, or use the Add pad, to add sounds.
 
@@ -26,8 +24,18 @@ Pass `output` to route the board into a mixer channel instead of the speakers.
 
 <PropsTable
   rows={[
-    ["sounds / defaultSounds", "{ id, label, src, hotkey?, mode?, volume?, accent? }[]", "[]", null],
-    ["onSoundsChange", "(sounds) => void", null, "Called when sounds are added, edited or removed."],
+    [
+      "sounds / defaultSounds",
+      "{ id, label, src, hotkey?, mode?, volume?, accent? }[]",
+      "[]",
+      null,
+    ],
+    [
+      "onSoundsChange",
+      "(sounds) => void",
+      null,
+      "Called when sounds are added, edited or removed.",
+    ],
     ["output", "AudioNode | null", "speakers", "Route pads into a mixer."],
     ["columns", "number", "4", null],
   ]}

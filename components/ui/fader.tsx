@@ -78,7 +78,7 @@ const defaultFormat = (db: number) =>
 const roundValue = (value: number) => Math.round(value * PRECISION) / PRECISION;
 
 const faderVariants = cva(
-  "group/fader relative flex touch-none select-none gap-2 data-disabled:opacity-50",
+  "group/fader relative flex touch-none gap-2 select-none data-disabled:opacity-50",
   {
     defaultVariants: {
       orientation: "horizontal",
@@ -100,20 +100,19 @@ const faderVariants = cva(
 
 type SliderRootProps = SliderPrimitive.Root.Props<number>;
 
-export interface FaderProps
-  extends Omit<
-    SliderRootProps,
-    | "value"
-    | "defaultValue"
-    | "onValueChange"
-    | "onValueCommitted"
-    | "min"
-    | "max"
-    | "step"
-    | "largeStep"
-    | "format"
-    | "orientation"
-  > {
+export interface FaderProps extends Omit<
+  SliderRootProps,
+  | "value"
+  | "defaultValue"
+  | "onValueChange"
+  | "onValueCommitted"
+  | "min"
+  | "max"
+  | "step"
+  | "largeStep"
+  | "format"
+  | "orientation"
+> {
   /** The value in dB. */
   value?: number;
   defaultValue?: number;
@@ -187,7 +186,10 @@ export const Fader = ({
   const latestRef = useRef(value);
   latestRef.current = value;
 
-  const taperFn = useMemo(() => resolveTaper(taper, min, max), [taper, min, max]);
+  const taperFn = useMemo(
+    () => resolveTaper(taper, min, max),
+    [taper, min, max]
+  );
   const snapPoints = useMemo(() => detents ?? [0], [detents]);
 
   const toPosition = useCallback(
@@ -244,11 +246,14 @@ export const Fader = ({
 
   const nudge = useCallback(
     (direction: number, increment: number) => {
-      const current = latestRef.current;
+      const { current } = latestRef;
       if (current === SILENCE_DB) {
         return direction > 0 ? min : SILENCE_DB;
       }
-      const next = quantize(current + direction * increment, Math.min(increment, step));
+      const next = quantize(
+        current + direction * increment,
+        Math.min(increment, step)
+      );
       if (silenceAtMin && direction < 0 && current <= min) {
         return SILENCE_DB;
       }
@@ -317,7 +322,7 @@ export const Fader = ({
       return;
     }
     const onWheel = (event: globalThis.WheelEvent) => {
-      const current = wheelRef.current;
+      const { current } = wheelRef;
       const focused = root.contains(document.activeElement);
       if (current.disabled || !focused || event.deltaY === 0) {
         return;
@@ -370,7 +375,23 @@ export const Fader = ({
       value,
       variant,
     }),
-    [change, commit, disabled, format, handleKeyDown, max, min, orientation, originPosition, position, resetValue, size, taperFn, value, variant]
+    [
+      change,
+      commit,
+      disabled,
+      format,
+      handleKeyDown,
+      max,
+      min,
+      orientation,
+      originPosition,
+      position,
+      resetValue,
+      size,
+      taperFn,
+      value,
+      variant,
+    ]
   );
 
   return (
@@ -418,7 +439,7 @@ export const FaderLabel = ({
   ...props
 }: SliderPrimitive.Label.Props) => (
   <SliderPrimitive.Label
-    className={cn("font-medium text-sm", className)}
+    className={cn("text-sm font-medium", className)}
     data-slot="fader-label"
     {...props}
   />
@@ -445,7 +466,7 @@ export const FaderTrack = ({
     >
       <SliderPrimitive.Track
         className={cn(
-          "relative grow rounded-full bg-input/90",
+          "bg-input/90 relative grow rounded-full",
           horizontal
             ? "h-(--fader-track-size) w-full"
             : "h-full w-(--fader-track-size)",
@@ -475,7 +496,7 @@ export const FaderRange = ({
   return (
     <div
       className={cn(
-        "absolute rounded-full bg-primary",
+        "bg-primary absolute rounded-full",
         orientation === "horizontal" ? "inset-y-0" : "inset-x-0",
         className
       )}
@@ -487,22 +508,8 @@ export const FaderRange = ({
 };
 
 const thumbVariants = cva(
-  "block shrink-0 bg-background shadow-sm outline-hidden ring-1 ring-foreground/15 transition-[box-shadow] hover:ring-4 hover:ring-ring/30 focus-visible:ring-4 focus-visible:ring-ring/40 data-dragging:ring-4 data-dragging:ring-ring/30 data-disabled:pointer-events-none",
+  "bg-background ring-foreground/15 hover:ring-ring/30 focus-visible:ring-ring/40 data-dragging:ring-ring/30 block shrink-0 shadow-sm ring-1 outline-hidden transition-[box-shadow] hover:ring-4 focus-visible:ring-4 data-disabled:pointer-events-none data-dragging:ring-4",
   {
-    defaultVariants: {
-      orientation: "horizontal",
-      variant: "default",
-    },
-    variants: {
-      orientation: {
-        horizontal: "",
-        vertical: "",
-      },
-      variant: {
-        console: "rounded-sm border border-border",
-        default: "size-(--fader-thumb-size) rounded-full",
-      },
-    },
     compoundVariants: [
       {
         className:
@@ -517,6 +524,20 @@ const thumbVariants = cva(
         variant: "console",
       },
     ],
+    defaultVariants: {
+      orientation: "horizontal",
+      variant: "default",
+    },
+    variants: {
+      orientation: {
+        horizontal: "",
+        vertical: "",
+      },
+      variant: {
+        console: "border-border rounded-sm border",
+        default: "size-(--fader-thumb-size) rounded-full",
+      },
+    },
   }
 );
 
@@ -634,7 +655,7 @@ export const FaderValue = ({
       <input
         aria-label="Value in dB"
         className={cn(
-          "h-6 w-20 rounded-md border bg-background px-1.5 text-end font-mono text-xs tabular-nums outline-none focus-visible:ring-3 focus-visible:ring-ring/30",
+          "bg-background focus-visible:ring-ring/30 h-6 w-20 rounded-md border px-1.5 text-end font-mono text-xs tabular-nums outline-none focus-visible:ring-3",
           className
         )}
         data-slot="fader-value-input"
@@ -659,7 +680,7 @@ export const FaderValue = ({
     return (
       <button
         className={cn(
-          "h-6 rounded-md px-1.5 text-end font-mono text-muted-foreground text-xs tabular-nums outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/30",
+          "text-muted-foreground hover:bg-muted focus-visible:ring-ring/30 h-6 rounded-md px-1.5 text-end font-mono text-xs tabular-nums outline-none focus-visible:ring-3",
           className
         )}
         data-slot="fader-value"
@@ -678,7 +699,7 @@ export const FaderValue = ({
   return (
     <span
       className={cn(
-        "font-mono text-muted-foreground text-xs tabular-nums",
+        "text-muted-foreground font-mono text-xs tabular-nums",
         className
       )}
       data-slot="fader-value"
@@ -697,7 +718,8 @@ export const FaderReset = ({
   children,
   ...props
 }: FaderResetProps) => {
-  const { change, commit, disabled, resetValue, value } = useFader("FaderReset");
+  const { change, commit, disabled, resetValue, value } =
+    useFader("FaderReset");
   const modified = value !== resetValue;
 
   return useRender({
@@ -707,7 +729,7 @@ export const FaderReset = ({
         "aria-label": "Reset",
         children: children ?? "Reset",
         className: cn(
-          "inline-flex h-6 items-center rounded-md px-1.5 text-muted-foreground text-xs outline-none hover:bg-muted hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/30 disabled:pointer-events-none disabled:opacity-0",
+          "text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring/30 inline-flex h-6 items-center rounded-md px-1.5 text-xs outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-0",
           className
         ),
         disabled: disabled || !modified,

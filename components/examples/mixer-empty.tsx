@@ -1,4 +1,10 @@
-import { Mixer, MixerChannels, MixerEmpty, MixerHeader, MixerTitle } from "@/components/ui/mixer";
+import {
+  Mixer,
+  MixerChannels,
+  MixerEmpty,
+  MixerHeader,
+  MixerTitle,
+} from "@/components/ui/mixer";
 
 const MixerEmptyDemo = () => (
   <Mixer className="w-full max-w-md">
@@ -6,7 +12,9 @@ const MixerEmptyDemo = () => (
       <MixerTitle>Audio mixer</MixerTitle>
     </MixerHeader>
     <MixerChannels />
-    <MixerEmpty>No audio sources yet. Add a microphone to get started.</MixerEmpty>
+    <MixerEmpty>
+      No audio sources yet. Add a microphone to get started.
+    </MixerEmpty>
   </Mixer>
 );
 

@@ -3,7 +3,6 @@
 import { MicrophoneIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 
-import { MuteToggle, SoloToggle } from "@/components/ui/channel-toggle";
 import {
   ChannelStrip,
   ChannelStripControls,
@@ -17,6 +16,7 @@ import {
   ChannelStripTitle,
   ChannelStripValue,
 } from "@/components/ui/channel-strip";
+import { MuteToggle, SoloToggle } from "@/components/ui/channel-toggle";
 import { DbReadout } from "@/components/ui/db-readout";
 import { Fader } from "@/components/ui/fader";
 import { LevelMeter } from "@/components/ui/level-meter";
@@ -38,13 +38,24 @@ const ChannelStripDemo = () => {
           <ChannelStripTitle>Microphone</ChannelStripTitle>
           <ChannelStripDescription>Shure MV7+</ChannelStripDescription>
         </ChannelStripText>
-        <ChannelStripStatus tone={muted ? "muted" : "live"}>{muted ? "Muted" : "Live"}</ChannelStripStatus>
+        <ChannelStripStatus tone={muted ? "muted" : "live"}>
+          {muted ? "Muted" : "Live"}
+        </ChannelStripStatus>
       </ChannelStripHeader>
       <ChannelStripMeter>
-        <LevelMeter aria-label="Microphone level" size="sm" source={signal.meter} />
+        <LevelMeter
+          aria-label="Microphone level"
+          size="sm"
+          source={signal.meter}
+        />
       </ChannelStripMeter>
       <ChannelStripFader>
-        <Fader aria-label="Microphone volume" onValueChange={setGainDb} size="sm" value={gainDb} />
+        <Fader
+          aria-label="Microphone volume"
+          onValueChange={setGainDb}
+          size="sm"
+          value={gainDb}
+        />
       </ChannelStripFader>
       <ChannelStripValue>
         <DbReadout source={signal.meter} />

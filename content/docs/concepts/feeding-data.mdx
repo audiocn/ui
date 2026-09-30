@@ -3,8 +3,7 @@ title: Feeding data
 description: Every meter and visualizer accepts levels three ways, so it fits any audio source.
 ---
 
-audiocn components never open a microphone or connect to Web Audio themselves.
-They receive levels, and they accept them three ways.
+audiocn components never open a microphone or connect to Web Audio themselves. They receive levels, and they accept them three ways.
 
 ## 1. A source
 
@@ -16,9 +15,7 @@ interface FrameSource<T> {
 }
 ```
 
-Pass one as `source` and the component subscribes and paints itself on every
-animation frame, without re-rendering React. This is the fastest way, and the
-one to use for live audio.
+Pass one as `source` and the component subscribes and paints itself on every animation frame, without re-rendering React. This is the fastest way, and the one to use for live audio.
 
 ```tsx
 const analyser = useAudioAnalyser(stream);
@@ -40,8 +37,7 @@ socket.on("levels", (frame) => levels.emit(frame));
 
 ## 2. Values
 
-For data that arrives slowly, such as once a second from a server, pass plain
-values. The meter's ballistics still move it smoothly between updates.
+For data that arrives slowly, such as once a second from a server, pass plain values. The meter's ballistics still move it smoothly between updates.
 
 ```tsx
 <LevelMeter peakDb={-9.1} rmsDb={-18} />
@@ -79,10 +75,8 @@ interface VisualFrame {
 }
 ```
 
-Sources reuse their frame objects to avoid allocating on every frame. Copy a
-frame if you need to keep it.
+Sources reuse their frame objects to avoid allocating on every frame. Copy a frame if you need to keep it.
 
 ## In React state
 
-When you need a level in React, for a label or a warning, use
-[`useLevel`](/docs/hooks/use-level). It samples a source a few times a second.
+When you need a level in React, for a label or a warning, use [`useLevel`](/docs/hooks/use-level). It samples a source a few times a second.

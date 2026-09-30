@@ -21,8 +21,7 @@ import { LiveWaveform } from "@/components/ui/live-waveform";
 <LiveWaveform mode="scrolling" source={analyser.visual} className="h-16" />
 ```
 
-The waveform fills its container, so size it with classes. It redraws on
-resize and picks up theme changes on its own.
+The waveform fills its container, so size it with classes. It redraws on resize and picks up theme changes on its own.
 
 ## Examples
 
@@ -42,25 +41,33 @@ With `active={false}` the waveform shows a dotted line.
 
 ## Theming
 
-| Variable or attribute | Meaning |
-| --- | --- |
-| `--waveform` | Drawing color, default `currentColor` |
-| `data-mode`, `data-variant` | Current settings |
-| `data-active` | Drawing the signal rather than the idle line |
+| Variable or attribute       | Meaning                                      |
+| --------------------------- | -------------------------------------------- |
+| `--waveform`                | Drawing color, default `currentColor`        |
+| `data-mode`, `data-variant` | Current settings                             |
+| `data-active`               | Drawing the signal rather than the idle line |
 
 ## Accessibility
 
-The root has `role="img"`. Give it an `aria-label`, or `aria-hidden` when a
-labelled meter is next to it. With reduced motion it redraws four times a
-second.
+The root has `role="img"`. Give it an `aria-label`, or `aria-hidden` when a labelled meter is next to it. With reduced motion it redraws four times a second.
 
 ## API reference
 
 <PropsTable
   rows={[
     ["source", "FrameSource<VisualFrame> | null", null, null],
-    ["mode", '"scrolling" | "static"', '"static"', "scrolling shows level history; static shows the current frame."],
-    ["variant", '"bars" | "line" | "mirror"', '"bars"', "line draws the waveform trace in static mode."],
+    [
+      "mode",
+      '"scrolling" | "static"',
+      '"static"',
+      "scrolling shows level history; static shows the current frame.",
+    ],
+    [
+      "variant",
+      '"bars" | "line" | "mirror"',
+      '"bars"',
+      "line draws the waveform trace in static mode.",
+    ],
     ["barWidth", "number", "3", "Pixels."],
     ["barGap", "number", "1", "Pixels."],
     ["barRadius", "number", "1.5", "Pixels."],
@@ -70,6 +77,11 @@ second.
     ["fadeWidth", "number", "24", "Pixels."],
     ["active", "boolean", "true", "false shows an idle dotted line."],
     ["sensitivity", "number", "1", "Visual gain."],
-    ["actionsRef", "Ref<LiveWaveformActions>", null, "{ paint(frame), clear() }."],
+    [
+      "actionsRef",
+      "Ref<LiveWaveformActions>",
+      null,
+      "{ paint(frame), clear() }.",
+    ],
   ]}
 />

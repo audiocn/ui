@@ -5,26 +5,22 @@ description: audiocn uses your shadcn theme, plus six audio tokens you can chang
 
 ## Your theme applies
 
-Components use the standard shadcn tokens: `background`, `foreground`,
-`muted`, `primary`, `border`, `ring`, `destructive`. Any shadcn theme or preset
-restyles audiocn with no extra work.
+Components use the standard shadcn tokens: `background`, `foreground`, `muted`, `primary`, `border`, `ring`, `destructive`. Any shadcn theme or preset restyles audiocn with no extra work.
 
 ## Audio tokens
 
-Six tokens cover meanings shadcn has no token for. The CLI adds them to your CSS
-file when you install your first component:
+Six tokens cover meanings shadcn has no token for. The CLI adds them to your CSS file when you install your first component:
 
-| Token | Default | Used for |
-| --- | --- | --- |
-| `--meter-ok` | green | Normal level zone |
-| `--meter-warn` | amber | Warning zone |
-| `--meter-clip` | `var(--destructive)` | Clip zone and clip light |
-| `--channel-mute` | `var(--destructive)` | Pressed mute toggle |
-| `--channel-solo` | amber | Pressed solo toggle |
-| `--channel-monitor` | blue | Pressed monitor toggle |
+| Token               | Default              | Used for                 |
+| ------------------- | -------------------- | ------------------------ |
+| `--meter-ok`        | green                | Normal level zone        |
+| `--meter-warn`      | amber                | Warning zone             |
+| `--meter-clip`      | `var(--destructive)` | Clip zone and clip light |
+| `--channel-mute`    | `var(--destructive)` | Pressed mute toggle      |
+| `--channel-solo`    | amber                | Pressed solo toggle      |
+| `--channel-monitor` | blue                 | Pressed monitor toggle   |
 
-They are also Tailwind colours: `bg-meter-ok`, `text-channel-solo` and so on.
-Change them the same way as any shadcn token:
+They are also Tailwind colours: `bg-meter-ok`, `text-channel-solo` and so on. Change them the same way as any shadcn token:
 
 ```css title="app/globals.css"
 :root {
@@ -37,8 +33,7 @@ Change them the same way as any shadcn token:
 
 ## Component variables
 
-Geometry and drawing colours are CSS variables on each component, so a class
-can change them:
+Geometry and drawing colours are CSS variables on each component, so a class can change them:
 
 ```tsx
 <LevelMeter className="[--meter-thickness:6px]" />
@@ -46,8 +41,7 @@ can change them:
 <BarVisualizer className="text-primary [--bar-width:4px]" />
 ```
 
-Canvas components read their colours when the theme changes, so switching
-between light and dark repaints them without a remount.
+Canvas components read their colours when the theme changes, so switching between light and dark repaints them without a remount.
 
 ## Data attributes
 
@@ -62,6 +56,4 @@ Each component page lists its variables and attributes.
 
 ## Live values in CSS
 
-Meters write their live level to `--meter-level` (0..1) on every channel, so you
-can build a visual in CSS alone. See
-[Build your own visual](/docs/components/level-meter#build-your-own-visual).
+Meters write their live level to `--meter-level` (0..1) on every channel, so you can build a visual in CSS alone. See [Build your own visual](/docs/components/level-meter#build-your-own-visual).

@@ -21,8 +21,7 @@ import { LevelMeter } from "@/components/ui/level-meter";
 <LevelMeter aria-label="Microphone level" peakDb={-12} />
 ```
 
-With no children, `LevelMeter` renders one track per channel with a peak bar
-and a peak-hold tick. Add children to control the anatomy.
+With no children, `LevelMeter` renders one track per channel with a peak bar and a peak-hold tick. Add children to control the anatomy.
 
 ## Anatomy
 
@@ -51,8 +50,7 @@ and a peak-hold tick. Add children to control the anatomy.
 
 ### Values
 
-Pass `peakDb` (and optionally `rmsDb`) for data that arrives slowly. The meter
-still moves smoothly between updates.
+Pass `peakDb` (and optionally `rmsDb`) for data that arrives slowly. The meter still moves smoothly between updates.
 
 <ComponentPreview name="level-meter-values" />
 
@@ -72,8 +70,7 @@ Layer an `rms` bar over a translucent `peak` bar for a dual meter.
 
 ### Ballistics
 
-`peak` rises in 15 ms and falls steadily; `vu` is slow and averaged; `instant`
-follows the input exactly.
+`peak` rises in 15 ms and falls steadily; `vu` is slow and averaged; `instant` follows the input exactly.
 
 <ComponentPreview name="level-meter-ballistics" />
 
@@ -85,8 +82,7 @@ Override the meter tokens with a class, or pass your own `zones`.
 
 ### Build your own visual
 
-Each channel writes its live level to `--meter-level` (0..1). Anything inside a
-`LevelMeterChannel` can use it in CSS.
+Each channel writes its live level to `--meter-level` (0..1). Anything inside a `LevelMeterChannel` can use it in CSS.
 
 <ComponentPreview name="level-meter-css-level" />
 
@@ -131,12 +127,9 @@ meter.current?.paint({ channels: [{ peakDb: -9.1 }] });
 
 ## Accessibility
 
-- The root has `role="meter"` with `aria-valuemin`, `aria-valuemax` and
-  `aria-valuenow` in dB, and `aria-valuetext` such as "−12.0 dB". These update
-  at most four times a second.
+- The root has `role="meter"` with `aria-valuemin`, `aria-valuemax` and `aria-valuenow` in dB, and `aria-valuetext` such as "−12.0 dB". These update at most four times a second.
 - Give every meter a name with `aria-label` or `aria-labelledby`.
-- With reduced motion, the meter shows the current level four times a second
-  instead of animating.
+- With reduced motion, the meter shows the current level four times a second instead of animating.
 
 ## API reference
 
@@ -144,39 +137,75 @@ meter.current?.paint({ channels: [{ peakDb: -9.1 }] });
 
 <PropsTable
   rows={[
-    ["source", "FrameSource<MeterFrame> | null", null, "Subscribes and paints without re-rendering React."],
+    [
+      "source",
+      "FrameSource<MeterFrame> | null",
+      null,
+      "Subscribes and paints without re-rendering React.",
+    ],
     ["peakDb", "number", null, "Mono peak level in dBFS, for declarative use."],
     ["rmsDb", "number", null, "Mono RMS level in dBFS."],
-    ["channels", "ChannelLevel[]", null, "Levels per channel, for declarative multi-channel use."],
+    [
+      "channels",
+      "ChannelLevel[]",
+      null,
+      "Levels per channel, for declarative multi-channel use.",
+    ],
     ["channelCount", "number", "1", "Tracks to render before data arrives."],
     ["minDb", "number", "-60", "Bottom of the displayed range."],
     ["maxDb", "number", "0", "Top of the displayed range."],
-    ["zones", "MeterZone[]", "DEFAULT_ZONES", "Colour zones: ok, warn from −20, clip from −9."],
-    ["ballistics", '"peak" | "vu" | "instant" | Partial<BallisticsOptions>', '"peak"', "How the meter moves."],
+    [
+      "zones",
+      "MeterZone[]",
+      "DEFAULT_ZONES",
+      "Colour zones: ok, warn from −20, clip from −9.",
+    ],
+    [
+      "ballistics",
+      '"peak" | "vu" | "instant" | Partial<BallisticsOptions>',
+      '"peak"',
+      "How the meter moves.",
+    ],
     ["taper", '"linear" | "audio" | Taper', '"linear"', "Scale law."],
-    ["orientation", '"horizontal" | "vertical"', '"horizontal"', "Inherited from a channel strip."],
-    ["variant", '"solid" | "segmented" | "gradient"', '"solid"', "segmented is an LED ladder."],
+    [
+      "orientation",
+      '"horizontal" | "vertical"',
+      '"horizontal"',
+      "Inherited from a channel strip.",
+    ],
+    [
+      "variant",
+      '"solid" | "segmented" | "gradient"',
+      '"solid"',
+      "segmented is an LED ladder.",
+    ],
     ["segments", "number", "24", "Segments for the segmented variant."],
     ["size", '"sm" | "default" | "lg"', '"default"', "Track thickness."],
-    ["actionsRef", "Ref<LevelMeterActions>", null, "{ paint(frame), reset() }."],
+    [
+      "actionsRef",
+      "Ref<LevelMeterActions>",
+      null,
+      "{ paint(frame), reset() }.",
+    ],
   ]}
 />
 
 ### LevelMeterChannel
 
 <PropsTable
-  rows={[["index", "number", "0", "Which channel of the frames this track shows."]]}
+  rows={[
+    ["index", "number", "0", "Which channel of the frames this track shows."],
+  ]}
 />
 
 ### LevelMeterBar
 
 <PropsTable
-  rows={[["measure", '"peak" | "rms"', '"peak"', "Which measurement the bar shows."]]}
+  rows={[
+    ["measure", '"peak" | "rms"', '"peak"', "Which measurement the bar shows."],
+  ]}
 />
 
 ### LevelMeterScale, LevelMeterValue, LevelMeterClip
 
-These wrap [`DbScale`](/docs/components/db-scale),
-[`DbReadout`](/docs/components/db-readout) and
-[`ClipIndicator`](/docs/components/clip-indicator), and take their props. The
-range, orientation and data come from the meter.
+These wrap [`DbScale`](/docs/components/db-scale), [`DbReadout`](/docs/components/db-readout) and [`ClipIndicator`](/docs/components/clip-indicator), and take their props. The range, orientation and data come from the meter.

@@ -40,10 +40,7 @@ import {
 </Mixer>
 ```
 
-The mixer holds no audio and no state. Pair it with
-[`useMixer`](/docs/hooks/use-mixer) for state and
-[`useWebAudioMixer`](/docs/hooks/use-web-audio-mixer) for sound, or with your
-own engine.
+The mixer holds no audio and no state. Pair it with [`useMixer`](/docs/hooks/use-mixer) for state and [`useWebAudioMixer`](/docs/hooks/use-web-audio-mixer) for sound, or with your own engine.
 
 ## Anatomy
 
@@ -68,18 +65,13 @@ own engine.
 
 ### A complete mixer
 
-The [System Audio Mixer](/docs/blocks/system-audio-mixer) block is a working
-mixer built from these parts.
+The [System Audio Mixer](/docs/blocks/system-audio-mixer) block is a working mixer built from these parts.
 
 ## Behaviour
 
-- Every meter in the mixer shares `minDb`, `maxDb`, `zones` and `ballistics`,
-  so levels compare fairly across channels.
-- With focus on a control in a strip, Ctrl + arrow keys move to the same
-  control on the neighbouring strip: left and right in a console, up and down
-  in rows. Tab still moves through every control in order.
-- `MixerChannels` scrolls along the strip axis when strips overflow; the master
-  area stays in place.
+- Every meter in the mixer shares `minDb`, `maxDb`, `zones` and `ballistics`, so levels compare fairly across channels.
+- With focus on a control in a strip, Ctrl + arrow keys move to the same control on the neighbouring strip: left and right in a console, up and down in rows. Tab still moves through every control in order.
+- `MixerChannels` scrolls along the strip axis when strips overflow; the master area stays in place.
 - `MixerEmpty` appears when `MixerChannels` has no children.
 
 ## API reference
@@ -88,8 +80,18 @@ mixer built from these parts.
 
 <PropsTable
   rows={[
-    ["orientation", '"horizontal" | "vertical"', '"horizontal"', "horizontal stacks row strips; vertical lays console strips side by side."],
-    ["size", '"sm" | "default" | "lg"', null, "Inherited by every strip and control."],
+    [
+      "orientation",
+      '"horizontal" | "vertical"',
+      '"horizontal"',
+      "horizontal stacks row strips; vertical lays console strips side by side.",
+    ],
+    [
+      "size",
+      '"sm" | "default" | "lg"',
+      null,
+      "Inherited by every strip and control.",
+    ],
     ["minDb / maxDb", "number", "-60 / 0", "Shared meter range."],
     ["zones", "MeterZone[]", "DEFAULT_ZONES", "Shared meter zones."],
     ["ballistics", "BallisticsInput", '"peak"', "Shared meter movement."],
@@ -99,4 +101,6 @@ mixer built from these parts.
 
 ### MixerChannels
 
-<PropsTable rows={[["scrollable", "boolean", "true", "Scroll when strips overflow."]]} />
+<PropsTable
+  rows={[["scrollable", "boolean", "true", "Scroll when strips overflow."]]}
+/>

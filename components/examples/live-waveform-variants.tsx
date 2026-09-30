@@ -10,13 +10,17 @@ const LiveWaveformVariants = () => {
     <div className="grid w-full max-w-md gap-6">
       <div className="grid gap-1.5">
         <span className="text-muted-foreground text-xs">static bars</span>
-        <LiveWaveform aria-label="Spectrum bars" className="h-14" source={signal.visual} />
+        <LiveWaveform
+          aria-label="Spectrum bars"
+          className="h-14"
+          source={signal.visual}
+        />
       </div>
       <div className="grid gap-1.5">
         <span className="text-muted-foreground text-xs">static mirror</span>
         <LiveWaveform
           aria-label="Mirrored spectrum"
-          className="h-14 text-primary"
+          className="text-primary h-14"
           source={signal.visual}
           variant="mirror"
         />

@@ -17,7 +17,11 @@ const LevelMeterDemo = () => {
   const signal = useDemoSignal({ channels: 2, kind: "music" });
 
   return (
-    <LevelMeter aria-label="Program level" className="max-w-md" source={signal.meter}>
+    <LevelMeter
+      aria-label="Program level"
+      className="max-w-md"
+      source={signal.meter}
+    >
       <LevelMeterChannels>
         <LevelMeterChannel index={0}>
           <LevelMeterTrack>

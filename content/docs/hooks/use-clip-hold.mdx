@@ -3,9 +3,7 @@ title: useClipHold
 description: Clip detection with a hold time, a clip count and a reset.
 ---
 
-`useClipHold` powers the [clip indicator](/docs/components/clip-indicator).
-Feed it every level reading; it tells you when the signal clipped and keeps
-that state for a while so people can see it.
+`useClipHold` powers the [clip indicator](/docs/components/clip-indicator). Feed it every level reading; it tells you when the signal clipped and keeps that state for a while so people can see it.
 
 ```npm
 npx shadcn@latest add @audiocn/use-clip-hold
@@ -28,8 +26,18 @@ return clip.clipping ? <span>Clipping ({clip.count})</span> : null;
 <PropsTable
   rows={[
     ["thresholdDb", "number", "-1", "Levels at or above this count as a clip."],
-    ["holdMs", "number", "1500", "How long the clip state holds. Infinity latches until reset()."],
-    ["onClippingChange", "(clipping: boolean) => void", null, "Called when the state changes."],
+    [
+      "holdMs",
+      "number",
+      "1500",
+      "How long the clip state holds. Infinity latches until reset().",
+    ],
+    [
+      "onClippingChange",
+      "(clipping: boolean) => void",
+      null,
+      "Called when the state changes.",
+    ],
   ]}
 />
 
@@ -38,8 +46,18 @@ return clip.clipping ? <span>Clipping ({clip.count})</span> : null;
 <PropsTable
   rows={[
     ["clipping", "boolean", null, "The clip state, including the hold."],
-    ["count", "number", null, "Separate clips since mount or the last reset. A long clip counts once."],
-    ["report", "(db: number) => void", null, "Feed a level reading. Cheap to call every frame."],
+    [
+      "count",
+      "number",
+      null,
+      "Separate clips since mount or the last reset. A long clip counts once.",
+    ],
+    [
+      "report",
+      "(db: number) => void",
+      null,
+      "Feed a level reading. Cheap to call every frame.",
+    ],
     ["reset", "() => void", null, "Clear the state and the count."],
   ]}
 />

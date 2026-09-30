@@ -276,12 +276,7 @@ export const Soundboard = ({
             onCheckedChange={setHotkeys}
             size="sm"
           />
-          <Label
-            className="text-muted-foreground text-xs"
-            htmlFor="soundboard-hotkeys"
-          >
-            Hotkeys
-          </Label>
+          <Label htmlFor="soundboard-hotkeys">Hotkeys</Label>
         </div>
         <VolumeControl
           className="w-36"
@@ -305,25 +300,27 @@ export const Soundboard = ({
         </Button>
       </div>
       {sounds.length === 0 ? (
-        <Empty className="border border-dashed">
-          <EmptyHeader>
-            <EmptyMedia variant="icon">
-              <WaveformIcon />
-            </EmptyMedia>
-            <EmptyTitle>No sounds yet</EmptyTitle>
-            <EmptyDescription>
-              Drop audio files here, or add them from your computer.
-            </EmptyDescription>
-          </EmptyHeader>
-          <Button
-            onClick={() => fileInputRef.current?.click()}
-            size="sm"
-            variant="outline"
-          >
-            <PlusIcon data-icon="inline-start" />
-            Add sounds
-          </Button>
-        </Empty>
+        <div className="rounded-xl border border-dashed">
+          <Empty>
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <WaveformIcon />
+              </EmptyMedia>
+              <EmptyTitle>No sounds yet</EmptyTitle>
+              <EmptyDescription>
+                Drop audio files here, or add them from your computer.
+              </EmptyDescription>
+            </EmptyHeader>
+            <Button
+              onClick={() => fileInputRef.current?.click()}
+              size="sm"
+              variant="outline"
+            >
+              <PlusIcon data-icon="inline-start" />
+              Add sounds
+            </Button>
+          </Empty>
+        </div>
       ) : (
         <SoundPadGrid
           className="data-dragging:ring-2"

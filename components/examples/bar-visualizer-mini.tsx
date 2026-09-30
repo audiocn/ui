@@ -10,7 +10,7 @@ const BarVisualizerMini = () => {
   const signal = useDemoSignal({ kind: "speech", seed: 12 });
 
   return (
-    <Badge className="h-7 gap-2 px-3" variant="secondary">
+    <Badge className="h-7" variant="secondary">
       <MicrophoneIcon />
       Live
       <BarVisualizer

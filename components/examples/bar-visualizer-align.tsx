@@ -12,14 +12,16 @@ const BarVisualizerAlign = () => {
     <div className="grid w-full max-w-md grid-cols-3 gap-6">
       {alignments.map((align) => (
         <div className="grid gap-2" key={align}>
-          <BarVisualizer
-            align={align}
-            aria-label={`Bars aligned to ${align}`}
-            barCount={12}
-            className="h-20 rounded-lg bg-muted/40 p-2"
-            source={signal.visual}
-          />
-          <span className="text-center font-mono text-muted-foreground text-xs">
+          <div className="bg-muted/40 rounded-lg p-2">
+            <BarVisualizer
+              align={align}
+              aria-label={`Bars aligned to ${align}`}
+              barCount={12}
+              className="h-16"
+              source={signal.visual}
+            />
+          </div>
+          <span className="text-muted-foreground text-center font-mono text-xs">
             {align}
           </span>
         </div>

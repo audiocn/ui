@@ -18,7 +18,9 @@ const ChannelToggleVariants = () => (
         <ChannelToggle aria-label="Record arm" defaultPressed variant={variant}>
           R
         </ChannelToggle>
-        <span className="font-mono text-muted-foreground text-xs">{variant}</span>
+        <span className="text-muted-foreground font-mono text-xs">
+          {variant}
+        </span>
       </div>
     ))}
   </div>

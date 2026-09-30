@@ -11,9 +11,7 @@ description: One channel of a mixer, as a row or a console strip, composed from 
 npx shadcn@latest add @audiocn/channel-strip
 ```
 
-`channel-strip` is layout and context only. Install the meters, faders and
-toggles you put inside it separately, or install a
-[block](/docs/blocks/system-audio-mixer) that brings everything.
+`channel-strip` is layout and context only. Install the meters, faders and toggles you put inside it separately, or install a [block](/docs/blocks/system-audio-mixer) that brings everything.
 
 ## Usage
 
@@ -37,8 +35,7 @@ import {
 </ChannelStrip>
 ```
 
-Every part is optional. The smallest useful strip is a title, a meter and a
-mute toggle.
+Every part is optional. The smallest useful strip is a title, a meter and a mute toggle.
 
 ## Anatomy
 
@@ -75,17 +72,11 @@ With `orientation="vertical"`, the meter and fader stand side by side.
 
 ## How it passes settings down
 
-A strip provides its `orientation`, `size` and `disabled` state to the audiocn
-components inside it, so meters and faders line up without extra props. When
-the strip is `muted` or `dimmed`, meters inside it render dimmed. Explicit props
-on a child always win. `useChannelStrip()` reads the strip's state in your own
-parts.
+A strip provides its `orientation`, `size` and `disabled` state to the audiocn components inside it, so meters and faders line up without extra props. When the strip is `muted` or `dimmed`, meters inside it render dimmed. Explicit props on a child always win. `useChannelStrip()` reads the strip's state in your own parts.
 
 ## Layout
 
-The strip is a CSS grid with named areas: `header`, `meter`, `fader`,
-`value`, `controls` and `notice`. Each part places itself in its area, so you
-can rearrange the strip by overriding `grid-template-areas` with a class.
+The strip is a CSS grid with named areas: `header`, `meter`, `fader`, `value`, `controls` and `notice`. Each part places itself in its area, so you can rearrange the strip by overriding `grid-template-areas` with a class.
 
 ## Theming
 
@@ -99,9 +90,7 @@ can rearrange the strip by overriding `grid-template-areas` with a class.
 
 ## Accessibility
 
-The strip is a `group` named by `ChannelStripTitle`. A notice is a `status`,
-or an `alert` for the `destructive` variant. State is never shown by colour
-alone: pair a muted strip with a pressed mute toggle and a status label.
+The strip is a `group` named by `ChannelStripTitle`. A notice is a `status`, or an `alert` for the `destructive` variant. State is never shown by colour alone: pair a muted strip with a pressed mute toggle and a status label.
 
 ## API reference
 
@@ -109,9 +98,19 @@ alone: pair a muted strip with a pressed mute toggle and a status label.
 
 <PropsTable
   rows={[
-    ["orientation", '"horizontal" | "vertical"', "from Mixer", "Horizontal is a row; vertical is a console strip."],
+    [
+      "orientation",
+      '"horizontal" | "vertical"',
+      "from Mixer",
+      "Horizontal is a row; vertical is a console strip.",
+    ],
     ["variant", '"default" | "card" | "ghost" | "master"', '"default"', null],
-    ["size", '"sm" | "default" | "lg"', "from Mixer", "Passed to controls inside."],
+    [
+      "size",
+      '"sm" | "default" | "lg"',
+      "from Mixer",
+      "Passed to controls inside.",
+    ],
     ["muted", "boolean", "false", "Styling and context only."],
     ["solo", "boolean", "false", null],
     ["dimmed", "boolean", "false", "Silenced by another channel's solo."],
@@ -124,8 +123,26 @@ alone: pair a muted strip with a pressed mute toggle and a status label.
 
 ### ChannelStripStatus
 
-<PropsTable rows={[["tone", '"default" | "live" | "muted" | "warning" | "error"', '"default"', "Rendered with the shadcn Badge."]]} />
+<PropsTable
+  rows={[
+    [
+      "tone",
+      '"default" | "live" | "muted" | "warning" | "error"',
+      '"default"',
+      "Rendered with the shadcn Badge.",
+    ],
+  ]}
+/>
 
 ### ChannelStripNotice
 
-<PropsTable rows={[["variant", '"default" | "warning" | "destructive"', '"default"', "Children can include an action button."]]} />
+<PropsTable
+  rows={[
+    [
+      "variant",
+      '"default" | "warning" | "destructive"',
+      '"default"',
+      "Children can include an action button.",
+    ],
+  ]}
+/>

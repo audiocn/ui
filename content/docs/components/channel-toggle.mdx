@@ -14,7 +14,11 @@ npx shadcn@latest add @audiocn/channel-toggle
 ## Usage
 
 ```tsx
-import { MonitorToggle, MuteToggle, SoloToggle } from "@/components/ui/channel-toggle";
+import {
+  MonitorToggle,
+  MuteToggle,
+  SoloToggle,
+} from "@/components/ui/channel-toggle";
 ```
 
 ```tsx
@@ -22,9 +26,7 @@ import { MonitorToggle, MuteToggle, SoloToggle } from "@/components/ui/channel-t
 <SoloToggle pressed={solo} onPressedChange={setSolo}>S</SoloToggle>
 ```
 
-The presets set the tone and a default `aria-label`. Children are a letter, a
-word or an icon; nothing is rendered by default. Use `ChannelToggle` with a
-`tone` for anything else.
+The presets set the tone and a default `aria-label`. Children are a letter, a word or an icon; nothing is rendered by default. Use `ChannelToggle` with a `tone` for anything else.
 
 ## Examples
 
@@ -42,9 +44,7 @@ word or an icon; nothing is rendered by default. Use `ChannelToggle` with a
 
 ## Accessibility
 
-Toggles are buttons with `aria-pressed`. The presets are labelled "Mute",
-"Solo" and "Monitor"; override `aria-label` to name the channel, such as
-"Mute microphone".
+Toggles are buttons with `aria-pressed`. The presets are labelled "Mute", "Solo" and "Monitor"; override `aria-label` to name the channel, such as "Mute microphone".
 
 ## API reference
 
@@ -53,7 +53,12 @@ Toggles are buttons with `aria-pressed`. The presets are labelled "Mute",
     ["pressed", "boolean", null, null],
     ["defaultPressed", "boolean", "false", null],
     ["onPressedChange", "(pressed, details) => void", null, null],
-    ["tone", '"mute" | "solo" | "monitor" | "neutral"', "per export", "Colour when pressed."],
+    [
+      "tone",
+      '"mute" | "solo" | "monitor" | "neutral"',
+      "per export",
+      "Colour when pressed.",
+    ],
     ["variant", '"default" | "outline" | "ghost"', '"default"', null],
     ["size", '"sm" | "default" | "lg" | "icon"', '"default"', null],
     ["disabled", "boolean", "false", "Inherited from a channel strip."],

@@ -24,7 +24,14 @@ import {
 ```
 
 ```tsx
-<ParameterSlider min={-1000} max={1000} step={5} unit="ms" value={ms} onValueChange={setMs}>
+<ParameterSlider
+  min={-1000}
+  max={1000}
+  step={5}
+  unit="ms"
+  value={ms}
+  onValueChange={setMs}
+>
   <ParameterSliderHeader>
     <ParameterSliderLabel>Sync offset</ParameterSliderLabel>
     <ParameterSliderInput />
@@ -33,8 +40,7 @@ import {
 </ParameterSlider>
 ```
 
-Use it for gain trims, delays, thresholds, times and frequencies. For volume,
-use [Fader](/docs/components/fader).
+Use it for gain trims, delays, thresholds, times and frequencies. For volume, use [Fader](/docs/components/fader).
 
 ## Anatomy
 
@@ -60,17 +66,16 @@ use [Fader](/docs/components/fader).
 
 ## Theming
 
-| Data attribute | Meaning |
-| --- | --- |
+| Data attribute  | Meaning                             |
+| --------------- | ----------------------------------- |
 | `data-modified` | The value differs from `resetValue` |
-| `data-disabled` | Disabled |
+| `data-disabled` | Disabled                            |
 
 ## Accessibility
 
 - The label names both the slider and the number input.
 - `ParameterSliderDescription` describes the slider thumb.
-- The same keys as the [fader](/docs/components/fader#keyboard) work on the
-  thumb; the number input supports arrow keys and typing.
+- The same keys as the [fader](/docs/components/fader#keyboard) work on the thumb; the number input supports arrow keys and typing.
 - Drag the unit next to the input to scrub the value.
 
 ## API reference
@@ -79,18 +84,28 @@ use [Fader](/docs/components/fader).
   rows={[
     ["value", "number", null, null],
     ["defaultValue", "number", null, null],
-    ["onValueChange", "(value, details) => void", null, "details.reason: drag, keyboard, input or reset."],
+    [
+      "onValueChange",
+      "(value, details) => void",
+      null,
+      "details.reason: drag, keyboard, input or reset.",
+    ],
     ["onValueCommitted", "(value) => void", null, null],
     ["min", "number", "0", null],
     ["max", "number", "100", null],
     ["step", "number", "1", null],
     ["largeStep", "number", "10", null],
-    ["unit", "string", null, "Suffix such as \"ms\", \"dB\" or \"Hz\"."],
+    ["unit", "string", null, 'Suffix such as "ms", "dB" or "Hz".'],
     ["decimals", "number", "from step", null],
     ["scale", '"linear" | "log"', '"linear"', "log suits frequency and time."],
     ["origin", "number", "min", "Where the fill starts."],
     ["resetValue", "number", "defaultValue ?? min", null],
-    ["marks", "{ value: number; label?: string }[]", null, "Shown by ParameterSliderMarks."],
+    [
+      "marks",
+      "{ value: number; label?: string }[]",
+      null,
+      "Shown by ParameterSliderMarks.",
+    ],
     ["format", "(value: number) => string", null, null],
     ["disabled", "boolean", "false", null],
   ]}
@@ -98,4 +113,6 @@ use [Fader](/docs/components/fader).
 
 ### ParameterSliderInput
 
-<PropsTable rows={[["scrub", "boolean", "true", "Drag the unit to change the value."]]} />
+<PropsTable
+  rows={[["scrub", "boolean", "true", "Drag the unit to change the value."]]}
+/>

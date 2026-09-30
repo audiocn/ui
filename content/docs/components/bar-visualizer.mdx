@@ -21,8 +21,7 @@ import { BarVisualizer } from "@/components/ui/bar-visualizer";
 <BarVisualizer aria-label="Voice activity" source={analyser.visual} />
 ```
 
-Bars take their color from the text color, so set it with a class such as
-`text-primary`. Bars paint on the animation frame without re-rendering React.
+Bars take their color from the text color, so set it with a class such as `text-primary`. Bars paint on the animation frame without re-rendering React.
 
 ## Examples
 
@@ -32,8 +31,7 @@ Bars take their color from the text color, so set it with a class such as
 
 ### Idle and loading
 
-`idle` decides what bars do without a signal. `loading` runs a sweep, for
-connecting or thinking states.
+`idle` decides what bars do without a signal. `loading` runs a sweep, for connecting or thinking states.
 
 <ComponentPreview name="bar-visualizer-states" />
 
@@ -47,33 +45,56 @@ connecting or thinking states.
 
 ## Theming
 
-| Variable or attribute | Meaning |
-| --- | --- |
-| `--bar-width` | Maximum bar width, default `0.375rem` |
-| `--bar-gap` | Gap between bars, default `0.1875rem` |
-| `--bar-radius` | Bar corner radius, default fully rounded |
-| `data-loading` | The sweep is running |
-| `data-index` | On each bar, its position |
+| Variable or attribute | Meaning                                  |
+| --------------------- | ---------------------------------------- |
+| `--bar-width`         | Maximum bar width, default `0.375rem`    |
+| `--bar-gap`           | Gap between bars, default `0.1875rem`    |
+| `--bar-radius`        | Bar corner radius, default fully rounded |
+| `data-loading`        | The sweep is running                     |
+| `data-index`          | On each bar, its position                |
 
 ## Accessibility
 
-The root has `role="img"` and the label "Audio visualizer". Pass `aria-label`
-to describe what it shows, or `aria-hidden` when it is decorative next to a
-labelled meter.
+The root has `role="img"` and the label "Audio visualizer". Pass `aria-label` to describe what it shows, or `aria-hidden` when it is decorative next to a labelled meter.
 
 ## API reference
 
 <PropsTable
   rows={[
-    ["source", "FrameSource<VisualFrame> | null", null, "Bars follow the frame's frequency bands."],
+    [
+      "source",
+      "FrameSource<VisualFrame> | null",
+      null,
+      "Bars follow the frame's frequency bands.",
+    ],
     ["levels", "ArrayLike<number>", null, "Levels, 0..1, for declarative use."],
     ["barCount", "number", "24", "Bands are resampled to fit."],
-    ["align", '"center" | "start" | "end"', '"center"', "Where bars grow from."],
-    ["mirrored", "boolean", "false", "Symmetric around the middle bar, lows in the centre."],
+    [
+      "align",
+      '"center" | "start" | "end"',
+      '"center"',
+      "Where bars grow from.",
+    ],
+    [
+      "mirrored",
+      "boolean",
+      "false",
+      "Symmetric around the middle bar, lows in the centre.",
+    ],
     ["minLevel", "number", "0.08", "Resting bar size, 0..1."],
-    ["idle", '"static" | "pulse" | "wave"', '"static"', "What bars do without a signal."],
+    [
+      "idle",
+      '"static" | "pulse" | "wave"',
+      '"static"',
+      "What bars do without a signal.",
+    ],
     ["loading", "boolean", "false", "Run a sweep animation."],
-    ["orientation", '"horizontal" | "vertical"', '"horizontal"', "vertical grows bars sideways."],
+    [
+      "orientation",
+      '"horizontal" | "vertical"',
+      '"horizontal"',
+      "vertical grows bars sideways.",
+    ],
     ["actionsRef", "Ref<BarVisualizerActions>", null, "{ paint(levels) }."],
   ]}
 />

@@ -6,7 +6,7 @@ import { useDemoSounds } from "@/lib/docs/use-demo-audio";
 const SoundboardDemo = () => {
   const sounds = useDemoSounds();
   if (sounds.length === 0) {
-    return <p className="text-muted-foreground text-sm">Preparing sounds{"…"}</p>;
+    return <p className="text-muted-foreground text-sm">Preparing sounds…</p>;
   }
   return <Soundboard className="w-full max-w-2xl" defaultSounds={sounds} />;
 };

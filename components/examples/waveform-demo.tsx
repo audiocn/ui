@@ -1,7 +1,12 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Waveform, WaveformCanvas, WaveformCursor, WaveformHover } from "@/components/ui/waveform";
+import {
+  Waveform,
+  WaveformCanvas,
+  WaveformCursor,
+  WaveformHover,
+} from "@/components/ui/waveform";
 import { useAudioPlayer } from "@/hooks/use-audio-player";
 import { useWaveformData } from "@/hooks/use-waveform-data";
 import { useDemoTracks } from "@/lib/docs/use-demo-audio";
@@ -26,7 +31,13 @@ const WaveformDemo = () => {
         <WaveformCursor />
         <WaveformHover />
       </Waveform>
-      <Button className="self-start" disabled={!track} onClick={player.toggle} size="sm" variant="outline">
+      <Button
+        className="self-start"
+        disabled={!track}
+        onClick={player.toggle}
+        size="sm"
+        variant="outline"
+      >
         {player.playing ? "Pause" : "Play"}
       </Button>
     </div>

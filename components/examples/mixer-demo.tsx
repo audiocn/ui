@@ -1,9 +1,13 @@
 "use client";
 
-import { DesktopIcon, MicrophoneIcon, MusicNotesIcon, SpeakerHighIcon } from "@phosphor-icons/react";
+import {
+  DesktopIcon,
+  MicrophoneIcon,
+  MusicNotesIcon,
+  SpeakerHighIcon,
+} from "@phosphor-icons/react";
 import type { ReactNode } from "react";
 
-import { MuteToggle, SoloToggle } from "@/components/ui/channel-toggle";
 import {
   ChannelStrip,
   ChannelStripControls,
@@ -15,6 +19,7 @@ import {
   ChannelStripTitle,
   ChannelStripValue,
 } from "@/components/ui/channel-strip";
+import { MuteToggle, SoloToggle } from "@/components/ui/channel-toggle";
 import { Fader } from "@/components/ui/fader";
 import { LevelMeter } from "@/components/ui/level-meter";
 import {
@@ -54,7 +59,11 @@ const Strip = ({
     return null;
   }
   return (
-    <ChannelStrip dimmed={mixer.isDimmed(id)} muted={channel.muted} solo={channel.solo}>
+    <ChannelStrip
+      dimmed={mixer.isDimmed(id)}
+      muted={channel.muted}
+      solo={channel.solo}
+    >
       <ChannelStripHeader>
         <ChannelStripIcon>{icon}</ChannelStripIcon>
         <ChannelStripText>
@@ -74,10 +83,18 @@ const Strip = ({
       </ChannelStripFader>
       <ChannelStripValue>{formatDb(channel.gainDb)}</ChannelStripValue>
       <ChannelStripControls>
-        <MuteToggle onPressedChange={(muted) => mixer.setMuted(id, muted)} pressed={channel.muted} size="sm">
+        <MuteToggle
+          onPressedChange={(muted) => mixer.setMuted(id, muted)}
+          pressed={channel.muted}
+          size="sm"
+        >
           M
         </MuteToggle>
-        <SoloToggle onPressedChange={(solo) => mixer.setSolo(id, solo)} pressed={channel.solo} size="sm">
+        <SoloToggle
+          onPressedChange={(solo) => mixer.setSolo(id, solo)}
+          pressed={channel.solo}
+          size="sm"
+        >
           S
         </SoloToggle>
       </ChannelStripControls>
@@ -90,7 +107,11 @@ const MixerDemo = () => {
   const speech = useDemoSignal({ kind: "speech" });
   const noise = useDemoSignal({ kind: "noise" });
   const music = useDemoSignal({ channels: 2, kind: "music" });
-  const sources = { mic: speech.meter, music: music.meter, system: noise.meter };
+  const sources = {
+    mic: speech.meter,
+    music: music.meter,
+    system: noise.meter,
+  };
 
   return (
     <Mixer className="w-full max-w-2xl">
@@ -119,10 +140,20 @@ const MixerDemo = () => {
             <ChannelStripTitle>Master</ChannelStripTitle>
           </ChannelStripHeader>
           <ChannelStripMeter>
-            <LevelMeter aria-label="Master level" channelCount={2} size="sm" source={music.meter} />
+            <LevelMeter
+              aria-label="Master level"
+              channelCount={2}
+              size="sm"
+              source={music.meter}
+            />
           </ChannelStripMeter>
           <ChannelStripFader>
-            <Fader aria-label="Master volume" onValueChange={mixer.setMasterGain} size="sm" value={mixer.master.gainDb} />
+            <Fader
+              aria-label="Master volume"
+              onValueChange={mixer.setMasterGain}
+              size="sm"
+              value={mixer.master.gainDb}
+            />
           </ChannelStripFader>
         </ChannelStrip>
       </MixerMaster>

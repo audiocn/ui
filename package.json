@@ -2,6 +2,7 @@
   "name": "audiocn",
   "version": "0.0.1",
   "private": true,
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "dev": "pnpm examples:build && next dev",
@@ -56,6 +57,5 @@
     "typescript": "^5",
     "ultracite": "7.12.2",
     "vitest": "^5.0.3"
-  },
-  "license": "MIT"
+  }
 }

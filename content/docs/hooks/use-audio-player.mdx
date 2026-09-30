@@ -13,13 +13,15 @@ npx shadcn@latest add @audiocn/use-audio-player
 const player = useAudioPlayer({ src: "/episode.mp3" });
 
 <Button onClick={player.toggle}>{player.playing ? "Pause" : "Play"}</Button>;
-<Waveform peaks={peaks} duration={player.duration} time={player.time} onSeekCommitted={player.seek} />;
+<Waveform
+  peaks={peaks}
+  duration={player.duration}
+  time={player.time}
+  onSeekCommitted={player.seek}
+/>;
 ```
 
-The hook creates and owns an `<audio>` element. Pass `player.element` to
-[`useAudioAnalyser`](/docs/hooks/use-audio-analyser) or
-[`useWebAudioMixer`](/docs/hooks/use-web-audio-mixer), and `player` to
-[`AudioPlayer`](/docs/components/audio-player).
+The hook creates and owns an `<audio>` element. Pass `player.element` to [`useAudioAnalyser`](/docs/hooks/use-audio-analyser) or [`useWebAudioMixer`](/docs/hooks/use-web-audio-mixer), and `player` to [`AudioPlayer`](/docs/components/audio-player).
 
 ## Options
 
@@ -30,7 +32,12 @@ The hook creates and owns an `<audio>` element. Pass `player.element` to
     ["volume", "number", "1", "0..1."],
     ["playbackRate", "number", "1", null],
     ["preload", '"none" | "metadata" | "auto"', '"metadata"', null],
-    ["crossOrigin", '"anonymous" | "use-credentials"', null, "Needed to analyse audio from another origin."],
+    [
+      "crossOrigin",
+      '"anonymous" | "use-credentials"',
+      null,
+      "Needed to analyse audio from another origin.",
+    ],
     ["onPlay / onPause / onEnded", "() => void", null, null],
     ["onError", "(error) => void", null, null],
   ]}
@@ -41,13 +48,38 @@ The hook creates and owns an `<audio>` element. Pass `player.element` to
 <PropsTable
   rows={[
     ["element", "HTMLAudioElement | null", null, null],
-    ["status", '"idle" | "loading" | "ready" | "playing" | "paused" | "ended" | "error"', null, null],
+    [
+      "status",
+      '"idle" | "loading" | "ready" | "playing" | "paused" | "ended" | "error"',
+      null,
+      null,
+    ],
     ["playing", "boolean", null, null],
     ["currentTime", "number", null, "Updates about four times a second."],
-    ["time", "FrameSource<number>", null, "The time on every animation frame while playing."],
+    [
+      "time",
+      "FrameSource<number>",
+      null,
+      "The time on every animation frame while playing.",
+    ],
     ["duration / buffered", "number", null, "Seconds."],
-    ["volume / muted / playbackRate / loop", "number | boolean", null, "Current settings."],
-    ["play / pause / toggle / seek", "() => void | (seconds) => void", null, "toggle and play return a promise."],
-    ["setVolume / setMuted / setPlaybackRate / setLoop", "(value) => void", null, null],
+    [
+      "volume / muted / playbackRate / loop",
+      "number | boolean",
+      null,
+      "Current settings.",
+    ],
+    [
+      "play / pause / toggle / seek",
+      "() => void | (seconds) => void",
+      null,
+      "toggle and play return a promise.",
+    ],
+    [
+      "setVolume / setMuted / setPlaybackRate / setLoop",
+      "(value) => void",
+      null,
+      null,
+    ],
   ]}
 />

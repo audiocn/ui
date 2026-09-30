@@ -49,7 +49,6 @@ export const QuickAudioPopover = ({
         render={
           <Button
             aria-label={live ? "Audio: microphone live" : "Audio settings"}
-            className="gap-2"
             variant="outline"
           />
         }
@@ -72,7 +71,7 @@ export const QuickAudioPopover = ({
           <PopoverTitle>Audio</PopoverTitle>
           <PopoverDescription>Microphone and system audio.</PopoverDescription>
         </PopoverHeader>
-        <FieldGroup className="gap-4">
+        <FieldGroup>
           <Field>
             <FieldLabel>Microphone</FieldLabel>
             <AudioDeviceSelect

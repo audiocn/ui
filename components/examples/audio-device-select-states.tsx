@@ -6,7 +6,12 @@ import type { AudioDevice } from "@/components/ui/audio-device-select";
 const devices: AudioDevice[] = [
   { id: "default", isDefault: true, label: "MacBook Pro Microphone" },
   { description: "USB", id: "usb", label: "Shure MV7+" },
-  { description: "In use by another app", id: "busy", label: "Elgato Wave:3", status: "unavailable" },
+  {
+    description: "In use by another app",
+    id: "busy",
+    label: "Elgato Wave:3",
+    status: "unavailable",
+  },
 ];
 
 const AudioDeviceSelectStates = () => (

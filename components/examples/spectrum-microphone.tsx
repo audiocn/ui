@@ -7,7 +7,10 @@ import { useMicrophone } from "@/hooks/use-microphone";
 
 const SpectrumMicrophone = () => {
   const microphone = useMicrophone();
-  const analyser = useAudioAnalyser(microphone.stream, { bands: 64, fftSize: 4096 });
+  const analyser = useAudioAnalyser(microphone.stream, {
+    bands: 64,
+    fftSize: 4096,
+  });
   const listening = microphone.status === "active";
 
   return (

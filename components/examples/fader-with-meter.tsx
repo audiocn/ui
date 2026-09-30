@@ -2,7 +2,12 @@
 
 import { useState } from "react";
 
-import { Fader, FaderThumb, FaderTrack, FaderValue } from "@/components/ui/fader";
+import {
+  Fader,
+  FaderThumb,
+  FaderTrack,
+  FaderValue,
+} from "@/components/ui/fader";
 import { LevelMeter } from "@/components/ui/level-meter";
 import { useDemoSignal } from "@/hooks/use-demo-signal";
 

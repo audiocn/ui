@@ -10,7 +10,7 @@ const BarVisualizerMirrored = () => {
     <BarVisualizer
       aria-label="Assistant speaking"
       barCount={31}
-      className="h-28 max-w-md text-foreground [--bar-gap:2px] [--bar-width:4px]"
+      className="text-foreground h-28 max-w-md [--bar-gap:2px] [--bar-width:4px]"
       mirrored
       source={signal.visual}
     />

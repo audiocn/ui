@@ -29,8 +29,7 @@ const { peaks, duration } = useWaveformData(src);
 />;
 ```
 
-Pass `time` (a frame source) for a playhead that moves every frame without
-re-rendering React, or `currentTime` for plain controlled use.
+Pass `time` (a frame source) for a playhead that moves every frame without re-rendering React, or `currentTime` for plain controlled use.
 
 ## Anatomy
 
@@ -66,9 +65,7 @@ re-rendering React, or `currentTime` for plain controlled use.
 
 ## Accessibility
 
-When interactive, the waveform is a slider with `aria-valuetext` such as
-"1:24 of 3:40". Arrow keys seek by `step`, Shift by `largeStep`, and Home and
-End jump to the ends. Region edges are separate sliders.
+When interactive, the waveform is a slider with `aria-valuetext` such as "1:24 of 3:40". Arrow keys seek by `step`, Shift by `largeStep`, and Home and End jump to the ends. Region edges are separate sliders.
 
 ## API reference
 
@@ -80,9 +77,19 @@ End jump to the ends. Region edges are separate sliders.
     ["duration", "number", null, "Seconds."],
     ["currentTime", "number", null, "Controlled playhead in seconds."],
     ["defaultCurrentTime", "number", "0", null],
-    ["time", "FrameSource<number> | null", null, "A smooth playhead with no renders."],
+    [
+      "time",
+      "FrameSource<number> | null",
+      null,
+      "A smooth playhead with no renders.",
+    ],
     ["onSeek", "(time) => void", null, "While seeking."],
-    ["onSeekCommitted", "(time) => void", null, "On release or after keyboard seeking."],
+    [
+      "onSeekCommitted",
+      "(time) => void",
+      null,
+      "On release or after keyboard seeking.",
+    ],
     ["step / largeStep", "number", "5 / 15", "Seconds for the keyboard."],
     ["variant", '"bars" | "line" | "mirror"', '"bars"', null],
     ["barWidth / barGap / barRadius", "number", "2 / 1 / 1", "Pixels."],
@@ -106,4 +113,6 @@ End jump to the ends. Region edges are separate sliders.
 
 ### WaveformMarker
 
-<PropsTable rows={[["time", "number", null, "Seconds. Children become the label."]]} />
+<PropsTable
+  rows={[["time", "number", null, "Seconds. Children become the label."]]}
+/>

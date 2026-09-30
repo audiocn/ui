@@ -16,9 +16,14 @@ const AudioPlayerCompact = () => {
   const track = tracks[1];
 
   return (
-    <AudioPlayer className="w-full max-w-md rounded-full border py-1 pr-3 pl-1" src={track?.src}>
+    <AudioPlayer
+      className="w-full max-w-md rounded-full border py-1 pr-3 pl-1"
+      src={track?.src}
+    >
       <AudioPlayerPlay className="size-8">
-        {({ playing }) => (playing ? <PauseIcon weight="fill" /> : <PlayIcon weight="fill" />)}
+        {({ playing }) =>
+          playing ? <PauseIcon weight="fill" /> : <PlayIcon weight="fill" />
+        }
       </AudioPlayerPlay>
       <AudioPlayerSeek />
       <AudioPlayerTime type="remaining" />

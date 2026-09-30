@@ -1,6 +1,12 @@
 "use client";
 
-import { MusicNotesIcon, PauseIcon, PlayIcon, SkipBackIcon, SkipForwardIcon } from "@phosphor-icons/react";
+import {
+  MusicNotesIcon,
+  PauseIcon,
+  PlayIcon,
+  SkipBackIcon,
+  SkipForwardIcon,
+} from "@phosphor-icons/react";
 
 import {
   AudioPlayer,
@@ -20,9 +26,12 @@ const AudioPlayerDemo = () => {
   const [track] = useDemoTracks();
 
   return (
-    <AudioPlayer className="w-full max-w-md flex-col items-stretch rounded-xl border p-4" src={track?.src}>
+    <AudioPlayer
+      className="w-full max-w-md flex-col items-stretch rounded-xl border p-4"
+      src={track?.src}
+    >
       <div className="flex items-center gap-3">
-        <span className="flex size-12 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+        <span className="bg-muted text-muted-foreground flex size-12 items-center justify-center rounded-lg">
           <MusicNotesIcon className="size-5" />
         </span>
         <div className="flex min-w-0 flex-col">
@@ -41,7 +50,9 @@ const AudioPlayerDemo = () => {
             <SkipBackIcon />
           </AudioPlayerSkipBack>
           <AudioPlayerPlay>
-            {({ playing }) => (playing ? <PauseIcon weight="fill" /> : <PlayIcon weight="fill" />)}
+            {({ playing }) =>
+              playing ? <PauseIcon weight="fill" /> : <PlayIcon weight="fill" />
+            }
           </AudioPlayerPlay>
           <AudioPlayerSkipForward>
             <SkipForwardIcon />

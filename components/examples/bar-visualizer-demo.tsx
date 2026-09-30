@@ -9,7 +9,7 @@ const BarVisualizerDemo = () => {
   return (
     <BarVisualizer
       aria-label="Voice activity"
-      className="h-24 max-w-sm text-primary"
+      className="text-primary h-24 max-w-sm"
       source={signal.visual}
     />
   );

@@ -211,7 +211,7 @@ export const SoundPadGrid = ({
 };
 
 const soundPadVariants = cva(
-  "group/sound-pad [--pad-accent:var(--primary)] focus-visible:ring-ring/40 relative flex flex-col items-start justify-between gap-2 overflow-hidden rounded-xl p-3 text-left transition-[background-color,box-shadow,transform] outline-none select-none focus-visible:ring-3 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 data-loading:opacity-60 data-playing:ring-2 data-playing:ring-(--pad-accent)",
+  "group/sound-pad focus-visible:ring-ring/40 relative flex flex-col items-start justify-between gap-2 overflow-hidden rounded-xl p-3 text-left transition-[background-color,box-shadow,transform] outline-none select-none [--pad-accent:var(--primary)] focus-visible:ring-3 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 data-loading:opacity-60 data-playing:ring-2 data-playing:ring-(--pad-accent)",
   {
     defaultVariants: { size: "default", variant: "default" },
     variants: {

@@ -5,46 +5,36 @@ description: How audiocn components work with keyboards, screen readers and redu
 
 ## Meters
 
-- Level meters have `role="meter"` and report their value in dB, such as
-  "−12.0 dB". Screen readers get updates at most four times a second, so they
-  are not flooded.
+- Level meters have `role="meter"` and report their value in dB, such as "−12.0 dB". Screen readers get updates at most four times a second, so they are not flooded.
 - Give every meter a name with `aria-label` or `aria-labelledby`.
-- Visualizers have `role="img"`. Mark decorative ones `aria-hidden` when a
-  labelled meter sits next to them.
+- Visualizers have `role="img"`. Mark decorative ones `aria-hidden` when a labelled meter sits next to them.
 - A clip indicator announces "Clipping" politely, once per clip.
 
 ## Controls
 
-Faders, parameter sliders, knobs, pan controls and seek bars are sliders with a
-readable `aria-valuetext`: "−6.0 dB", "Silent", "30% left", "1:24 of 3:40".
-They share one keyboard map:
+Faders, parameter sliders, knobs, pan controls and seek bars are sliders with a readable `aria-valuetext`: "−6.0 dB", "Silent", "30% left", "1:24 of 3:40". They share one keyboard map:
 
-| Key | Action |
-| --- | --- |
-| Arrow keys | One step |
-| Shift + arrow, Page Up / Page Down | A large step |
-| Alt + arrow | A fine step |
-| Home / End | Minimum / maximum |
+| Key                                | Action            |
+| ---------------------------------- | ----------------- |
+| Arrow keys                         | One step          |
+| Shift + arrow, Page Up / Page Down | A large step      |
+| Alt + arrow                        | A fine step       |
+| Home / End                         | Minimum / maximum |
 
-Double-clicking resets a fader, knob or pan control; `FaderReset` and
-`ParameterSliderReset` give the same action a keyboard path.
+Double-clicking resets a fader, knob or pan control; `FaderReset` and `ParameterSliderReset` give the same action a keyboard path.
 
 Mute, solo and monitor toggles are buttons with `aria-pressed`.
 
 ## Mixers and lists
 
-- Strips are named groups. Ctrl + arrow keys move focus to the same control on
-  the next strip; Tab still reaches everything in order.
+- Strips are named groups. Ctrl + arrow keys move focus to the same control on the next strip; Tab still reaches everything in order.
 - Track lists and sound pad grids move focus with the arrow keys.
-- Sound pad hotkeys are announced with `aria-keyshortcuts` and never fire while
-  someone is typing in a field.
+- Sound pad hotkeys are announced with `aria-keyshortcuts` and never fire while someone is typing in a field.
 
 ## Colour is never the only signal
 
-Muted, soloed and clipping states also show as pressed toggles, labels or
-shapes. Zone colours sit on top of a level you can read without them.
+Muted, soloed and clipping states also show as pressed toggles, labels or shapes. Zone colours sit on top of a level you can read without them.
 
 ## Reduced motion
 
-With `prefers-reduced-motion`, meters and visualizers stop animating and show the
-current level four times a second. Idle animations and sweeps turn off.
+With `prefers-reduced-motion`, meters and visualizers stop animating and show the current level four times a second. Idle animations and sweeps turn off.

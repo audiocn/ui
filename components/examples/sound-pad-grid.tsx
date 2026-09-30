@@ -1,12 +1,21 @@
 "use client";
 
-import { SoundPad, SoundPadGrid, SoundPadLabel, SoundPadProgress, SoundPadShortcut } from "@/components/ui/sound-pad";
+import {
+  SoundPad,
+  SoundPadGrid,
+  SoundPadLabel,
+  SoundPadProgress,
+  SoundPadShortcut,
+} from "@/components/ui/sound-pad";
 import type { SoundPadMode } from "@/components/ui/sound-pad";
 import { useSound } from "@/hooks/use-sound";
 import { useDemoSounds } from "@/lib/docs/use-demo-audio";
 import type { DemoSoundSource } from "@/lib/docs/use-demo-audio";
 
-const MODES: Record<string, SoundPadMode> = { drumroll: "hold", whoosh: "toggle" };
+const MODES: Record<string, SoundPadMode> = {
+  drumroll: "hold",
+  whoosh: "toggle",
+};
 
 const Pad = ({ sound }: { sound: DemoSoundSource }) => {
   const mode = MODES[sound.id] ?? "one-shot";
@@ -23,7 +32,10 @@ const Pad = ({ sound }: { sound: DemoSoundSource }) => {
     >
       <SoundPadLabel>{sound.label}</SoundPadLabel>
       <SoundPadShortcut />
-      <SoundPadProgress source={player.progress} variant={mode === "one-shot" ? "bar" : "ring"} />
+      <SoundPadProgress
+        source={player.progress}
+        variant={mode === "one-shot" ? "bar" : "ring"}
+      />
     </SoundPad>
   );
 };

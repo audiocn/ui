@@ -11,10 +11,12 @@ const PanControlDemo = () => {
     <div className="grid w-full max-w-xs gap-2">
       <div className="flex justify-between text-sm">
         <span className="font-medium">Pan</span>
-        <span className="font-mono text-muted-foreground text-xs">{formatPan(pan)}</span>
+        <span className="text-muted-foreground font-mono text-xs">
+          {formatPan(pan)}
+        </span>
       </div>
       <PanControl onValueChange={setPan} value={pan} />
-      <div className="flex justify-between text-muted-foreground text-xs">
+      <div className="text-muted-foreground flex justify-between text-xs">
         <span>L</span>
         <span>R</span>
       </div>

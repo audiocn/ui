@@ -3,49 +3,42 @@ title: Decibels and levels
 description: The units audiocn uses, and the helpers in the audio core that convert between them.
 ---
 
-Audio levels span a huge range, so audio tools measure them in decibels (dB),
-a logarithmic scale. audiocn uses dB wherever audio engineers would.
+Audio levels span a huge range, so audio tools measure them in decibels (dB), a logarithmic scale. audiocn uses dB wherever audio engineers would.
 
 ## dBFS
 
-**dBFS** means decibels relative to full scale. 0 dBFS is the loudest a digital
-signal can be; everything else is negative. Silence is `-Infinity`.
+**dBFS** means decibels relative to full scale. 0 dBFS is the loudest a digital signal can be; everything else is negative. Silence is `-Infinity`.
 
-| Level | What it sounds like |
-| --- | --- |
-| 0 dBFS | Full scale. Anything louder clips and distorts. |
-| −6 dBFS | About half the amplitude |
-| −18 to −12 dBFS | A good level for speech |
-| −60 dBFS | The bottom of a typical meter |
-| `-Infinity` | Digital silence |
+| Level           | What it sounds like                             |
+| --------------- | ----------------------------------------------- |
+| 0 dBFS          | Full scale. Anything louder clips and distorts. |
+| −6 dBFS         | About half the amplitude                        |
+| −18 to −12 dBFS | A good level for speech                         |
+| −60 dBFS        | The bottom of a typical meter                   |
+| `-Infinity`     | Digital silence                                 |
 
-Meters show dBFS. By default they cover −60 to 0 dBFS and colour three zones:
-green below −20, amber from −20, and red from −9.
+Meters show dBFS. By default they cover −60 to 0 dBFS and colour three zones: green below −20, amber from −20, and red from −9.
 
 ## dB as gain
 
-A fader's value is **gain** in dB: how much a channel is raised or lowered.
-0 dB leaves the signal unchanged, −6 dB halves the amplitude, and +6 dB doubles
-it. Faders can reach `-Infinity` to silence a channel completely.
+A fader's value is **gain** in dB: how much a channel is raised or lowered. 0 dB leaves the signal unchanged, −6 dB halves the amplitude, and +6 dB doubles it. Faders can reach `-Infinity` to silence a channel completely.
 
 ## Peak and RMS
 
-- **Peak** is the loudest single sample. It tells you whether you are about to
-  clip.
+- **Peak** is the loudest single sample. It tells you whether you are about to clip.
 - **RMS** is the average power. It is closer to how loud something sounds.
 
 Speech usually peaks 10–15 dB above its RMS. A dual meter shows both.
 
 ## Ballistics
 
-A meter that showed every sample would flicker too fast to read. Ballistics
-decide how it moves:
+A meter that showed every sample would flicker too fast to read. Ballistics decide how it moves:
 
-| Preset | Attack | Release | Peak hold |
-| --- | --- | --- | --- |
-| `peak` | 15 ms | falls about 25 dB per second | 1.2 s |
-| `vu` | 300 ms | 300 ms | none |
-| `instant` | none | none | none |
+| Preset    | Attack | Release                      | Peak hold |
+| --------- | ------ | ---------------------------- | --------- |
+| `peak`    | 15 ms  | falls about 25 dB per second | 1.2 s     |
+| `vu`      | 300 ms | 300 ms                       | none      |
+| `instant` | none   | none                         | none      |
 
 ## The audio core
 
@@ -75,6 +68,4 @@ formatDb(-Infinity); // "−∞ dB"
 
 ## Volume in players
 
-Players are the one exception. `VolumeControl` and `AudioPlayer` use a 0..1
-volume, the same as `HTMLMediaElement.volume`, because that is what media
-elements expect.
+Players are the one exception. `VolumeControl` and `AudioPlayer` use a 0..1 volume, the same as `HTMLMediaElement.volume`, because that is what media elements expect.

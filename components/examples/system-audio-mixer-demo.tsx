@@ -6,7 +6,9 @@ import { useDemoSounds, useDemoTracks } from "@/lib/docs/use-demo-audio";
 const SystemAudioMixerDemo = () => {
   const tracks = useDemoTracks();
   const sounds = useDemoSounds();
-  return <SystemAudioMixer className="w-full" sounds={sounds} tracks={tracks} />;
+  return (
+    <SystemAudioMixer className="w-full" sounds={sounds} tracks={tracks} />
+  );
 };
 
 export default SystemAudioMixerDemo;

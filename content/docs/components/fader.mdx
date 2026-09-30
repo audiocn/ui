@@ -23,8 +23,7 @@ const [gainDb, setGainDb] = useState(0);
 <Fader aria-label="Microphone" value={gainDb} onValueChange={setGainDb} />;
 ```
 
-The value is always in dB. The taper decides where each dB value sits on the
-travel. The thumb snaps to 0 dB while dragging, and double-clicking it resets.
+The value is always in dB. The taper decides where each dB value sits on the travel. The thumb snaps to 0 dB while dragging, and double-clicking it resets.
 
 ## Anatomy
 
@@ -73,31 +72,29 @@ With `silenceAtMin`, the lowest position reports `-Infinity`.
 
 ## Keyboard
 
-| Key | Action |
-| --- | --- |
-| Arrow keys | Change by `step` (0.5 dB) |
-| Shift + arrow, Page Up / Page Down | Change by `largeStep` (6 dB) |
-| Alt + arrow | Change by `fineStep` (0.1 dB) |
-| Home / End | Minimum (or silence) / maximum |
+| Key                                | Action                         |
+| ---------------------------------- | ------------------------------ |
+| Arrow keys                         | Change by `step` (0.5 dB)      |
+| Shift + arrow, Page Up / Page Down | Change by `largeStep` (6 dB)   |
+| Alt + arrow                        | Change by `fineStep` (0.1 dB)  |
+| Home / End                         | Minimum (or silence) / maximum |
 
 Holding Alt while dragging uses `fineStep` resolution.
 
 ## Theming
 
-| Variable or attribute | Meaning |
-| --- | --- |
-| `--fader-track-size`, `--fader-thumb-size` | Set by `size` |
-| `data-orientation`, `data-variant`, `data-size` | Current settings |
-| `data-dragging` | The thumb is held |
-| `data-at-detent` | The value sits on a detent |
-| `data-silent` | The value is `-Infinity` |
-| `data-disabled` | Disabled |
+| Variable or attribute                           | Meaning                    |
+| ----------------------------------------------- | -------------------------- |
+| `--fader-track-size`, `--fader-thumb-size`      | Set by `size`              |
+| `data-orientation`, `data-variant`, `data-size` | Current settings           |
+| `data-dragging`                                 | The thumb is held          |
+| `data-at-detent`                                | The value sits on a detent |
+| `data-silent`                                   | The value is `-Infinity`   |
+| `data-disabled`                                 | Disabled                   |
 
 ## Accessibility
 
-The thumb is a slider whose `aria-valuetext` is the formatted value, such as
-"−6.0 dB" or "Silent". Give the fader a name with `FaderLabel` or
-`aria-label`.
+The thumb is a slider whose `aria-valuetext` is the formatted value, such as "−6.0 dB" or "Silent". Give the fader a name with `FaderLabel` or `aria-label`.
 
 ## API reference
 
@@ -107,8 +104,18 @@ The thumb is a slider whose `aria-valuetext` is the formatted value, such as
   rows={[
     ["value", "number", null, "The value in dB."],
     ["defaultValue", "number", "resetValue", null],
-    ["onValueChange", "(value, details) => void", null, "details.reason: drag, track-press, keyboard, wheel, reset or input."],
-    ["onValueCommitted", "(value) => void", null, "Fires when a drag ends, after keyboard input and on reset."],
+    [
+      "onValueChange",
+      "(value, details) => void",
+      null,
+      "details.reason: drag, track-press, keyboard, wheel, reset or input.",
+    ],
+    [
+      "onValueCommitted",
+      "(value) => void",
+      null,
+      "Fires when a drag ends, after keyboard input and on reset.",
+    ],
     ["min", "number", "-60", null],
     ["max", "number", "6", null],
     ["step", "number", "0.5", "Arrow keys and drag resolution."],
@@ -118,21 +125,54 @@ The thumb is a slider whose `aria-valuetext` is the formatted value, such as
     ["taper", '"linear" | "audio" | Taper', '"linear"', "Position law."],
     ["origin", "number", "min", "Where the range fill starts."],
     ["detents", "number[]", "[0]", "Values the thumb snaps to while dragging."],
-    ["silenceAtMin", "boolean", "false", "The lowest position reports -Infinity."],
-    ["allowWheel", "boolean", "false", "The wheel adjusts the value while focused."],
-    ["orientation", '"horizontal" | "vertical"', '"horizontal"', "Inherited from a channel strip."],
-    ["variant", '"default" | "console"', '"default"', "console has a wide cap thumb."],
+    [
+      "silenceAtMin",
+      "boolean",
+      "false",
+      "The lowest position reports -Infinity.",
+    ],
+    [
+      "allowWheel",
+      "boolean",
+      "false",
+      "The wheel adjusts the value while focused.",
+    ],
+    [
+      "orientation",
+      '"horizontal" | "vertical"',
+      '"horizontal"',
+      "Inherited from a channel strip.",
+    ],
+    [
+      "variant",
+      '"default" | "console"',
+      '"default"',
+      "console has a wide cap thumb.",
+    ],
     ["size", '"sm" | "default" | "lg"', '"default"', null],
-    ["format", "(db: number) => string", null, "Used by FaderValue and assistive technology."],
+    [
+      "format",
+      "(db: number) => string",
+      null,
+      "Used by FaderValue and assistive technology.",
+    ],
     ["disabled", "boolean", "false", null],
   ]}
 />
 
 ### FaderValue
 
-<PropsTable rows={[["editable", "boolean", "false", "Click to type a value. Accepts \"-6\", \"−6 dB\" and \"-inf\"."]]} />
+<PropsTable
+  rows={[
+    [
+      "editable",
+      "boolean",
+      "false",
+      'Click to type a value. Accepts "-6", "−6 dB" and "-inf".',
+    ],
+  ]}
+/>
 
 ### FaderScale
 
-Takes [`DbScale`](/docs/components/db-scale) props. The range, taper and
-orientation come from the fader.
+Takes [`DbScale`](/docs/components/db-scale) props. The range, taper and orientation come from the fader.

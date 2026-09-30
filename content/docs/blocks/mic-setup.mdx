@@ -14,20 +14,22 @@ npx shadcn@latest add @audiocn/mic-setup
 ## What it does
 
 - Lists microphones and asks for access when needed.
-- Shows a scrolling waveform and a meter with peak hold, a scale and a clip
-  light.
+- Shows a scrolling waveform and a meter with peak hold, a scale and a clip light.
 - Applies gain (−24 to +24 dB) and mute to what the meter shows.
-- "Check level" listens for three seconds and says whether the level is good,
-  too quiet, too loud or silent.
+- "Check level" listens for three seconds and says whether the level is good, too quiet, too loud or silent.
 
-The microphone opens when the user clicks "Turn on microphone", or on mount with
-`autoStart`.
+The microphone opens when the user clicks "Turn on microphone", or on mount with `autoStart`.
 
 ## Props
 
 <PropsTable
   rows={[
-    ["deviceId / onDeviceChange", "string | null", null, "Optional control of the selected device."],
+    [
+      "deviceId / onDeviceChange",
+      "string | null",
+      null,
+      "Optional control of the selected device.",
+    ],
     ["gainDb / onGainChange", "number", "0", null],
     ["muted / onMutedChange", "boolean", "false", null],
     ["autoStart", "boolean", "false", "Open the microphone on mount."],

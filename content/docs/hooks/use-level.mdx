@@ -3,9 +3,7 @@ title: useLevel
 description: Read a meter source into React state at a low rate, for labels and conditional UI.
 ---
 
-Meters paint every frame without React. When you need the level in React, for
-a label or to show a warning, `useLevel` samples the source a few times a
-second.
+Meters paint every frame without React. When you need the level in React, for a label or to show a warning, `useLevel` samples the source a few times a second.
 
 ```npm
 npx shadcn@latest add @audiocn/use-level
@@ -24,7 +22,12 @@ return zone === "clip" ? <p>Turn your microphone down.</p> : null;
 <PropsTable
   rows={[
     ["intervalMs", "number", "250", "How often React state updates."],
-    ["channel", 'number | "max"', '"max"', "A channel index, or the loudest channel."],
+    [
+      "channel",
+      'number | "max"',
+      '"max"',
+      "A channel index, or the loudest channel.",
+    ],
     ["zones", "MeterZone[]", "DEFAULT_ZONES", "Zones used to compute zone."],
     ["enabled", "boolean", "true", "Pause sampling."],
   ]}
@@ -34,8 +37,18 @@ return zone === "clip" ? <p>Turn your microphone down.</p> : null;
 
 <PropsTable
   rows={[
-    ["peakDb", "number", null, "Peak level in dBFS. -Infinity until the first frame."],
-    ["rmsDb", "number | undefined", null, "RMS level in dBFS, when the source measures it."],
+    [
+      "peakDb",
+      "number",
+      null,
+      "Peak level in dBFS. -Infinity until the first frame.",
+    ],
+    [
+      "rmsDb",
+      "number | undefined",
+      null,
+      "RMS level in dBFS, when the source measures it.",
+    ],
     ["zone", '"ok" | "warn" | "clip"', null, "The zone of peakDb."],
   ]}
 />

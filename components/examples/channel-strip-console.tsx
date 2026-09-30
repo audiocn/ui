@@ -1,10 +1,13 @@
 "use client";
 
-import { DesktopIcon, MicrophoneIcon, MusicNotesIcon } from "@phosphor-icons/react";
+import {
+  DesktopIcon,
+  MicrophoneIcon,
+  MusicNotesIcon,
+} from "@phosphor-icons/react";
 import type { ReactNode } from "react";
 import { useState } from "react";
 
-import { MuteToggle, SoloToggle } from "@/components/ui/channel-toggle";
 import {
   ChannelStrip,
   ChannelStripControls,
@@ -15,6 +18,7 @@ import {
   ChannelStripTitle,
   ChannelStripValue,
 } from "@/components/ui/channel-strip";
+import { MuteToggle, SoloToggle } from "@/components/ui/channel-toggle";
 import { Fader } from "@/components/ui/fader";
 import { LevelMeter } from "@/components/ui/level-meter";
 import { useDemoSignal } from "@/hooks/use-demo-signal";
@@ -36,16 +40,33 @@ const Strip = ({
   const [muted, setMuted] = useState(false);
 
   return (
-    <ChannelStrip accent={accent} muted={muted} orientation="vertical" variant="card">
+    <ChannelStrip
+      accent={accent}
+      muted={muted}
+      orientation="vertical"
+      variant="card"
+    >
       <ChannelStripHeader>
         <ChannelStripIcon>{icon}</ChannelStripIcon>
         <ChannelStripTitle>{title}</ChannelStripTitle>
       </ChannelStripHeader>
       <ChannelStripMeter>
-        <LevelMeter aria-label={`${title} level`} channelCount={2} className="h-full" size="sm" source={source} />
+        <LevelMeter
+          aria-label={`${title} level`}
+          channelCount={2}
+          className="h-full"
+          size="sm"
+          source={source}
+        />
       </ChannelStripMeter>
       <ChannelStripFader>
-        <Fader aria-label={`${title} volume`} onValueChange={setGainDb} size="sm" taper="audio" value={gainDb} />
+        <Fader
+          aria-label={`${title} volume`}
+          onValueChange={setGainDb}
+          size="sm"
+          taper="audio"
+          value={gainDb}
+        />
       </ChannelStripFader>
       <ChannelStripValue>{formatDb(gainDb)}</ChannelStripValue>
       <ChannelStripControls>
@@ -65,9 +86,24 @@ const ChannelStripConsole = () => {
 
   return (
     <div className="flex h-96 gap-3">
-      <Strip accent="var(--chart-2)" icon={<MicrophoneIcon />} source={voice.meter} title="Mic" />
-      <Strip accent="var(--chart-1)" icon={<MusicNotesIcon />} source={music.meter} title="Music" />
-      <Strip accent="var(--chart-4)" icon={<DesktopIcon />} source={game.meter} title="Game" />
+      <Strip
+        accent="var(--chart-2)"
+        icon={<MicrophoneIcon />}
+        source={voice.meter}
+        title="Mic"
+      />
+      <Strip
+        accent="var(--chart-1)"
+        icon={<MusicNotesIcon />}
+        source={music.meter}
+        title="Music"
+      />
+      <Strip
+        accent="var(--chart-4)"
+        icon={<DesktopIcon />}
+        source={game.meter}
+        title="Game"
+      />
     </div>
   );
 };

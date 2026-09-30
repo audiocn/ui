@@ -3,7 +3,11 @@
 import { HeadphonesIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 
-import { MonitorToggle, MuteToggle, SoloToggle } from "@/components/ui/channel-toggle";
+import {
+  MonitorToggle,
+  MuteToggle,
+  SoloToggle,
+} from "@/components/ui/channel-toggle";
 
 const ChannelToggleDemo = () => {
   const [muted, setMuted] = useState(true);

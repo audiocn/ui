@@ -13,13 +13,10 @@ npx shadcn@latest add @audiocn/music-player
 
 ## What it does
 
-- A player with a [waveform](/docs/components/waveform) seek bar that shows
-  what has played, hover time, and elapsed and remaining time.
-- A [track list](/docs/components/track-list): select a track to play it; the
-  list advances on its own.
+- A player with a [waveform](/docs/components/waveform) seek bar that shows what has played, hover time, and elapsed and remaining time.
+- A [track list](/docs/components/track-list): select a track to play it; the list advances on its own.
 - Shuffle, repeat all and repeat one.
-- With a `duckingSource`, the music drops while the source is active, with an
-  on/off switch and an amount.
+- With a `duckingSource`, the music drops while the source is active, with an on/off switch and an amount.
 
 ## Ducking under the microphone
 
@@ -29,9 +26,19 @@ npx shadcn@latest add @audiocn/music-player
 
 <PropsTable
   rows={[
-    ["tracks / defaultTracks", "{ id, title, artist?, src, artwork?, duration? }[]", "[]", null],
+    [
+      "tracks / defaultTracks",
+      "{ id, title, artist?, src, artwork?, duration? }[]",
+      "[]",
+      null,
+    ],
     ["onTrackChange", "(track) => void", null, null],
-    ["duckingSource", "FrameSource<MeterFrame> | null", null, "The signal that ducks the music, usually the microphone."],
+    [
+      "duckingSource",
+      "FrameSource<MeterFrame> | null",
+      null,
+      "The signal that ducks the music, usually the microphone.",
+    ],
     ["output", "AudioNode | null", "speakers", "Route the music into a mixer."],
   ]}
 />

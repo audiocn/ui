@@ -3,9 +3,7 @@ title: useDemoSignal
 description: A synthetic speech, music, tone or noise signal as frame sources, for previews, prototypes and tests.
 ---
 
-`useDemoSignal` makes meters and visualizers move without a microphone. Every
-preview on this site runs on it. The signal is repeatable for a given `seed`,
-and it only runs while something is subscribed.
+`useDemoSignal` makes meters and visualizers move without a microphone. Every preview on this site runs on it. The signal is repeatable for a given `seed`, and it only runs while something is subscribed.
 
 ```npm
 npx shadcn@latest add @audiocn/use-demo-signal
@@ -29,13 +27,23 @@ export const Preview = () => {
 
 <PropsTable
   rows={[
-    ["kind", '"speech" | "music" | "tone" | "noise" | "silence"', '"speech"', "What the signal sounds like."],
+    [
+      "kind",
+      '"speech" | "music" | "tone" | "noise" | "silence"',
+      '"speech"',
+      "What the signal sounds like.",
+    ],
     ["channels", "number", "1", "1 for mono, 2 for stereo."],
     ["seed", "number", "1", "Changes the pattern while keeping it repeatable."],
     ["bands", "number", "32", "Frequency bands per visual frame."],
     ["historySize", "number", "60", "Entries in the level history ring."],
     ["historyIntervalMs", "number", "50", "Time between history entries."],
-    ["playing", "boolean", "true", "When false the signal falls silent, so meters fall."],
+    [
+      "playing",
+      "boolean",
+      "true",
+      "When false the signal falls silent, so meters fall.",
+    ],
   ]}
 />
 
@@ -43,9 +51,24 @@ export const Preview = () => {
 
 <PropsTable
   rows={[
-    ["meter", "FrameSource<MeterFrame>", null, "Peak and RMS per channel, every animation frame."],
-    ["visual", "FrameSource<VisualFrame>", null, "Bands, level history and time-domain samples."],
-    ["configure", "(options) => void", null, "Change options without creating a new signal."],
+    [
+      "meter",
+      "FrameSource<MeterFrame>",
+      null,
+      "Peak and RMS per channel, every animation frame.",
+    ],
+    [
+      "visual",
+      "FrameSource<VisualFrame>",
+      null,
+      "Bands, level history and time-domain samples.",
+    ],
+    [
+      "configure",
+      "(options) => void",
+      null,
+      "Change options without creating a new signal.",
+    ],
   ]}
 />
 

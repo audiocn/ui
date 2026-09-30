@@ -20,19 +20,32 @@ mixer.setSolo("music", true, { exclusive: true });
 mixer.isAudible("mic"); // false while music is soloed
 ```
 
-`useMixer` only holds state. Connect it to sound with
-[`useWebAudioMixer`](/docs/hooks/use-web-audio-mixer), or read `mixer.state` and
-send it to your own engine.
+`useMixer` only holds state. Connect it to sound with [`useWebAudioMixer`](/docs/hooks/use-web-audio-mixer), or read `mixer.state` and send it to your own engine.
 
 ## Options
 
 <PropsTable
   rows={[
-    ["channels", "(Partial<MixerChannelState> & { id })[]", "[]", "Initial channels. Missing fields get defaults."],
-    ["master", "Partial<MixerMasterState>", "{ gainDb: 0, muted: false }", null],
+    [
+      "channels",
+      "(Partial<MixerChannelState> & { id })[]",
+      "[]",
+      "Initial channels. Missing fields get defaults.",
+    ],
+    [
+      "master",
+      "Partial<MixerMasterState>",
+      "{ gainDb: 0, muted: false }",
+      null,
+    ],
     ["state", "MixerState", null, "Controlled state."],
     ["onStateChange", "(state) => void", null, "Called after every change."],
-    ["persistKey", "string", null, "Save state to localStorage under this key."],
+    [
+      "persistKey",
+      "string",
+      null,
+      "Save state to localStorage under this key.",
+    ],
   ]}
 />
 
@@ -44,11 +57,31 @@ A channel is `{ id, gainDb, muted, solo, pan, monitor }`. `pan` runs from −1 t
   rows={[
     ["state / channels / master", "MixerState", null, "Current state."],
     ["channel", "(id) => MixerChannelState | undefined", null, null],
-    ["setGain / setMuted / setPan / setMonitor", "(id, value) => void", null, null],
-    ["setSolo", "(id, solo, { exclusive? }) => void", null, "exclusive un-solos every other channel."],
+    [
+      "setGain / setMuted / setPan / setMonitor",
+      "(id, value) => void",
+      null,
+      null,
+    ],
+    [
+      "setSolo",
+      "(id, solo, { exclusive? }) => void",
+      null,
+      "exclusive un-solos every other channel.",
+    ],
     ["setMasterGain / setMasterMuted", "(value) => void", null, null],
-    ["isAudible", "(id) => boolean", null, "False when muted, or when another channel is soloed."],
-    ["isDimmed", "(id) => boolean", null, "True when silenced only by another channel's solo."],
+    [
+      "isAudible",
+      "(id) => boolean",
+      null,
+      "False when muted, or when another channel is soloed.",
+    ],
+    [
+      "isDimmed",
+      "(id) => boolean",
+      null,
+      "True when silenced only by another channel's solo.",
+    ],
     ["addChannel / removeChannel", "(channel | id) => void", null, null],
     ["reset", "() => void", null, "Back to the initial state."],
   ]}

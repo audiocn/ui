@@ -22,7 +22,9 @@ const MusicPlayerDucking = () => {
       >
         {listening ? "Stop microphone" : "Use my microphone to duck"}
       </Button>
-      {tracks.length > 0 ? <MusicPlayer duckingSource={analyser.meter} tracks={tracks} /> : null}
+      {tracks.length > 0 ? (
+        <MusicPlayer duckingSource={analyser.meter} tracks={tracks} />
+      ) : null}
     </div>
   );
 };

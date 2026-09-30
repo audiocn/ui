@@ -41,7 +41,9 @@ const FaderVertical = () => {
             </FaderTrack>
             <FaderScale />
           </div>
-          <FaderLabel className="text-muted-foreground text-xs">{channel}</FaderLabel>
+          <FaderLabel className="text-muted-foreground text-xs">
+            {channel}
+          </FaderLabel>
         </Fader>
       ))}
     </div>

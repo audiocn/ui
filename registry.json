@@ -78,9 +78,7 @@
       "type": "registry:hook",
       "title": "useFrameSource",
       "description": "Subscribe a callback to a frame source, with a stable callback and automatic cleanup.",
-      "registryDependencies": [
-        "@audiocn/core"
-      ],
+      "registryDependencies": ["@audiocn/core"],
       "files": [
         {
           "path": "hooks/use-frame-source.ts",
@@ -93,10 +91,7 @@
       "type": "registry:hook",
       "title": "useLevel",
       "description": "Read a meter source into React state at a low rate, for labels and conditional UI.",
-      "registryDependencies": [
-        "@audiocn/core",
-        "@audiocn/use-frame-source"
-      ],
+      "registryDependencies": ["@audiocn/core", "@audiocn/use-frame-source"],
       "files": [
         {
           "path": "hooks/use-level.ts",
@@ -109,9 +104,7 @@
       "type": "registry:hook",
       "title": "useClipHold",
       "description": "Clip detection with a hold time, a clip count and a reset.",
-      "registryDependencies": [
-        "@audiocn/core"
-      ],
+      "registryDependencies": ["@audiocn/core"],
       "files": [
         {
           "path": "hooks/use-clip-hold.ts",
@@ -136,9 +129,7 @@
       "type": "registry:hook",
       "title": "useDemoSignal",
       "description": "A synthetic speech, music, tone or noise signal as frame sources, for previews, prototypes and tests.",
-      "registryDependencies": [
-        "@audiocn/core"
-      ],
+      "registryDependencies": ["@audiocn/core"],
       "files": [
         {
           "path": "hooks/use-demo-signal.ts",
@@ -163,10 +154,7 @@
       "type": "registry:hook",
       "title": "useAudioAnalyser",
       "description": "Meter and visual frame sources from a MediaStream, media element or AudioNode, using the Web Audio AnalyserNode.",
-      "registryDependencies": [
-        "@audiocn/core",
-        "@audiocn/use-audio-context"
-      ],
+      "registryDependencies": ["@audiocn/core", "@audiocn/use-audio-context"],
       "files": [
         {
           "path": "hooks/use-audio-analyser.ts",
@@ -215,9 +203,7 @@
       "type": "registry:hook",
       "title": "useAudioConfig",
       "description": "The context a mixer or channel strip uses to pass orientation, size, range, zones and ballistics down to the components inside it.",
-      "registryDependencies": [
-        "@audiocn/core"
-      ],
+      "registryDependencies": ["@audiocn/core"],
       "files": [
         {
           "path": "hooks/use-audio-config.tsx",
@@ -230,10 +216,7 @@
       "type": "registry:ui",
       "title": "dB Scale",
       "description": "Tick marks and labels for a decibel range, shared by meters and faders.",
-      "registryDependencies": [
-        "@audiocn/core",
-        "@audiocn/use-audio-config"
-      ],
+      "registryDependencies": ["@audiocn/core", "@audiocn/use-audio-config"],
       "files": [
         {
           "path": "components/ui/db-scale.tsx",
@@ -246,10 +229,7 @@
       "type": "registry:ui",
       "title": "dB Readout",
       "description": "A numeric level label that updates at a readable rate, with a reserved width so the layout never shifts.",
-      "registryDependencies": [
-        "@audiocn/core",
-        "@audiocn/use-frame-source"
-      ],
+      "registryDependencies": ["@audiocn/core", "@audiocn/use-frame-source"],
       "files": [
         {
           "path": "components/ui/db-readout.tsx",
@@ -262,9 +242,7 @@
       "type": "registry:ui",
       "title": "Clip Indicator",
       "description": "A clip light that holds after the signal clips, with an optional count and click to reset.",
-      "dependencies": [
-        "@base-ui/react"
-      ],
+      "dependencies": ["@base-ui/react"],
       "registryDependencies": [
         "@audiocn/core",
         "@audiocn/use-clip-hold",
@@ -282,9 +260,7 @@
       "type": "registry:ui",
       "title": "Level Meter",
       "description": "A peak and RMS level meter: mono or stereo, horizontal or vertical, solid, segmented or gradient, with zones, peak hold, a scale, a readout and a clip light.",
-      "dependencies": [
-        "class-variance-authority"
-      ],
+      "dependencies": ["class-variance-authority"],
       "registryDependencies": [
         "@audiocn/core",
         "@audiocn/use-audio-config",
@@ -341,10 +317,7 @@
       "type": "registry:ui",
       "title": "Fader",
       "description": "A volume fader in decibels: linear or console taper, detents, a scale, reset, an editable value, silence at the bottom, horizontal or vertical.",
-      "dependencies": [
-        "@base-ui/react",
-        "class-variance-authority"
-      ],
+      "dependencies": ["@base-ui/react", "class-variance-authority"],
       "registryDependencies": [
         "@audiocn/core",
         "@audiocn/use-audio-config",
@@ -362,13 +335,8 @@
       "type": "registry:ui",
       "title": "Parameter Slider",
       "description": "A labelled slider with a numeric input, unit, marks, reset and a linear or log scale, for gain trims, delays, thresholds and frequencies.",
-      "dependencies": [
-        "@base-ui/react"
-      ],
-      "registryDependencies": [
-        "@audiocn/core",
-        "@audiocn/use-audio-config"
-      ],
+      "dependencies": ["@base-ui/react"],
+      "registryDependencies": ["@audiocn/core", "@audiocn/use-audio-config"],
       "files": [
         {
           "path": "components/ui/parameter-slider.tsx",
@@ -381,13 +349,8 @@
       "type": "registry:ui",
       "title": "Knob",
       "description": "A rotary control drawn in SVG, with vertical, horizontal or circular dragging, fine adjustment, reset and a bipolar origin.",
-      "dependencies": [
-        "class-variance-authority"
-      ],
-      "registryDependencies": [
-        "@audiocn/core",
-        "@audiocn/use-audio-config"
-      ],
+      "dependencies": ["class-variance-authority"],
+      "registryDependencies": ["@audiocn/core", "@audiocn/use-audio-config"],
       "files": [
         {
           "path": "components/ui/knob.tsx",
@@ -400,14 +363,8 @@
       "type": "registry:ui",
       "title": "Pan Control",
       "description": "Left and right balance with a fill from the centre, a centre detent and reset.",
-      "dependencies": [
-        "@base-ui/react",
-        "class-variance-authority"
-      ],
-      "registryDependencies": [
-        "@audiocn/core",
-        "@audiocn/use-audio-config"
-      ],
+      "dependencies": ["@base-ui/react", "class-variance-authority"],
+      "registryDependencies": ["@audiocn/core", "@audiocn/use-audio-config"],
       "files": [
         {
           "path": "components/ui/pan-control.tsx",
@@ -420,13 +377,8 @@
       "type": "registry:ui",
       "title": "Channel Toggle",
       "description": "Mute, solo and monitor toggle buttons with their own pressed colours.",
-      "dependencies": [
-        "@base-ui/react",
-        "class-variance-authority"
-      ],
-      "registryDependencies": [
-        "@audiocn/use-audio-config"
-      ],
+      "dependencies": ["@base-ui/react", "class-variance-authority"],
+      "registryDependencies": ["@audiocn/use-audio-config"],
       "files": [
         {
           "path": "components/ui/channel-toggle.tsx",
@@ -439,13 +391,8 @@
       "type": "registry:ui",
       "title": "Volume Control",
       "description": "A 0..1 volume slider with a mute button and a perceptual curve, for players.",
-      "dependencies": [
-        "@base-ui/react"
-      ],
-      "registryDependencies": [
-        "@audiocn/core",
-        "@audiocn/use-audio-config"
-      ],
+      "dependencies": ["@base-ui/react"],
+      "registryDependencies": ["@audiocn/core", "@audiocn/use-audio-config"],
       "files": [
         {
           "path": "components/ui/volume-control.tsx",
@@ -458,10 +405,7 @@
       "type": "registry:ui",
       "title": "Audio Device Select",
       "description": "A microphone, speaker or source picker with loading, permission, None and disconnected-device states, and a slot for a live preview.",
-      "registryDependencies": [
-        "select",
-        "button"
-      ],
+      "registryDependencies": ["select", "button"],
       "files": [
         {
           "path": "components/ui/audio-device-select.tsx",
@@ -474,9 +418,7 @@
       "type": "registry:hook",
       "title": "useMixer",
       "description": "Mixer state with no audio attached: gain, mute, solo, pan and monitor per channel, a master, persistence and a controlled mode.",
-      "registryDependencies": [
-        "@audiocn/core"
-      ],
+      "registryDependencies": ["@audiocn/core"],
       "files": [
         {
           "path": "hooks/use-mixer.ts",
@@ -507,14 +449,8 @@
       "type": "registry:ui",
       "title": "Channel Strip",
       "description": "One channel of a mixer: header, status, meter, fader, value, controls and a notice, as a row or a console strip. The master strip is a variant.",
-      "dependencies": [
-        "@base-ui/react",
-        "class-variance-authority"
-      ],
-      "registryDependencies": [
-        "badge",
-        "@audiocn/use-audio-config"
-      ],
+      "dependencies": ["@base-ui/react", "class-variance-authority"],
+      "registryDependencies": ["badge", "@audiocn/use-audio-config"],
       "files": [
         {
           "path": "components/ui/channel-strip.tsx",
@@ -544,9 +480,7 @@
       "type": "registry:hook",
       "title": "useAudioPlayer",
       "description": "Playback state for an audio element the hook owns: status, time, duration, buffering, volume, rate and loop, plus a smooth time source.",
-      "registryDependencies": [
-        "@audiocn/core"
-      ],
+      "registryDependencies": ["@audiocn/core"],
       "files": [
         {
           "path": "hooks/use-audio-player.ts",
@@ -559,10 +493,7 @@
       "type": "registry:hook",
       "title": "useSound",
       "description": "Low-latency playback of short sounds decoded into memory, with voices, looping, progress and a routable output node.",
-      "registryDependencies": [
-        "@audiocn/core",
-        "@audiocn/use-audio-context"
-      ],
+      "registryDependencies": ["@audiocn/core", "@audiocn/use-audio-context"],
       "files": [
         {
           "path": "hooks/use-sound.ts",
@@ -591,10 +522,7 @@
       "type": "registry:ui",
       "title": "Waveform",
       "description": "A static waveform of a clip with a smooth playhead, seeking by pointer and keyboard, hover time, draggable regions and markers.",
-      "registryDependencies": [
-        "@audiocn/core",
-        "@audiocn/use-frame-source"
-      ],
+      "registryDependencies": ["@audiocn/core", "@audiocn/use-frame-source"],
       "files": [
         {
           "path": "components/ui/waveform.tsx",
@@ -607,9 +535,7 @@
       "type": "registry:ui",
       "title": "Audio Player",
       "description": "A composable audio player: transport, seek bar with buffering, time, volume, playback rate, loop and keyboard shortcuts.",
-      "dependencies": [
-        "@base-ui/react"
-      ],
+      "dependencies": ["@base-ui/react"],
       "registryDependencies": [
         "@audiocn/core",
         "@audiocn/use-audio-player",
@@ -628,10 +554,7 @@
       "type": "registry:ui",
       "title": "Track List",
       "description": "A list of tracks with active and playing states, arrow-key navigation and slots for artwork, duration and actions.",
-      "dependencies": [
-        "@base-ui/react",
-        "class-variance-authority"
-      ],
+      "dependencies": ["@base-ui/react", "class-variance-authority"],
       "files": [
         {
           "path": "components/ui/track-list.tsx",
@@ -644,9 +567,7 @@
       "type": "registry:ui",
       "title": "Sound Pad",
       "description": "A trigger pad with one-shot, toggle, hold and loop modes, a hotkey, playback progress and an accent colour, plus a grid with hotkeys and arrow navigation.",
-      "dependencies": [
-        "class-variance-authority"
-      ],
+      "dependencies": ["class-variance-authority"],
       "registryDependencies": [
         "kbd",
         "@audiocn/core",
@@ -681,9 +602,7 @@
       "type": "registry:block",
       "title": "System Audio Mixer",
       "description": "The complete mixer: microphone, system audio, music and sound pads with meters, faders, mute, solo, monitor and ducking, a limited master and a mixed output stream, all running on Web Audio.",
-      "dependencies": [
-        "@phosphor-icons/react"
-      ],
+      "dependencies": ["@phosphor-icons/react"],
       "registryDependencies": [
         "button",
         "switch",
@@ -719,18 +638,14 @@
           "type": "registry:block"
         }
       ],
-      "categories": [
-        "mixer"
-      ]
+      "categories": ["mixer"]
     },
     {
       "name": "mic-setup",
       "type": "registry:block",
       "title": "Microphone Setup",
       "description": "Choose and check a microphone: device select with a live preview, a level meter, gain, mute and a level check that says whether you sound right.",
-      "dependencies": [
-        "@phosphor-icons/react"
-      ],
+      "dependencies": ["@phosphor-icons/react"],
       "registryDependencies": [
         "alert",
         "button",
@@ -753,18 +668,14 @@
           "type": "registry:block"
         }
       ],
-      "categories": [
-        "microphone"
-      ]
+      "categories": ["microphone"]
     },
     {
       "name": "system-audio-settings",
       "type": "registry:block",
       "title": "System Audio Settings",
       "description": "Turn system audio capture on, set its level, watch its meter and explain what the browser will capture.",
-      "dependencies": [
-        "@phosphor-icons/react"
-      ],
+      "dependencies": ["@phosphor-icons/react"],
       "registryDependencies": [
         "alert",
         "badge",
@@ -783,18 +694,14 @@
           "type": "registry:block"
         }
       ],
-      "categories": [
-        "system-audio"
-      ]
+      "categories": ["system-audio"]
     },
     {
       "name": "quick-audio-popover",
       "type": "registry:block",
       "title": "Quick Audio Popover",
       "description": "Compact microphone and system audio controls behind one toolbar button that shows a live level.",
-      "dependencies": [
-        "@phosphor-icons/react"
-      ],
+      "dependencies": ["@phosphor-icons/react"],
       "registryDependencies": [
         "button",
         "field",
@@ -814,18 +721,14 @@
           "type": "registry:block"
         }
       ],
-      "categories": [
-        "microphone"
-      ]
+      "categories": ["microphone"]
     },
     {
       "name": "soundboard",
       "type": "registry:block",
       "title": "Soundboard",
       "description": "A grid of sound pads with global hotkeys, per-pad mode and volume in a context menu, master volume, stop all, and drag-and-drop to add sounds.",
-      "dependencies": [
-        "@phosphor-icons/react"
-      ],
+      "dependencies": ["@phosphor-icons/react"],
       "registryDependencies": [
         "button",
         "context-menu",
@@ -843,18 +746,14 @@
           "type": "registry:block"
         }
       ],
-      "categories": [
-        "sounds"
-      ]
+      "categories": ["sounds"]
     },
     {
       "name": "music-player",
       "type": "registry:block",
       "title": "Music Player",
       "description": "A playlist player with a waveform seek bar, shuffle, repeat, volume and optional ducking under the microphone.",
-      "dependencies": [
-        "@phosphor-icons/react"
-      ],
+      "dependencies": ["@phosphor-icons/react"],
       "registryDependencies": [
         "card",
         "empty",
@@ -878,9 +777,7 @@
           "type": "registry:block"
         }
       ],
-      "categories": [
-        "music"
-      ]
+      "categories": ["music"]
     }
   ]
 }

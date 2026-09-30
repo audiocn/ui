@@ -14,7 +14,11 @@ npx shadcn@latest add @audiocn/audio-player
 ## Usage
 
 ```tsx
-import { AudioPlayer, AudioPlayerPlay, AudioPlayerSeek } from "@/components/ui/audio-player";
+import {
+  AudioPlayer,
+  AudioPlayerPlay,
+  AudioPlayerSeek,
+} from "@/components/ui/audio-player";
 ```
 
 ```tsx
@@ -24,9 +28,7 @@ import { AudioPlayer, AudioPlayerPlay, AudioPlayerSeek } from "@/components/ui/a
 </AudioPlayer>
 ```
 
-Every part is optional. A play button and a seek bar is a complete player.
-Buttons show a text label unless you pass an icon as children, so the component
-works with any icon set.
+Every part is optional. A play button and a seek bar is a complete player. Buttons show a text label unless you pass an icon as children, so the component works with any icon set.
 
 ## Anatomy
 
@@ -59,14 +61,11 @@ works with any icon set.
 
 ### With a waveform and a playlist
 
-The [Music Player](/docs/blocks/music-player) block uses a
-[Waveform](/docs/components/waveform) as the seek bar and a
-[Track List](/docs/components/track-list) for the queue.
+The [Music Player](/docs/blocks/music-player) block uses a [Waveform](/docs/components/waveform) as the seek bar and a [Track List](/docs/components/track-list) for the queue.
 
 ### Your own player state
 
-Create the player with [`useAudioPlayer`](/docs/hooks/use-audio-player) and pass
-it in, to reach it from outside, route it into a mixer or analyse it.
+Create the player with [`useAudioPlayer`](/docs/hooks/use-audio-player) and pass it in, to reach it from outside, route it into a mixer or analyse it.
 
 ```tsx
 const player = useAudioPlayer({ src });
@@ -81,14 +80,14 @@ const analyser = useAudioAnalyser(player.element);
 
 While focus is inside the player:
 
-| Key | Action |
-| --- | --- |
-| Space or K | Play or pause |
-| Left / Right | Seek 5 s |
-| Shift + Left / Right | Seek 15 s |
-| Up / Down | Volume |
-| M | Mute |
-| Home / End | Start or end |
+| Key                  | Action        |
+| -------------------- | ------------- |
+| Space or K           | Play or pause |
+| Left / Right         | Seek 5 s      |
+| Shift + Left / Right | Seek 15 s     |
+| Up / Down            | Volume        |
+| M                    | Mute          |
+| Home / End           | Start or end  |
 
 ## Theming
 
@@ -103,23 +102,52 @@ While focus is inside the player:
 <PropsTable
   rows={[
     ["src", "string", null, null],
-    ["player", "AudioPlayerController", null, "Use an external player from useAudioPlayer."],
+    [
+      "player",
+      "AudioPlayerController",
+      null,
+      "Use an external player from useAudioPlayer.",
+    ],
     ["autoPlay / loop / muted", "boolean", "false", null],
     ["volume", "number", "1", "0..1."],
     ["playbackRate", "number", "1", null],
     ["preload", '"none" | "metadata" | "auto"', '"metadata"', null],
-    ["crossOrigin", '"anonymous" | "use-credentials"', null, "Needed to analyse remote audio."],
+    [
+      "crossOrigin",
+      '"anonymous" | "use-credentials"',
+      null,
+      "Needed to analyse remote audio.",
+    ],
     ["onPlay / onPause / onEnded", "() => void", null, null],
     ["onTimeUpdate", "(time) => void", null, null],
-    ["onPrevious / onNext", "() => void", null, "Enable the previous and next buttons."],
+    [
+      "onPrevious / onNext",
+      "() => void",
+      null,
+      "Enable the previous and next buttons.",
+    ],
     ["onError", "(error: MediaError | null) => void", null, null],
-    ["shortcuts", "boolean", "true", "Keyboard shortcuts while focus is inside."],
+    [
+      "shortcuts",
+      "boolean",
+      "true",
+      "Keyboard shortcuts while focus is inside.",
+    ],
   ]}
 />
 
 ### AudioPlayerPlay
 
-<PropsTable rows={[["children", "ReactNode | ({ playing, loading }) => ReactNode", null, "An icon, or a function of the state."]]} />
+<PropsTable
+  rows={[
+    [
+      "children",
+      "ReactNode | ({ playing, loading }) => ReactNode",
+      null,
+      "An icon, or a function of the state.",
+    ],
+  ]}
+/>
 
 ### AudioPlayerSkipBack, AudioPlayerSkipForward
 
@@ -136,4 +164,8 @@ While focus is inside the player:
 
 ### AudioPlayerRate
 
-<PropsTable rows={[["rates", "number[]", "[0.5, 0.75, 1, 1.25, 1.5, 2]", "Cycles on click."]]} />
+<PropsTable
+  rows={[
+    ["rates", "number[]", "[0.5, 0.75, 1, 1.25, 1.5, 2]", "Cycles on click."],
+  ]}
+/>

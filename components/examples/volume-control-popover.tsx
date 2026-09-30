@@ -4,7 +4,11 @@ import { SpeakerHighIcon, SpeakerXIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   VolumeControl,
   VolumeControlMute,
@@ -22,7 +26,7 @@ const VolumeControlPopover = () => {
       >
         {muted || volume === 0 ? <SpeakerXIcon /> : <SpeakerHighIcon />}
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-3" side="top">
+      <PopoverContent className="w-auto" side="top">
         <VolumeControl
           muted={muted}
           onMutedChange={setMuted}

@@ -15,7 +15,8 @@ import { useAudioDevices } from "@/hooks/use-audio-devices";
 import { useMicrophone } from "@/hooks/use-microphone";
 
 const AudioDeviceSelectDemo = () => {
-  const { devices, isLoading, permission, requestPermission } = useAudioDevices();
+  const { devices, isLoading, permission, requestPermission } =
+    useAudioDevices();
   const [deviceId, setDeviceId] = useState<string | null>(null);
   const microphone = useMicrophone({ deviceId, enabled: deviceId !== null });
   const analyser = useAudioAnalyser(microphone.stream, { historySize: 120 });

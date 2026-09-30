@@ -130,9 +130,11 @@ export const SystemAudioSettings = ({
   return (
     <Card className={className}>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <DesktopIcon />
-          System audio
+        <CardTitle>
+          <span className="flex items-center gap-2">
+            <DesktopIcon />
+            System audio
+          </span>
         </CardTitle>
         <CardDescription>
           Add the sound from your computer to your recording or stream.

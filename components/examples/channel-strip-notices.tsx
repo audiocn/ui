@@ -1,6 +1,10 @@
 "use client";
 
-import { DesktopIcon, MicrophoneSlashIcon, WarningIcon } from "@phosphor-icons/react";
+import {
+  DesktopIcon,
+  MicrophoneSlashIcon,
+  WarningIcon,
+} from "@phosphor-icons/react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -31,7 +35,8 @@ const ChannelStripNotices = () => (
         <LevelMeter aria-label="Microphone level" size="sm" />
       </ChannelStripMeter>
       <ChannelStripNotice variant="destructive">
-        Microphone access is blocked. Allow it in your browser&apos;s site settings.
+        Microphone access is blocked. Allow it in your browser&apos;s site
+        settings.
       </ChannelStripNotice>
     </ChannelStrip>
     <ChannelStrip>
@@ -49,7 +54,9 @@ const ChannelStripNotices = () => (
       </ChannelStripMeter>
       <ChannelStripNotice variant="warning">
         <WarningIcon />
-        <span className="flex-1">Paused to prevent an echo from your own stream.</span>
+        <span className="flex-1">
+          Paused to prevent an echo from your own stream.
+        </span>
         <Button size="xs" variant="outline">
           Resume
         </Button>

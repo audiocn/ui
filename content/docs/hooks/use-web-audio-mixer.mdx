@@ -10,7 +10,9 @@ npx shadcn@latest add @audiocn/use-web-audio-mixer
 ## Usage
 
 ```tsx
-const mixer = useMixer({ channels: [{ id: "mic" }, { id: "music", monitor: true }] });
+const mixer = useMixer({
+  channels: [{ id: "mic" }, { id: "music", monitor: true }],
+});
 const microphone = useMicrophone({ enabled: true });
 const player = useAudioPlayer({ src: "/music.mp3" });
 
@@ -27,9 +29,7 @@ The [System Audio Mixer](/docs/blocks/system-audio-mixer) block is built on it.
 
 ## The graph
 
-Each channel runs through a gain, a ducking stage and a stereo panner. The
-panner feeds the master bus, and a monitor send feeds the speakers. The master
-bus runs through an optional peak limiter into a `MediaStream` for recording.
+Each channel runs through a gain, a ducking stage and a stereo panner. The panner feeds the master bus, and a monitor send feeds the speakers. The master bus runs through an optional peak limiter into a `MediaStream` for recording.
 
 ```
 input → gain → duck → pan ─┬─→ master → limiter → output stream
@@ -37,19 +37,32 @@ input → gain → duck → pan ─┬─→ master → limiter → output strea
 ```
 
 - Mute and solo are gain ramps, so they never click.
-- `monitor` decides whether a channel is heard in the speakers. It is off by
-  default so a microphone does not feed back; turn it on for music and sounds.
-- A media element used as an input is taken over by the mixer while mounted,
-  and routed back to the speakers afterwards.
+- `monitor` decides whether a channel is heard in the speakers. It is off by default so a microphone does not feed back; turn it on for music and sounds.
+- A media element used as an input is taken over by the mixer while mounted, and routed back to the speakers afterwards.
 
 ## Options
 
 <PropsTable
   rows={[
-    ["inputs", "Record<string, MediaStream | HTMLMediaElement | AudioNode | null>", null, "One input per channel id."],
-    ["ducking", "DuckingOptions | DuckingOptions[]", null, "{ trigger, targets, thresholdDb = -35, amountDb = -12, attackMs = 50, releaseMs = 400 }."],
+    [
+      "inputs",
+      "Record<string, MediaStream | HTMLMediaElement | AudioNode | null>",
+      null,
+      "One input per channel id.",
+    ],
+    [
+      "ducking",
+      "DuckingOptions | DuckingOptions[]",
+      null,
+      "{ trigger, targets, thresholdDb = -35, amountDb = -12, attackMs = 50, releaseMs = 400 }.",
+    ],
     ["limiter", "boolean", "true", "A peak limiter on the master."],
-    ["analyser", "{ fftSize?, bands?, historySize?, smoothing? }", null, "Settings for the meters."],
+    [
+      "analyser",
+      "{ fftSize?, bands?, historySize?, smoothing? }",
+      null,
+      "Settings for the meters.",
+    ],
     ["enabled", "boolean", "true", "Build the graph."],
   ]}
 />
@@ -58,14 +71,33 @@ input → gain → duck → pan ─┬─→ master → limiter → output strea
 
 <PropsTable
   rows={[
-    ["meters", "Record<string, FrameSource<MeterFrame>>", null, "Post-fader stereo meter per channel."],
-    ["visuals", "Record<string, FrameSource<VisualFrame>>", null, "Post-fader visual frames per channel."],
+    [
+      "meters",
+      "Record<string, FrameSource<MeterFrame>>",
+      null,
+      "Post-fader stereo meter per channel.",
+    ],
+    [
+      "visuals",
+      "Record<string, FrameSource<VisualFrame>>",
+      null,
+      "Post-fader visual frames per channel.",
+    ],
     ["master", "{ meter, visual }", null, "After the limiter."],
-    ["output", "MediaStream | null", null, "The mix, for MediaRecorder or WebRTC."],
-    ["destination", "AudioNode | null", null, "The master bus input, for your own nodes."],
+    [
+      "output",
+      "MediaStream | null",
+      null,
+      "The mix, for MediaRecorder or WebRTC.",
+    ],
+    [
+      "destination",
+      "AudioNode | null",
+      null,
+      "The master bus input, for your own nodes.",
+    ],
     ["context", "AudioContext | null", null, null],
   ]}
 />
 
-The sources stay the same while the graph is rebuilt, so components never need
-to resubscribe.
+The sources stay the same while the graph is rebuilt, so components never need to resubscribe.

@@ -23,8 +23,7 @@ const airhorn = useSound("/sounds/airhorn.mp3");
 </SoundPad>;
 ```
 
-The pad plays nothing itself. It reports triggers; [`useSound`](/docs/hooks/use-sound)
-or your own engine does the playback.
+The pad plays nothing itself. It reports triggers; [`useSound`](/docs/hooks/use-sound) or your own engine does the playback.
 
 ## Anatomy
 
@@ -41,19 +40,18 @@ or your own engine does the playback.
 
 ## Modes
 
-| Mode | Behaviour |
-| --- | --- |
+| Mode       | Behaviour                                     |
+| ---------- | --------------------------------------------- |
 | `one-shot` | Every press triggers; pressing again restarts |
-| `toggle` | Press to start, press again to stop |
-| `hold` | Plays while held |
-| `loop` | Like toggle, and marks the pad as looping |
+| `toggle`   | Press to start, press again to stop           |
+| `hold`     | Plays while held                              |
+| `loop`     | Like toggle, and marks the pad as looping     |
 
 ## Examples
 
 ### A grid with hotkeys
 
-Press 1–8 while the grid has focus. Whoosh toggles and the drum roll plays only
-while held.
+Press 1–8 while the grid has focus. Whoosh toggles and the drum roll plays only while held.
 
 <ComponentPreview name="sound-pad-grid" />
 
@@ -67,10 +65,7 @@ while held.
 
 ## Accessibility
 
-A pad is a real `<button>`. In toggle and loop modes it has `aria-pressed`. The
-grid moves focus between pads with the arrow keys, and hotkeys are announced
-with `aria-keyshortcuts`. Global hotkeys never fire while someone is typing in a
-field.
+A pad is a real `<button>`. In toggle and loop modes it has `aria-pressed`. The grid moves focus between pads with the arrow keys, and hotkeys are announced with `aria-keyshortcuts`. Global hotkeys never fire while someone is typing in a field.
 
 ## API reference
 
@@ -97,7 +92,12 @@ field.
   rows={[
     ["columns", "number", "4", "Also settable with a class."],
     ["hotkeys", "boolean", "false", "Listen for pad hotkeys."],
-    ["hotkeyScope", '"focus" | "global"', '"focus"', "global listens on the whole page."],
+    [
+      "hotkeyScope",
+      '"focus" | "global"',
+      '"focus"',
+      "global listens on the whole page.",
+    ],
   ]}
 />
 
@@ -106,7 +106,12 @@ field.
 <PropsTable
   rows={[
     ["value", "number", null, "0..1, declarative."],
-    ["source", "FrameSource<number> | null", null, "Smooth progress with no renders."],
+    [
+      "source",
+      "FrameSource<number> | null",
+      null,
+      "Smooth progress with no renders.",
+    ],
     ["variant", '"bar" | "fill" | "ring"', '"bar"', null],
   ]}
 />

@@ -7,11 +7,13 @@ const DbReadoutZones = () => {
   const signal = useDemoSignal({ kind: "music", seed: 6 });
 
   return (
-    <DbReadout
-      className="rounded-md px-2 py-1 font-semibold text-2xl transition-colors data-[zone=clip]:bg-meter-clip/15 data-[zone=clip]:text-meter-clip data-[zone=warn]:text-meter-warn data-silent:text-muted-foreground"
-      holdMs={500}
-      source={signal.meter}
-    />
+    <span className="bg-muted/40 has-data-[zone=clip]:bg-meter-clip/15 rounded-md px-2 py-1">
+      <DbReadout
+        className="data-[zone=clip]:text-meter-clip data-[zone=warn]:text-meter-warn data-silent:text-muted-foreground text-2xl font-semibold"
+        holdMs={500}
+        source={signal.meter}
+      />
+    </span>
   );
 };
 

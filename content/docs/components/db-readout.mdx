@@ -21,39 +21,46 @@ import { DbReadout } from "@/components/ui/db-readout";
 <DbReadout source={analyser.meter} />
 ```
 
-With a `source`, the readout updates its own text four times a second without
-re-rendering React. Its width is reserved for the longest value, so the text
-never pushes neighbouring elements around.
+With a `source`, the readout updates its own text four times a second without re-rendering React. Its width is reserved for the longest value, so the text never pushes neighbouring elements around.
 
 ## Examples
 
 ### Color by zone
 
-The readout sets `data-zone` and `data-silent`, so it can change color with
-plain Tailwind classes.
+The readout sets `data-zone` and `data-silent`, so it can change color with plain Tailwind classes.
 
 <ComponentPreview name="db-readout-zones" />
 
 ## Theming
 
-| Data attribute | Meaning |
-| --- | --- |
-| `data-zone` | `ok`, `warn` or `clip` |
-| `data-silent` | The level is at or below `floorDb` |
+| Data attribute | Meaning                            |
+| -------------- | ---------------------------------- |
+| `data-zone`    | `ok`, `warn` or `clip`             |
+| `data-silent`  | The level is at or below `floorDb` |
 
 ## API reference
 
 <PropsTable
   rows={[
     ["value", "number", null, "A level in dB, for declarative use."],
-    ["source", "FrameSource<MeterFrame> | null", null, "Updates the text without re-rendering React."],
+    [
+      "source",
+      "FrameSource<MeterFrame> | null",
+      null,
+      "Updates the text without re-rendering React.",
+    ],
     ["measure", '"peak" | "rms"', '"peak"', null],
-    ["channel", 'number | "max"', '"max"', "A channel index, or the loudest channel."],
+    [
+      "channel",
+      'number | "max"',
+      '"max"',
+      "A channel index, or the loudest channel.",
+    ],
     ["intervalMs", "number", "250", "How often the text changes."],
     ["holdMs", "number", "0", "Show the highest value within this window."],
     ["decimals", "number", "1", null],
-    ["unit", "boolean", "true", "Append \" dB\"."],
-    ["floorDb", "number", "-60", "At or below this, show \"−∞\"."],
+    ["unit", "boolean", "true", 'Append " dB".'],
+    ["floorDb", "number", "-60", 'At or below this, show "−∞".'],
     ["zones", "MeterZone[]", "DEFAULT_ZONES", "Zones used for data-zone."],
     ["format", "(db: number) => string", null, "Replaces all formatting."],
   ]}

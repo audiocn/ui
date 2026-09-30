@@ -23,9 +23,7 @@ const analyser = useAudioAnalyser(stream, { bands: 64 });
 <Spectrum source={analyser.visual} />;
 ```
 
-The spectrum draws the frequency bands of a visual frame. Set `minHz`, `maxHz`,
-`minDb` and `maxDb` to match the analyser that produced them, so the axes are
-labelled correctly. The defaults match `useAudioAnalyser`.
+The spectrum draws the frequency bands of a visual frame. Set `minHz`, `maxHz`, `minDb` and `maxDb` to match the analyser that produced them, so the axes are labelled correctly. The defaults match `useAudioAnalyser`.
 
 ## Anatomy
 
@@ -49,11 +47,11 @@ labelled correctly. The defaults match `useAudioAnalyser`.
 
 ## Theming
 
-| Variable | Default |
-| --- | --- |
-| `--spectrum` | `primary` |
+| Variable          | Default      |
+| ----------------- | ------------ |
+| `--spectrum`      | `primary`    |
 | `--spectrum-peak` | `foreground` |
-| `--spectrum-grid` | `border` |
+| `--spectrum-grid` | `border`     |
 
 ## API reference
 
@@ -61,8 +59,18 @@ labelled correctly. The defaults match `useAudioAnalyser`.
   rows={[
     ["source", "FrameSource<VisualFrame> | null", null, null],
     ["variant", '"bars" | "line" | "area"', '"bars"', null],
-    ["minDb / maxDb", "number", "-100 / -30", "The level range the bands cover."],
-    ["minHz / maxHz", "number", "40 / 16000", "The frequency range the bands cover."],
+    [
+      "minDb / maxDb",
+      "number",
+      "-100 / -30",
+      "The level range the bands cover.",
+    ],
+    [
+      "minHz / maxHz",
+      "number",
+      "40 / 16000",
+      "The frequency range the bands cover.",
+    ],
     ["scale", '"log" | "linear"', '"log"', "Frequency axis law."],
     ["peakHold", "boolean", "false", "Falling peak markers."],
     ["grid", "boolean", "true", null],

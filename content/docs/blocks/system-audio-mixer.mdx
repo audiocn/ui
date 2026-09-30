@@ -14,18 +14,12 @@ npx shadcn@latest add @audiocn/system-audio-mixer
 
 ## What it does
 
-- **Microphone**: choose a device, start and stop it, and see when it is live,
-  muted or blocked.
-- **System audio**: capture a screen or tab with its audio through the browser's
-  picker, with notices when nothing was shared or the browser cannot capture.
-- **Music**: play and skip tracks. Music ducks by 12 dB while the microphone is
-  active.
+- **Microphone**: choose a device, start and stop it, and see when it is live, muted or blocked.
+- **System audio**: capture a screen or tab with its audio through the browser's picker, with notices when nothing was shared or the browser cannot capture.
+- **Music**: play and skip tracks. Music ducks by 12 dB while the microphone is active.
 - **Sounds**: a popover of sound pads with hotkeys.
-- **Every channel** has a stereo meter, a fader, mute, solo and a monitor send
-  to the speakers. Microphone monitoring is off by default to avoid feedback.
-- **Master**: a limited stereo mix with a clip counter and a master fader. The
-  mix is available as a `MediaStream` through `onOutputChange`, ready for
-  `MediaRecorder` or WebRTC.
+- **Every channel** has a stereo meter, a fader, mute, solo and a monitor send to the speakers. Microphone monitoring is off by default to avoid feedback.
+- **Master**: a limited stereo mix with a clip counter and a master fader. The mix is available as a `MediaStream` through `onOutputChange`, ready for `MediaRecorder` or WebRTC.
 - **Layouts**: switch between rows and console strips.
 
 ## Console layout
@@ -49,12 +43,37 @@ import { SystemAudioMixer } from "@/components/blocks/system-audio-mixer/system-
 
 <PropsTable
   rows={[
-    ["defaultOrientation", '"horizontal" | "vertical"', '"horizontal"', "Rows or console strips."],
-    ["sources", '("microphone" | "system" | "music" | "sounds")[]', "all four", "Which strips to show."],
+    [
+      "defaultOrientation",
+      '"horizontal" | "vertical"',
+      '"horizontal"',
+      "Rows or console strips.",
+    ],
+    [
+      "sources",
+      '("microphone" | "system" | "music" | "sounds")[]',
+      "all four",
+      "Which strips to show.",
+    ],
     ["persistKey", "string", null, "Save mixer settings to localStorage."],
-    ["onOutputChange", "(stream: MediaStream | null) => void", null, "The mixed output."],
-    ["tracks", "{ id, title, artist?, src }[]", "[]", "Tracks for the music channel."],
-    ["sounds", "{ id, label, src, hotkey?, accent? }[]", "[]", "Sounds for the sounds channel."],
+    [
+      "onOutputChange",
+      "(stream: MediaStream | null) => void",
+      null,
+      "The mixed output.",
+    ],
+    [
+      "tracks",
+      "{ id, title, artist?, src }[]",
+      "[]",
+      "Tracks for the music channel.",
+    ],
+    [
+      "sounds",
+      "{ id, label, src, hotkey?, accent? }[]",
+      "[]",
+      "Sounds for the sounds channel.",
+    ],
   ]}
 />
 

@@ -21,9 +21,7 @@ import { DbScale } from "@/components/ui/db-scale";
 <DbScale minDb={-60} maxDb={6} />
 ```
 
-Inside a `LevelMeter` or `Fader`, use `LevelMeterScale` or `FaderScale` instead:
-they take the range, orientation and taper from their parent so the ticks line
-up.
+Inside a `LevelMeter` or `Fader`, use `LevelMeterScale` or `FaderScale` instead: they take the range, orientation and taper from their parent so the ticks line up.
 
 ## Anatomy
 
@@ -34,8 +32,7 @@ up.
 </DbScale>
 ```
 
-With no children, the scale renders ticks from the `ticks` prop, or common
-values inside the range.
+With no children, the scale renders ticks from the `ticks` prop, or common values inside the range.
 
 ## Examples
 
@@ -45,17 +42,16 @@ values inside the range.
 
 ## Theming
 
-| Data attribute | On | Meaning |
-| --- | --- | --- |
-| `data-orientation`, `data-side` | root | Current settings |
-| `data-major` | ticks | A major tick |
+| Data attribute                  | On    | Meaning          |
+| ------------------------------- | ----- | ---------------- |
+| `data-orientation`, `data-side` | root  | Current settings |
+| `data-major`                    | ticks | A major tick     |
 
 Marks use `bg-border` and labels use `text-muted-foreground`.
 
 ## Accessibility
 
-The scale is decorative (`aria-hidden`): the meter or fader it belongs to
-already reports its value.
+The scale is decorative (`aria-hidden`): the meter or fader it belongs to already reports its value.
 
 ## API reference
 
@@ -63,14 +59,39 @@ already reports its value.
 
 <PropsTable
   rows={[
-    ["minDb", "number", "-60", "Bottom of the range, or the surrounding meter's range."],
+    [
+      "minDb",
+      "number",
+      "-60",
+      "Bottom of the range, or the surrounding meter's range.",
+    ],
     ["maxDb", "number", "0", "Top of the range."],
-    ["ticks", "number[]", null, "Tick values. Default: common values inside the range."],
-    ["taper", '"linear" | "audio" | Taper', '"linear"', "Position law, so ticks line up with a fader."],
+    [
+      "ticks",
+      "number[]",
+      null,
+      "Tick values. Default: common values inside the range.",
+    ],
+    [
+      "taper",
+      '"linear" | "audio" | Taper',
+      '"linear"',
+      "Position law, so ticks line up with a fader.",
+    ],
     ["orientation", '"horizontal" | "vertical"', '"horizontal"', null],
-    ["side", '"start" | "end"', '"end"', "Which side of the marks the labels sit on."],
+    [
+      "side",
+      '"start" | "end"',
+      '"end"',
+      "Which side of the marks the labels sit on.",
+    ],
     ["labels", "boolean", "true", "Show labels."],
-    ["format", "(db: number) => string", null, "Label text. Default: \"+6\", \"0\", \"−12\"."],
+    [
+      "format",
+      "(db: number) => string",
+      null,
+      'Label text. Default: "+6", "0", "−12".',
+    ],
   ]}
 />
 

@@ -10,18 +10,22 @@ npx shadcn@latest add @audiocn/use-waveform-data
 ## Usage
 
 ```tsx
-const { peaks, duration, status } = useWaveformData("/episode.mp3", { samples: 800 });
+const { peaks, duration, status } = useWaveformData("/episode.mp3", {
+  samples: 800,
+});
 
 <Waveform loading={status === "loading"} peaks={peaks} duration={duration} />;
 ```
 
 Peaks are the loudest sample in each slice, normalised so the loudest slice is
-1. Results are cached per file and sample count. `src` can also be an
-`AudioBuffer`.
+
+1. Results are cached per file and sample count. `src` can also be an `AudioBuffer`.
 
 ## Options
 
-<PropsTable rows={[["samples", "number", "512", "How many peaks to compute."]]} />
+<PropsTable
+  rows={[["samples", "number", "512", "How many peaks to compute."]]}
+/>
 
 ## Returns
 
