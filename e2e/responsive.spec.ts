@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
 
 import { publicPages } from "./routes";
+import { mountShowcase } from "./showcase";
 
 const PAGES = publicPages;
 
@@ -13,13 +14,11 @@ const VIEWPORTS = [
   { height: 900, width: 1440 },
 ];
 
-/** Elements that leave their preview box without a scroller or clip in between. */
-const escapingPreviews = (page: Page) =>
-  page.evaluate(() => {
+/** Elements that leave their box without a scroller or clip in between. */
+const escapingFrom = (page: Page, boxSelector: string) =>
+  page.evaluate((selector) => {
     const escaping: string[] = [];
-    for (const box of document.querySelectorAll<HTMLElement>(
-      '[data-slot="component-preview"]'
-    )) {
+    for (const box of document.querySelectorAll<HTMLElement>(selector)) {
       const bounds = box.getBoundingClientRect();
       for (const element of box.querySelectorAll<HTMLElement>("*")) {
         const rect = element.getBoundingClientRect();
@@ -49,7 +48,7 @@ const escapingPreviews = (page: Page) =>
       }
     }
     return escaping;
-  });
+  }, boxSelector);
 
 for (const viewport of VIEWPORTS) {
   test.describe(`at ${viewport.width}px`, () => {
@@ -65,9 +64,25 @@ for (const viewport of VIEWPORTS) {
             document.documentElement.clientWidth
         );
         expect(overflow).toBeLessThanOrEqual(0);
-        expect(await escapingPreviews(page)).toEqual([]);
+        expect(
+          await escapingFrom(page, '[data-slot="component-preview"]')
+        ).toEqual([]);
       });
     }
+
+    test("every home showcase tile fits its card", async ({ page }) => {
+      await page.goto("/");
+      await mountShowcase(page);
+      const overflow = await page.evaluate(
+        () =>
+          document.documentElement.scrollWidth -
+          document.documentElement.clientWidth
+      );
+      expect(overflow).toBeLessThanOrEqual(0);
+      expect(await escapingFrom(page, '[data-slot="showcase-card"]')).toEqual(
+        []
+      );
+    });
   });
 }
 

@@ -1,7 +1,9 @@
 import { expect, test } from "@playwright/test";
+import type { Page } from "@playwright/test";
 
 import { siteConfig } from "../lib/site";
 import { docsPages } from "./routes";
+import { mountShowcase } from "./showcase";
 
 const pages = docsPages;
 
@@ -128,6 +130,39 @@ test("the home page shows a live mixer", async ({ page }) => {
     .toBeGreaterThan(-60);
 });
 
+test("every home showcase tile loads without errors", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  page.on("console", (message) => {
+    if (message.type() === "error") {
+      errors.push(message.text());
+    }
+  });
+  await page.goto("/");
+  await mountShowcase(page);
+  await expect(page.getByRole("button", { name: "Airhorn" })).toBeVisible();
+  await expect(
+    page
+      .getByRole("article", { name: "Music player" })
+      .getByText("Night Drive")
+      .last()
+  ).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+test("the home mixer solos a channel and dims the others", async ({ page }) => {
+  await page.goto("/");
+  const mixer = page.getByRole("group", { name: "Mixer" });
+  await mixer.getByRole("button", { name: "Solo Microphone" }).click();
+  await expect(mixer.getByRole("group", { name: "System" })).toHaveAttribute(
+    "data-dimmed",
+    ""
+  );
+  await expect(mixer.getByRole("group", { name: "Mic" })).not.toHaveAttribute(
+    "data-dimmed"
+  );
+});
+
 test("level meters move with the demo signal", async ({ page }) => {
   await page.goto("/docs/components/level-meter");
   const meter = page.getByRole("meter", { name: "Program level" }).first();
@@ -244,11 +279,9 @@ interface PerfWindow {
   audiocnFrames: { commitsAtStart: number; count: number; start: number };
 }
 
-test("a 16-strip console meters at full frame rate with no React commits", async ({
-  page,
-}) => {
-  // A stand-in for React DevTools: React reports every commit to this hook.
-  await page.addInitScript(() => {
+/** A stand-in for React DevTools: React reports every commit to this hook. */
+const countCommits = (page: Page) =>
+  page.addInitScript(() => {
     const commits = { count: 0 };
     Object.assign(window, {
       __REACT_DEVTOOLS_GLOBAL_HOOK__: {
@@ -262,18 +295,9 @@ test("a 16-strip console meters at full frame rate with no React commits", async
       audiocnCommits: commits,
     });
   });
-  await page.goto("/docs/components/mixer");
-  const meter = page.getByRole("meter", { name: "In 16 level" });
-  await meter.scrollIntoViewIfNeeded();
-  await expect(meter).toBeVisible();
-  await expect
-    .poll(async () => Number(await meter.getAttribute("aria-valuenow")), {
-      timeout: 10_000,
-    })
-    .toBeGreaterThan(-60);
-  // Let loading, scrolling and the table of contents settle.
-  await page.waitForTimeout(1500);
 
+/** Frame rate and React commits over two seconds of the page running. */
+const measureFrames = async (page: Page) => {
   await page.evaluate(() => {
     const perf = window as unknown as PerfWindow;
     const frames = {
@@ -289,7 +313,7 @@ test("a 16-strip console meters at full frame rate with no React commits", async
     requestAnimationFrame(tick);
   });
   await page.waitForTimeout(2000);
-  const result = await page.evaluate(() => {
+  return page.evaluate(() => {
     const perf = window as unknown as PerfWindow;
     const frames = perf.audiocnFrames;
     return {
@@ -300,11 +324,49 @@ test("a 16-strip console meters at full frame rate with no React commits", async
       meters: document.querySelectorAll('[data-slot="level-meter"]').length,
     };
   });
+};
 
+test("a 16-strip console meters at full frame rate with no React commits", async ({
+  page,
+}) => {
+  await countCommits(page);
+  await page.goto("/docs/components/mixer");
+  const meter = page.getByRole("meter", { name: "In 16 level" });
+  await meter.scrollIntoViewIfNeeded();
+  await expect(meter).toBeVisible();
+  await expect
+    .poll(async () => Number(await meter.getAttribute("aria-valuenow")), {
+      timeout: 10_000,
+    })
+    .toBeGreaterThan(-60);
+  // Let loading, scrolling and the table of contents settle.
+  await page.waitForTimeout(1500);
+
+  const result = await measureFrames(page);
   expect(result.meters).toBeGreaterThanOrEqual(16);
   expect(result.commitsBeforeMeasuring).toBeGreaterThan(0);
   expect(result.commits).toBe(0);
   expect(result.fps).toBeGreaterThan(50);
+});
+
+test.describe("the whole home showcase on screen", () => {
+  // Tall enough that every tile is visible, so none of them pauses.
+  test.use({ viewport: { height: 2200, width: 1440 } });
+
+  test("keeps full frame rate with every tile live", async ({ page }) => {
+    await countCommits(page);
+    await page.goto("/");
+    await mountShowcase(page);
+    // Let the demo audio render and the tiles settle.
+    await page.waitForTimeout(1500);
+
+    const result = await measureFrames(page);
+    expect(result.meters).toBeGreaterThanOrEqual(10);
+    expect(result.commitsBeforeMeasuring).toBeGreaterThan(0);
+    // Meters paint without React; a latching clip light may commit once.
+    expect(result.commits).toBeLessThanOrEqual(2);
+    expect(result.fps).toBeGreaterThan(50);
+  });
 });
 
 test("the registry serves built items", async ({ request }) => {
