@@ -301,8 +301,8 @@ export const ChannelStripText = ({
 const STATUS_CLASS = {
   default: "",
   error: "",
-  live: "bg-meter-ok/15 text-meter-ok",
-  muted: "bg-channel-mute/15 text-channel-mute",
+  live: "bg-meter-ok/15 text-meter-ok-foreground",
+  muted: "bg-channel-mute/15 text-channel-mute-foreground",
   warning: "bg-meter-warn/20 text-foreground",
 } as const;
 

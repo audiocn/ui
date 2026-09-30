@@ -24,10 +24,10 @@ const channelToggleVariants = cva(
       },
       tone: {
         monitor:
-          "data-pressed:border-channel-monitor/40 data-pressed:bg-channel-monitor/15 data-pressed:text-channel-monitor",
-        mute: "data-pressed:border-channel-mute/40 data-pressed:bg-channel-mute/15 data-pressed:text-channel-mute",
+          "data-pressed:border-channel-monitor/40 data-pressed:bg-channel-monitor/15 data-pressed:text-channel-monitor-foreground",
+        mute: "data-pressed:border-channel-mute/40 data-pressed:bg-channel-mute/15 data-pressed:text-channel-mute-foreground",
         neutral: "data-pressed:bg-foreground data-pressed:text-background",
-        solo: "data-pressed:border-channel-solo/50 data-pressed:bg-channel-solo/20 data-pressed:text-channel-solo",
+        solo: "data-pressed:border-channel-solo/50 data-pressed:bg-channel-solo/20 data-pressed:text-channel-solo-foreground",
       },
       variant: {
         default: "bg-muted text-muted-foreground hover:text-foreground",

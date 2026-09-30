@@ -7,6 +7,24 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
+  --meter-ok-foreground: color-mix(in oklch, var(--meter-ok), black 40%);
+  --meter-warn-foreground: color-mix(in oklch, var(--meter-warn), black 40%);
+  --meter-clip-foreground: color-mix(in oklch, var(--meter-clip), black 40%);
+  --channel-mute-foreground: color-mix(
+    in oklch,
+    var(--channel-mute),
+    black 40%
+  );
+  --channel-solo-foreground: color-mix(
+    in oklch,
+    var(--channel-solo),
+    black 40%
+  );
+  --channel-monitor-foreground: color-mix(
+    in oklch,
+    var(--channel-monitor),
+    black 40%
+  );
   --background: oklch(1 0 0);
   --foreground: oklch(0.147 0.004 49.25);
   --card: oklch(1 0 0);
@@ -18,7 +36,7 @@
   --secondary: oklch(0.97 0.001 106.424);
   --secondary-foreground: oklch(0.216 0.006 56.043);
   --muted: oklch(0.97 0.001 106.424);
-  --muted-foreground: oklch(0.553 0.013 58.071);
+  --muted-foreground: oklch(0.5 0.013 58.071);
   --accent: oklch(0.97 0.001 106.424);
   --accent-foreground: oklch(0.216 0.006 56.043);
   --destructive: oklch(0.577 0.245 27.325);
@@ -48,6 +66,12 @@
 }
 
 .dark {
+  --meter-ok-foreground: var(--meter-ok);
+  --meter-warn-foreground: var(--meter-warn);
+  --meter-clip-foreground: var(--meter-clip);
+  --channel-mute-foreground: var(--channel-mute);
+  --channel-solo-foreground: var(--channel-solo);
+  --channel-monitor-foreground: var(--channel-monitor);
   --background: oklch(0.147 0.004 49.25);
   --foreground: oklch(0.985 0.001 106.423);
   --card: oklch(0.216 0.006 56.043);
@@ -88,7 +112,7 @@
 }
 
 [data-theme="ocean"] {
-  --primary: oklch(0.546 0.215 262.881);
+  --primary: oklch(0.5 0.215 262.881);
   --primary-foreground: oklch(0.985 0 0);
   --ring: oklch(0.707 0.165 254.624);
   --meter-ok: oklch(0.704 0.14 182.503);
@@ -103,7 +127,7 @@
 }
 
 [data-theme="rose"] {
-  --primary: oklch(0.586 0.253 17.585);
+  --primary: oklch(0.54 0.253 17.585);
   --primary-foreground: oklch(0.985 0 0);
   --ring: oklch(0.712 0.194 13.428);
   --meter-ok: oklch(0.696 0.17 162.48);
@@ -139,6 +163,12 @@
 }
 
 @theme inline {
+  --color-meter-ok-foreground: var(--meter-ok-foreground);
+  --color-meter-warn-foreground: var(--meter-warn-foreground);
+  --color-meter-clip-foreground: var(--meter-clip-foreground);
+  --color-channel-mute-foreground: var(--channel-mute-foreground);
+  --color-channel-solo-foreground: var(--channel-solo-foreground);
+  --color-channel-monitor-foreground: var(--channel-monitor-foreground);
   --color-meter-ok: var(--meter-ok);
   --color-meter-warn: var(--meter-warn);
   --color-meter-clip: var(--meter-clip);

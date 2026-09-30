@@ -53,7 +53,13 @@
           "color-meter-clip": "var(--meter-clip)",
           "color-channel-mute": "var(--channel-mute)",
           "color-channel-solo": "var(--channel-solo)",
-          "color-channel-monitor": "var(--channel-monitor)"
+          "color-channel-monitor": "var(--channel-monitor)",
+          "color-meter-ok-foreground": "var(--meter-ok-foreground)",
+          "color-meter-warn-foreground": "var(--meter-warn-foreground)",
+          "color-meter-clip-foreground": "var(--meter-clip-foreground)",
+          "color-channel-mute-foreground": "var(--channel-mute-foreground)",
+          "color-channel-solo-foreground": "var(--channel-solo-foreground)",
+          "color-channel-monitor-foreground": "var(--channel-monitor-foreground)"
         },
         "light": {
           "meter-ok": "oklch(0.696 0.17 162.48)",
@@ -61,7 +67,13 @@
           "meter-clip": "var(--destructive)",
           "channel-mute": "var(--destructive)",
           "channel-solo": "oklch(0.795 0.184 86.047)",
-          "channel-monitor": "oklch(0.623 0.214 259.815)"
+          "channel-monitor": "oklch(0.623 0.214 259.815)",
+          "meter-ok-foreground": "color-mix(in oklch, var(--meter-ok), black 40%)",
+          "meter-warn-foreground": "color-mix(in oklch, var(--meter-warn), black 40%)",
+          "meter-clip-foreground": "color-mix(in oklch, var(--meter-clip), black 40%)",
+          "channel-mute-foreground": "color-mix(in oklch, var(--channel-mute), black 40%)",
+          "channel-solo-foreground": "color-mix(in oklch, var(--channel-solo), black 40%)",
+          "channel-monitor-foreground": "color-mix(in oklch, var(--channel-monitor), black 40%)"
         },
         "dark": {
           "meter-ok": "oklch(0.765 0.177 163.223)",
@@ -69,7 +81,13 @@
           "meter-clip": "var(--destructive)",
           "channel-mute": "var(--destructive)",
           "channel-solo": "oklch(0.852 0.199 91.936)",
-          "channel-monitor": "oklch(0.707 0.165 254.624)"
+          "channel-monitor": "oklch(0.707 0.165 254.624)",
+          "meter-ok-foreground": "var(--meter-ok)",
+          "meter-warn-foreground": "var(--meter-warn)",
+          "meter-clip-foreground": "var(--meter-clip)",
+          "channel-mute-foreground": "var(--channel-mute)",
+          "channel-solo-foreground": "var(--channel-solo)",
+          "channel-monitor-foreground": "var(--channel-monitor)"
         }
       }
     },
