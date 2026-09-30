@@ -145,6 +145,70 @@
           "type": "registry:hook"
         }
       ]
+    },
+    {
+      "name": "use-audio-context",
+      "type": "registry:hook",
+      "title": "useAudioContext",
+      "description": "One shared AudioContext that resumes on the first user gesture, plus a provider to supply your own.",
+      "files": [
+        {
+          "path": "hooks/use-audio-context.tsx",
+          "type": "registry:hook"
+        }
+      ]
+    },
+    {
+      "name": "use-audio-analyser",
+      "type": "registry:hook",
+      "title": "useAudioAnalyser",
+      "description": "Meter and visual frame sources from a MediaStream, media element or AudioNode, using the Web Audio AnalyserNode.",
+      "registryDependencies": [
+        "@audiocn/core",
+        "@audiocn/use-audio-context"
+      ],
+      "files": [
+        {
+          "path": "hooks/use-audio-analyser.ts",
+          "type": "registry:hook"
+        }
+      ]
+    },
+    {
+      "name": "use-audio-devices",
+      "type": "registry:hook",
+      "title": "useAudioDevices",
+      "description": "The list of audio input or output devices, with permission state and live updates when devices change.",
+      "files": [
+        {
+          "path": "hooks/use-audio-devices.ts",
+          "type": "registry:hook"
+        }
+      ]
+    },
+    {
+      "name": "use-microphone",
+      "type": "registry:hook",
+      "title": "useMicrophone",
+      "description": "Open a microphone as a MediaStream, with browser processing off by default so meters show the real signal.",
+      "files": [
+        {
+          "path": "hooks/use-microphone.ts",
+          "type": "registry:hook"
+        }
+      ]
+    },
+    {
+      "name": "use-system-audio",
+      "type": "registry:hook",
+      "title": "useSystemAudio",
+      "description": "Capture system or tab audio through the browser's screen-share picker.",
+      "files": [
+        {
+          "path": "hooks/use-system-audio.ts",
+          "type": "registry:hook"
+        }
+      ]
     }
   ]
 }
