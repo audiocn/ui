@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useMemo, useRef } from "react";
-import type { ComponentProps } from "react";
+import type { ComponentProps, CSSProperties, RefObject } from "react";
 
 import { useFrameSource } from "@/hooks/use-frame-source";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
@@ -14,6 +14,8 @@ import { cn } from "@/lib/utils";
 const COLOR_REFRESH_FRAMES = 30;
 const PEAK_RELEASE_PER_FRAME = 0.985;
 const REDUCED_MOTION_INTERVAL_MS = 250;
+const LEVEL_TICK_DB = 12;
+const DEFAULT_FREQUENCY_TICKS = [100, 1000, 10_000];
 
 interface SpectrumContextValue {
   minDb: number;
@@ -24,8 +26,8 @@ interface SpectrumContextValue {
   variant: "bars" | "line" | "area";
   peakHold: boolean;
   grid: boolean;
-  frameRef: { current: VisualFrame | null };
-  dirtyRef: { current: boolean };
+  frameRef: RefObject<VisualFrame | null>;
+  dirtyRef: RefObject<boolean>;
 }
 
 const SpectrumContext = createContext<SpectrumContextValue | null>(null);
@@ -39,6 +41,316 @@ const useSpectrum = (part: string) => {
 };
 
 const formatHz = (hz: number) => (hz >= 1000 ? `${hz / 1000}k` : String(hz));
+
+const formatLevel = (db: number) => String(Math.round(db));
+
+interface Size {
+  width: number;
+  height: number;
+  ratio: number;
+}
+
+interface Colors {
+  grid: string;
+  line: string;
+  peak: string;
+}
+
+const readColors = (canvas: HTMLCanvasElement): Colors => {
+  const style = getComputedStyle(canvas);
+  return {
+    grid: style.getPropertyValue("--spectrum-grid").trim() || style.color,
+    line: style.getPropertyValue("--spectrum").trim() || style.color,
+    peak: style.getPropertyValue("--spectrum-peak").trim() || style.color,
+  };
+};
+
+const drawGrid = (
+  context: CanvasRenderingContext2D,
+  size: Size,
+  settings: SpectrumContextValue,
+  color: string
+) => {
+  const { frequencyTaper, maxDb, maxHz, minDb, minHz } = settings;
+  const span = maxDb - minDb;
+  context.strokeStyle = color;
+  context.lineWidth = 1;
+  context.beginPath();
+  for (const db of [maxDb, maxDb - span / 3, maxDb - (span * 2) / 3]) {
+    const y = Math.round((1 - (db - minDb) / span) * size.height) + 0.5;
+    context.moveTo(0, y);
+    context.lineTo(size.width, y);
+  }
+  for (const hz of DEFAULT_FREQUENCY_TICKS) {
+    if (hz > minHz && hz < maxHz) {
+      const x = Math.round(frequencyTaper.toPosition(hz) * size.width) + 0.5;
+      context.moveTo(x, 0);
+      context.lineTo(x, size.height);
+    }
+  }
+  context.stroke();
+};
+
+const drawBars = (
+  context: CanvasRenderingContext2D,
+  size: Size,
+  bands: Float32Array
+) => {
+  const slot = size.width / bands.length;
+  const gap = Math.min(2, slot * 0.25);
+  for (const [index, band] of bands.entries()) {
+    const barHeight = clamp(band, 0, 1) * size.height;
+    context.fillRect(
+      index * slot + gap / 2,
+      size.height - barHeight,
+      Math.max(1, slot - gap),
+      barHeight
+    );
+  }
+};
+
+const drawCurve = (
+  context: CanvasRenderingContext2D,
+  size: Size,
+  bands: Float32Array,
+  filled: boolean
+) => {
+  const slot = size.width / bands.length;
+  context.lineWidth = 1.5;
+  context.lineJoin = "round";
+  context.beginPath();
+  for (const [index, band] of bands.entries()) {
+    const x = (index + 0.5) * slot;
+    const y = size.height - clamp(band, 0, 1) * size.height;
+    if (index === 0) {
+      context.moveTo(x, y);
+    } else {
+      context.lineTo(x, y);
+    }
+  }
+  if (filled) {
+    context.lineTo((bands.length - 0.5) * slot, size.height);
+    context.lineTo(0.5 * slot, size.height);
+    context.closePath();
+    context.globalAlpha = 0.3;
+    context.fill();
+    context.globalAlpha = 1;
+  }
+  context.stroke();
+};
+
+const drawPeaks = (
+  context: CanvasRenderingContext2D,
+  size: Size,
+  bands: Float32Array,
+  peaks: Float32Array
+) => {
+  const slot = size.width / bands.length;
+  for (const [index, band] of bands.entries()) {
+    const held = Math.max(
+      clamp(band, 0, 1),
+      (peaks[index] ?? 0) * PEAK_RELEASE_PER_FRAME
+    );
+    peaks[index] = held;
+    context.fillRect(
+      index * slot,
+      size.height - held * size.height - 1,
+      Math.max(1, slot - 1),
+      2
+    );
+  }
+};
+
+export const SpectrumCanvas = ({
+  className,
+  ...props
+}: ComponentProps<"canvas">) => {
+  const settings = useSpectrum("SpectrumCanvas");
+  const reducedMotion = useReducedMotion();
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const context = canvas?.getContext("2d");
+    if (!(canvas && context)) {
+      return;
+    }
+    const { dirtyRef, frameRef, grid, peakHold, variant } = settings;
+    const size: Size = { height: 0, ratio: 1, width: 0 };
+    let colors = readColors(canvas);
+    let framesSinceColor = 0;
+    let peaks = new Float32Array(0);
+    let lastPaintMs = 0;
+
+    const resize = () => {
+      const rect = canvas.getBoundingClientRect();
+      size.ratio = window.devicePixelRatio || 1;
+      size.width = rect.width;
+      size.height = rect.height;
+      canvas.width = Math.max(1, Math.round(rect.width * size.ratio));
+      canvas.height = Math.max(1, Math.round(rect.height * size.ratio));
+      dirtyRef.current = true;
+    };
+    resize();
+    const observer = new ResizeObserver(resize);
+    observer.observe(canvas);
+
+    const shouldPaint = (nowMs: number) => {
+      framesSinceColor += 1;
+      if (framesSinceColor >= COLOR_REFRESH_FRAMES) {
+        framesSinceColor = 0;
+        colors = readColors(canvas);
+        dirtyRef.current = true;
+      }
+      if (!dirtyRef.current || size.width === 0) {
+        return false;
+      }
+      return (
+        !reducedMotion || nowMs - lastPaintMs >= REDUCED_MOTION_INTERVAL_MS
+      );
+    };
+
+    const draw = (nowMs: number) => {
+      if (!shouldPaint(nowMs)) {
+        return;
+      }
+      lastPaintMs = nowMs;
+      dirtyRef.current = false;
+      context.setTransform(size.ratio, 0, 0, size.ratio, 0, 0);
+      context.clearRect(0, 0, size.width, size.height);
+      if (grid) {
+        drawGrid(context, size, settings, colors.grid);
+      }
+      const bands = frameRef.current?.bands;
+      if (!bands || bands.length === 0) {
+        return;
+      }
+      context.fillStyle = colors.line;
+      context.strokeStyle = colors.line;
+      if (variant === "bars") {
+        drawBars(context, size, bands);
+      } else {
+        drawCurve(context, size, bands, variant === "area");
+      }
+      if (peakHold) {
+        if (peaks.length !== bands.length) {
+          peaks = new Float32Array(bands.length);
+        }
+        context.fillStyle = colors.peak;
+        drawPeaks(context, size, bands, peaks);
+        dirtyRef.current = true;
+      }
+    };
+
+    const unsubscribe = subscribeFrame(draw);
+    return () => {
+      unsubscribe();
+      observer.disconnect();
+    };
+  }, [reducedMotion, settings]);
+
+  return (
+    <canvas
+      aria-hidden
+      className={cn(
+        "[grid-column:2] [grid-row:1] size-full min-h-0",
+        className
+      )}
+      data-slot="spectrum-canvas"
+      ref={canvasRef}
+      {...props}
+    />
+  );
+};
+
+export interface SpectrumFrequencyAxisProps extends ComponentProps<"div"> {
+  /** Default 100 Hz, 1 kHz and 10 kHz. */
+  ticks?: number[];
+  format?: (hz: number) => string;
+}
+
+export const SpectrumFrequencyAxis = ({
+  ticks = DEFAULT_FREQUENCY_TICKS,
+  format = formatHz,
+  className,
+  ...props
+}: SpectrumFrequencyAxisProps) => {
+  const { frequencyTaper, maxHz, minHz } = useSpectrum("SpectrumFrequencyAxis");
+  return (
+    <div
+      aria-hidden
+      className={cn(
+        "text-muted-foreground relative [grid-column:2] [grid-row:2] h-4 text-[0.625rem] tabular-nums",
+        className
+      )}
+      data-slot="spectrum-frequency-axis"
+      {...props}
+    >
+      {ticks
+        .filter((hz) => hz >= minHz && hz <= maxHz)
+        .map((hz) => (
+          <span
+            className="absolute top-0 left-(--tick-position) -translate-x-1/2"
+            key={hz}
+            style={
+              {
+                "--tick-position": `${frequencyTaper.toPosition(hz) * 100}%`,
+              } as CSSProperties
+            }
+          >
+            {format(hz)}
+          </span>
+        ))}
+    </div>
+  );
+};
+
+export interface SpectrumLevelAxisProps extends ComponentProps<"div"> {
+  /** Default: every 12 dB inside the range. */
+  ticks?: number[];
+  format?: (db: number) => string;
+}
+
+export const SpectrumLevelAxis = ({
+  ticks,
+  format = formatLevel,
+  className,
+  ...props
+}: SpectrumLevelAxisProps) => {
+  const { maxDb, minDb } = useSpectrum("SpectrumLevelAxis");
+  const values =
+    ticks ??
+    Array.from(
+      { length: Math.floor((maxDb - minDb) / LEVEL_TICK_DB) + 1 },
+      (_, index) => maxDb - index * LEVEL_TICK_DB
+    );
+
+  return (
+    <div
+      aria-hidden
+      className={cn(
+        "text-muted-foreground relative [grid-column:1] [grid-row:1] w-7 text-[0.625rem] tabular-nums",
+        className
+      )}
+      data-slot="spectrum-level-axis"
+      {...props}
+    >
+      {values.map((db) => (
+        <span
+          className="absolute right-0 bottom-(--tick-position) translate-y-1/2"
+          key={db}
+          style={
+            {
+              "--tick-position": `${((db - minDb) / (maxDb - minDb)) * 100}%`,
+            } as CSSProperties
+          }
+        >
+          {format(db)}
+        </span>
+      ))}
+    </div>
+  );
+};
 
 export interface SpectrumProps extends ComponentProps<"div"> {
   source?: FrameSource<VisualFrame> | null;
@@ -124,279 +436,5 @@ export const Spectrum = ({
         )}
       </div>
     </SpectrumContext.Provider>
-  );
-};
-
-export const SpectrumCanvas = ({
-  className,
-  ...props
-}: ComponentProps<"canvas">) => {
-  const {
-    dirtyRef,
-    frameRef,
-    frequencyTaper,
-    grid,
-    maxDb,
-    maxHz,
-    minDb,
-    minHz,
-    peakHold,
-    variant,
-  } = useSpectrum("SpectrumCanvas");
-  const reducedMotion = useReducedMotion();
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    const context = canvas?.getContext("2d");
-    if (!(canvas && context)) {
-      return;
-    }
-    const size = { height: 0, ratio: 1, width: 0 };
-    let colors = { grid: "", line: "", peak: "" };
-    let framesSinceColor = COLOR_REFRESH_FRAMES;
-    let peaks = new Float32Array(0);
-    let lastPaintMs = 0;
-    const gridDb = [
-      maxDb,
-      maxDb - (maxDb - minDb) / 3,
-      maxDb - ((maxDb - minDb) * 2) / 3,
-    ];
-    const gridHz = [100, 1000, 10_000].filter((hz) => hz > minHz && hz < maxHz);
-
-    const resize = () => {
-      const rect = canvas.getBoundingClientRect();
-      size.ratio = window.devicePixelRatio || 1;
-      size.width = rect.width;
-      size.height = rect.height;
-      canvas.width = Math.max(1, Math.round(rect.width * size.ratio));
-      canvas.height = Math.max(1, Math.round(rect.height * size.ratio));
-      dirtyRef.current = true;
-    };
-    resize();
-    const observer = new ResizeObserver(resize);
-    observer.observe(canvas);
-
-    const draw = (nowMs: number) => {
-      framesSinceColor += 1;
-      if (framesSinceColor >= COLOR_REFRESH_FRAMES) {
-        framesSinceColor = 0;
-        const style = getComputedStyle(canvas);
-        colors = {
-          grid: style.getPropertyValue("--spectrum-grid").trim() || "gray",
-          line: style.getPropertyValue("--spectrum").trim() || style.color,
-          peak: style.getPropertyValue("--spectrum-peak").trim() || style.color,
-        };
-        dirtyRef.current = true;
-      }
-      if (!dirtyRef.current || size.width === 0) {
-        return;
-      }
-      if (reducedMotion && nowMs - lastPaintMs < REDUCED_MOTION_INTERVAL_MS) {
-        return;
-      }
-      lastPaintMs = nowMs;
-      dirtyRef.current = false;
-      const { height, width } = size;
-      context.setTransform(size.ratio, 0, 0, size.ratio, 0, 0);
-      context.clearRect(0, 0, width, height);
-
-      if (grid) {
-        context.strokeStyle = colors.grid;
-        context.lineWidth = 1;
-        context.beginPath();
-        for (const db of gridDb) {
-          const y =
-            Math.round((1 - (db - minDb) / (maxDb - minDb)) * height) + 0.5;
-          context.moveTo(0, y);
-          context.lineTo(width, y);
-        }
-        for (const hz of gridHz) {
-          const x = Math.round(frequencyTaper.toPosition(hz) * width) + 0.5;
-          context.moveTo(x, 0);
-          context.lineTo(x, height);
-        }
-        context.stroke();
-      }
-
-      const bands = frameRef.current?.bands;
-      if (!bands || bands.length === 0) {
-        return;
-      }
-      if (peaks.length !== bands.length) {
-        peaks = new Float32Array(bands.length);
-      }
-      const count = bands.length;
-      const slot = width / count;
-      context.fillStyle = colors.line;
-      context.strokeStyle = colors.line;
-
-      if (variant === "bars") {
-        const gap = Math.min(2, slot * 0.25);
-        for (let index = 0; index < count; index += 1) {
-          const value = clamp(bands[index] ?? 0, 0, 1);
-          const barHeight = value * height;
-          context.fillRect(
-            index * slot + gap / 2,
-            height - barHeight,
-            Math.max(1, slot - gap),
-            barHeight
-          );
-        }
-      } else {
-        context.lineWidth = 1.5;
-        context.lineJoin = "round";
-        context.beginPath();
-        for (let index = 0; index < count; index += 1) {
-          const x = (index + 0.5) * slot;
-          const y = height - clamp(bands[index] ?? 0, 0, 1) * height;
-          if (index === 0) {
-            context.moveTo(x, y);
-          } else {
-            context.lineTo(x, y);
-          }
-        }
-        if (variant === "area") {
-          context.lineTo((count - 0.5) * slot, height);
-          context.lineTo(0.5 * slot, height);
-          context.closePath();
-          context.globalAlpha = 0.3;
-          context.fill();
-          context.globalAlpha = 1;
-        }
-        context.stroke();
-      }
-
-      if (peakHold) {
-        context.fillStyle = colors.peak;
-        for (let index = 0; index < count; index += 1) {
-          const value = clamp(bands[index] ?? 0, 0, 1);
-          const held = Math.max(
-            value,
-            (peaks[index] ?? 0) * PEAK_RELEASE_PER_FRAME
-          );
-          peaks[index] = held;
-          context.fillRect(
-            index * slot,
-            height - held * height - 1,
-            Math.max(1, slot - 1),
-            2
-          );
-        }
-        dirtyRef.current = true;
-      }
-    };
-
-    const unsubscribe = subscribeFrame(draw);
-    return () => {
-      unsubscribe();
-      observer.disconnect();
-    };
-  }, [
-    dirtyRef,
-    frameRef,
-    frequencyTaper,
-    grid,
-    maxDb,
-    maxHz,
-    minDb,
-    minHz,
-    peakHold,
-    reducedMotion,
-    variant,
-  ]);
-
-  return (
-    <canvas
-      aria-hidden
-      className={cn(
-        "[grid-column:2] [grid-row:1] size-full min-h-0",
-        className
-      )}
-      data-slot="spectrum-canvas"
-      ref={canvasRef}
-      {...props}
-    />
-  );
-};
-
-export interface SpectrumFrequencyAxisProps extends ComponentProps<"div"> {
-  /** Default 100 Hz, 1 kHz and 10 kHz. */
-  ticks?: number[];
-  format?: (hz: number) => string;
-}
-
-export const SpectrumFrequencyAxis = ({
-  ticks = [100, 1000, 10_000],
-  format = formatHz,
-  className,
-  ...props
-}: SpectrumFrequencyAxisProps) => {
-  const { frequencyTaper, maxHz, minHz } = useSpectrum("SpectrumFrequencyAxis");
-  return (
-    <div
-      aria-hidden
-      className={cn(
-        "text-muted-foreground relative [grid-column:2] [grid-row:2] h-4 text-[0.625rem] tabular-nums",
-        className
-      )}
-      data-slot="spectrum-frequency-axis"
-      {...props}
-    >
-      {ticks
-        .filter((hz) => hz >= minHz && hz <= maxHz)
-        .map((hz) => (
-          <span
-            className="absolute top-0 -translate-x-1/2"
-            key={hz}
-            style={{ left: `${frequencyTaper.toPosition(hz) * 100}%` }}
-          >
-            {format(hz)}
-          </span>
-        ))}
-    </div>
-  );
-};
-
-export interface SpectrumLevelAxisProps extends ComponentProps<"div"> {
-  /** Default: every 12 dB inside the range. */
-  ticks?: number[];
-  format?: (db: number) => string;
-}
-
-export const SpectrumLevelAxis = ({
-  ticks,
-  format = (db) => String(Math.round(db)),
-  className,
-  ...props
-}: SpectrumLevelAxisProps) => {
-  const { maxDb, minDb } = useSpectrum("SpectrumLevelAxis");
-  const values =
-    ticks ??
-    Array.from(
-      { length: Math.floor((maxDb - minDb) / 12) + 1 },
-      (_, index) => maxDb - index * 12
-    );
-
-  return (
-    <div
-      aria-hidden
-      className={cn(
-        "text-muted-foreground relative [grid-column:1] [grid-row:1] w-7 text-[0.625rem] tabular-nums",
-        className
-      )}
-      data-slot="spectrum-level-axis"
-      {...props}
-    >
-      {values.map((db) => (
-        <span
-          className="absolute right-0 translate-y-1/2"
-          key={db}
-          style={{ bottom: `${((db - minDb) / (maxDb - minDb)) * 100}%` }}
-        >
-          {format(db)}
-        </span>
-      ))}
-    </div>
   );
 };

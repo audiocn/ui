@@ -4,7 +4,12 @@ import { mergeProps } from "@base-ui/react/merge-props";
 import { Slider as SliderPrimitive } from "@base-ui/react/slider";
 import { useRender } from "@base-ui/react/use-render";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import type { ComponentProps, KeyboardEvent, ReactNode } from "react";
+import type {
+  ComponentProps,
+  CSSProperties,
+  KeyboardEvent,
+  ReactNode,
+} from "react";
 
 import {
   VolumeControl,
@@ -85,6 +90,46 @@ const isEditable = (target: EventTarget | null) =>
   (target.isContentEditable ||
     ["INPUT", "SELECT", "TEXTAREA"].includes(target.tagName));
 
+type ShortcutEvent = Pick<
+  KeyboardEvent<HTMLElement>,
+  "key" | "shiftKey" | "target"
+>;
+
+const inSliderTarget = (target: HTMLElement) =>
+  target.getAttribute("type") === "range" ||
+  target.getAttribute("role") === "slider";
+
+/** The player action for a key, or null to let the key through. */
+const shortcutFor = (
+  event: ShortcutEvent,
+  player: AudioPlayerController
+): (() => void) | null => {
+  const target = event.target as HTMLElement;
+  const seekAmount = event.shiftKey ? SEEK_LARGE_STEP : SEEK_STEP;
+  const togglesPlayback = !(target.tagName === "BUTTON" || isEditable(target));
+  const sliderKeys = !inSliderTarget(target);
+  const actions: Record<string, (() => void) | null> = {
+    " ": togglesPlayback ? () => player.toggle() : null,
+    ArrowDown: sliderKeys
+      ? () => player.setVolume(clamp(player.volume - VOLUME_STEP, 0, 1))
+      : null,
+    ArrowLeft: sliderKeys
+      ? () => player.seek(player.currentTime - seekAmount)
+      : null,
+    ArrowRight: sliderKeys
+      ? () => player.seek(player.currentTime + seekAmount)
+      : null,
+    ArrowUp: sliderKeys
+      ? () => player.setVolume(clamp(player.volume + VOLUME_STEP, 0, 1))
+      : null,
+    End: () => player.seek(player.duration),
+    Home: () => player.seek(0),
+    k: togglesPlayback ? () => player.toggle() : null,
+    m: () => player.setMuted(!player.muted),
+  };
+  return actions[event.key] ?? null;
+};
+
 const PlayerRoot = ({
   player,
   onPrevious,
@@ -118,61 +163,10 @@ const PlayerRoot = ({
     ) {
       return;
     }
-    const target = event.target as HTMLElement;
-    const inSlider =
-      target.getAttribute("type") === "range" ||
-      target.getAttribute("role") === "slider";
-    let handled = true;
-    switch (event.key) {
-      case " ":
-      case "k": {
-        if (target.tagName === "BUTTON" || isEditable(target)) {
-          handled = false;
-          break;
-        }
-        player.toggle();
-        break;
-      }
-      case "ArrowLeft":
-      case "ArrowRight": {
-        if (inSlider) {
-          handled = false;
-          break;
-        }
-        const amount = event.shiftKey ? SEEK_LARGE_STEP : SEEK_STEP;
-        player.seek(
-          player.currentTime + (event.key === "ArrowLeft" ? -amount : amount)
-        );
-        break;
-      }
-      case "ArrowUp":
-      case "ArrowDown": {
-        if (inSlider) {
-          handled = false;
-          break;
-        }
-        const direction = event.key === "ArrowUp" ? 1 : -1;
-        player.setVolume(clamp(player.volume + direction * VOLUME_STEP, 0, 1));
-        break;
-      }
-      case "m": {
-        player.setMuted(!player.muted);
-        break;
-      }
-      case "Home": {
-        player.seek(0);
-        break;
-      }
-      case "End": {
-        player.seek(player.duration);
-        break;
-      }
-      default: {
-        handled = false;
-      }
-    }
-    if (handled) {
+    const action = shortcutFor(event, player);
+    if (action) {
       event.preventDefault();
+      action();
     }
   };
 
@@ -483,9 +477,9 @@ export const AudioPlayerSeek = ({
           data-slot="audio-player-seek-track"
         >
           <div
-            className="bg-muted-foreground/25 absolute inset-y-0 left-0 rounded-full"
+            className="bg-muted-foreground/25 absolute inset-y-0 left-0 w-(--buffered) rounded-full"
             data-slot="audio-player-seek-buffered"
-            style={{ width: `${bufferedPercent}%` }}
+            style={{ "--buffered": `${bufferedPercent}%` } as CSSProperties}
           />
           <SliderPrimitive.Indicator
             className="bg-primary rounded-full"
