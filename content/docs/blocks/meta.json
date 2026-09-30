@@ -1,0 +1,12 @@
+{
+  "title": "Blocks",
+  "pages": [
+    "index",
+    "system-audio-mixer",
+    "mic-setup",
+    "system-audio-settings",
+    "quick-audio-popover",
+    "soundboard",
+    "music-player"
+  ]
+}
