@@ -188,7 +188,7 @@ export const MixerChannels = ({
   scrollable = true,
   className,
   children,
-  onKeyDown,
+  onKeyDownCapture,
   ...props
 }: MixerChannelsProps) => {
   const { orientation, setEmpty } = useMixerPart("MixerChannels");
@@ -199,7 +199,7 @@ export const MixerChannels = ({
   }, [count, setEmpty]);
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    onKeyDown?.(event);
+    onKeyDownCapture?.(event);
     if (event.defaultPrevented || !(event.ctrlKey || event.metaKey)) {
       return;
     }
@@ -213,6 +213,7 @@ export const MixerChannels = ({
     }
     if (direction !== 0 && focusNeighbour(event, direction)) {
       event.preventDefault();
+      event.stopPropagation();
     }
   };
 
@@ -229,7 +230,7 @@ export const MixerChannels = ({
         className
       )}
       data-slot="mixer-channels"
-      onKeyDown={handleKeyDown}
+      onKeyDownCapture={handleKeyDown}
       {...props}
     >
       {children}

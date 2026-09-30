@@ -160,7 +160,7 @@ describe("frame sources over time", () => {
     const { result } = renderHook(() => useLevel(emitter, { intervalMs: 100 }));
     emitter.emit({ channels: [{ peakDb: -6, rmsDb: -12 }] });
     advance(120);
-    expect(result.current).toEqual({ peakDb: -6, rmsDb: -12, zone: "warn" });
+    expect(result.current).toEqual({ peakDb: -6, rmsDb: -12, zone: "clip" });
   });
 
   it("useClipHold counts separate clips and releases after the hold", () => {

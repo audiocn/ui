@@ -359,7 +359,7 @@ export const KnobDial = ({
       return;
     }
     event.preventDefault();
-    const quantized = dial.quantize(next, increment);
+    const quantized = dial.quantize(next, Math.min(increment, dial.step));
     dial.change(quantized, { event: event.nativeEvent, reason: "keyboard" });
     dial.commit(quantized);
   };

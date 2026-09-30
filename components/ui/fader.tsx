@@ -248,13 +248,13 @@ export const Fader = ({
       if (current === SILENCE_DB) {
         return direction > 0 ? min : SILENCE_DB;
       }
-      const next = quantize(current + direction * increment, increment);
+      const next = quantize(current + direction * increment, Math.min(increment, step));
       if (silenceAtMin && direction < 0 && current <= min) {
         return SILENCE_DB;
       }
       return next;
     },
-    [min, quantize, silenceAtMin]
+    [min, quantize, silenceAtMin, step]
   );
 
   const handleKeyDown = useCallback(

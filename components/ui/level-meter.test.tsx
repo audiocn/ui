@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import { createRef } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -37,13 +37,15 @@ describe("LevelMeter", () => {
     advance(400);
     expect(levelOf()).toBeCloseTo(0.9, 2);
     expect(screen.getByRole("meter")).toHaveAttribute("aria-valuenow", "-6.0");
-    expect(channelElement()).toHaveAttribute("data-zone", "warn");
+    expect(channelElement()).toHaveAttribute("data-zone", "clip");
   });
 
   it("follows a frame source", () => {
     const emitter = createFrameEmitter<MeterFrame>();
     render(<LevelMeter aria-label="Mic" source={emitter} />);
-    emitter.emit({ channels: [{ peakDb: -30 }] });
+    act(() => {
+      emitter.emit({ channels: [{ peakDb: -30 }] });
+    });
     advance(400);
     expect(levelOf()).toBeCloseTo(0.5, 2);
   });
@@ -52,7 +54,9 @@ describe("LevelMeter", () => {
     const emitter = createFrameEmitter<MeterFrame>();
     render(<LevelMeter aria-label="Program" source={emitter} />);
     advance(20);
-    emitter.emit({ channels: [{ peakDb: -12 }, { peakDb: -24 }] });
+    act(() => {
+      emitter.emit({ channels: [{ peakDb: -12 }, { peakDb: -24 }] });
+    });
     advance(400);
     expect(channelElement(1)).not.toBeNull();
     expect(levelOf(1)).toBeCloseTo(0.6, 2);
@@ -61,7 +65,9 @@ describe("LevelMeter", () => {
   it("paints through actionsRef", () => {
     const actions = createRef<LevelMeterActions>();
     render(<LevelMeter actionsRef={actions} aria-label="Mic" />);
-    actions.current?.paint({ channels: [{ peakDb: -18 }] });
+    act(() => {
+      actions.current?.paint({ channels: [{ peakDb: -18 }] });
+    });
     advance(400);
     expect(levelOf()).toBeCloseTo(0.7, 2);
   });

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { createRef } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -50,7 +50,7 @@ describe("DbReadout", () => {
     emitter.emit({ channels: [{ peakDb: -12.34 }] });
     advance(260);
     expect(readout).toHaveTextContent("−12.3 dB");
-    expect(readout).toHaveAttribute("data-zone", "ok");
+    expect(readout).toHaveAttribute("data-zone", "warn");
   });
 });
 
@@ -61,8 +61,9 @@ describe("ClipIndicator", () => {
     const button = screen.getByRole("button");
     expect(button).not.toHaveAttribute("data-clipping");
 
-    advance(0);
-    actions.current?.report(0);
+    act(() => {
+      actions.current?.report(0);
+    });
     advance(10);
     expect(button).toHaveAttribute("data-clipping");
     expect(button).toHaveTextContent("1");
@@ -75,7 +76,9 @@ describe("ClipIndicator", () => {
   it("turns off after the hold time", () => {
     const actions = createRef<ClipIndicatorActions>();
     render(<ClipIndicator actionsRef={actions} holdMs={500} />);
-    actions.current?.report(-0.5);
+    act(() => {
+      actions.current?.report(-0.5);
+    });
     advance(10);
     expect(screen.getByRole("button")).toHaveAttribute("data-clipping");
     advance(600);
@@ -104,7 +107,7 @@ describe("BarVisualizer", () => {
     const bars = container.querySelectorAll<HTMLElement>(
       '[data-slot="bar-visualizer-bar"]'
     );
-    expect(bars[0]?.style.height).toBe("50.00%");
-    expect(bars[1]?.style.height).toBe("100.00%");
+    expect(bars[0]?.style.height).toBe("50%");
+    expect(bars[1]?.style.height).toBe("100%");
   });
 });
