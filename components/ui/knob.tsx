@@ -499,7 +499,7 @@ const KnobValueInput = ({
     <input
       aria-label="Value"
       className={cn(
-        "bg-background ring-ring/50 h-4 w-(--knob-value-width) min-w-0 rounded-sm p-0 text-center font-mono text-xs tabular-nums ring-1 outline-none",
+        "bg-background ring-ring/50 focus-visible:ring-foreground h-4 w-(--knob-value-width) min-w-0 rounded-sm p-0 text-center font-mono text-xs tabular-nums ring-1 outline-none focus-visible:ring-2",
         className
       )}
       data-slot="knob-value-input"

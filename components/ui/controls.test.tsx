@@ -26,6 +26,7 @@ describe("Fader", () => {
   it("reports its value in dB to assistive technology", () => {
     render(<Fader aria-label="Mic" defaultValue={-6} />);
     expect(faderInput()).toHaveAttribute("aria-valuetext", "−6.0 dB");
+    expect(faderInput()).toHaveAccessibleName("Mic");
   });
 
   it("steps by step, largeStep and fineStep", () => {

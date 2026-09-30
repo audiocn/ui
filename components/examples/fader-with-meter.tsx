@@ -17,6 +17,7 @@ const FaderWithMeter = () => {
 
   return (
     <Fader
+      aria-label="Program gain"
       className="h-64 flex-col items-center"
       max={6}
       min={-60}
