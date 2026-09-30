@@ -1,0 +1,53 @@
+---
+title: useAudioPlayer
+description: Playback state for an audio element the hook owns.
+---
+
+```npm
+npx shadcn@latest add @audiocn/use-audio-player
+```
+
+## Usage
+
+```tsx
+const player = useAudioPlayer({ src: "/episode.mp3" });
+
+<Button onClick={player.toggle}>{player.playing ? "Pause" : "Play"}</Button>;
+<Waveform peaks={peaks} duration={player.duration} time={player.time} onSeekCommitted={player.seek} />;
+```
+
+The hook creates and owns an `<audio>` element. Pass `player.element` to
+[`useAudioAnalyser`](/docs/hooks/use-audio-analyser) or
+[`useWebAudioMixer`](/docs/hooks/use-web-audio-mixer), and `player` to
+[`AudioPlayer`](/docs/components/audio-player).
+
+## Options
+
+<PropsTable
+  rows={[
+    ["src", "string", null, null],
+    ["autoPlay / loop / muted", "boolean", "false", null],
+    ["volume", "number", "1", "0..1."],
+    ["playbackRate", "number", "1", null],
+    ["preload", '"none" | "metadata" | "auto"', '"metadata"', null],
+    ["crossOrigin", '"anonymous" | "use-credentials"', null, "Needed to analyse audio from another origin."],
+    ["onPlay / onPause / onEnded", "() => void", null, null],
+    ["onError", "(error) => void", null, null],
+  ]}
+/>
+
+## Returns
+
+<PropsTable
+  rows={[
+    ["element", "HTMLAudioElement | null", null, null],
+    ["status", '"idle" | "loading" | "ready" | "playing" | "paused" | "ended" | "error"', null, null],
+    ["playing", "boolean", null, null],
+    ["currentTime", "number", null, "Updates about four times a second."],
+    ["time", "FrameSource<number>", null, "The time on every animation frame while playing."],
+    ["duration / buffered", "number", null, "Seconds."],
+    ["volume / muted / playbackRate / loop", null, null, "Current settings."],
+    ["play / pause / toggle / seek", null, null, null],
+    ["setVolume / setMuted / setPlaybackRate / setLoop", null, null, null],
+  ]}
+/>
