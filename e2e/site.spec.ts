@@ -226,6 +226,19 @@ test("the theme picker switches themes", async ({ page }) => {
   await expect(page.locator("html")).toHaveAttribute("data-theme", "ocean");
 });
 
+test("the home theme swatches retheme the page and the navbar picker", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const rose = page.getByRole("button", { name: "Rose" });
+  await rose.click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "rose");
+  await expect(rose).toHaveAttribute("aria-pressed", "true");
+  await expect(
+    page.getByRole("combobox", { name: "Theme" }).first()
+  ).toContainText("Rose");
+});
+
 interface PerfWindow {
   audiocnCommits: { count: number };
   audiocnFrames: { commitsAtStart: number; count: number; start: number };
