@@ -261,14 +261,17 @@ test("the theme picker switches themes", async ({ page }) => {
   await expect(page.locator("html")).toHaveAttribute("data-theme", "ocean");
 });
 
-test("the home theme swatches retheme the page and the navbar picker", async ({
+test("the home theme swatches retheme the site in place of the navbar picker", async ({
   page,
 }) => {
   await page.goto("/");
+  await expect(page.getByRole("combobox", { name: "Theme" })).toHaveCount(0);
   const rose = page.getByRole("button", { name: "Rose" });
   await rose.click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "rose");
   await expect(rose).toHaveAttribute("aria-pressed", "true");
+  await page.goto("/docs");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "rose");
   await expect(
     page.getByRole("combobox", { name: "Theme" }).first()
   ).toContainText("Rose");

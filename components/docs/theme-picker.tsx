@@ -66,18 +66,20 @@ const saveTheme = (theme: ThemeName) => {
 };
 
 /** The saved site theme, and a setter that saves and applies it everywhere. */
-export const useSiteTheme = (): [ThemeName, (theme: ThemeName) => void] => [
-  useSyncExternalStore(subscribe, readTheme, getServerTheme),
-  saveTheme,
-];
+export const useSiteTheme = (): [ThemeName, (theme: ThemeName) => void] => {
+  const theme = useSyncExternalStore(subscribe, readTheme, getServerTheme);
+
+  // Whichever control is on the page applies the saved theme when it loads.
+  useEffect(() => {
+    applyTheme(theme);
+  }, [theme]);
+
+  return [theme, saveTheme];
+};
 
 /** Docs only: switches the colour theme so every preview can be seen in it. */
 export const ThemePicker = () => {
   const [theme, setTheme] = useSiteTheme();
-
-  useEffect(() => {
-    applyTheme(theme);
-  }, [theme]);
 
   return (
     <Select

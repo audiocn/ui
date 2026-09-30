@@ -5,13 +5,28 @@ import { GitHubStarsLink } from "@/components/docs/github-stars-link";
 import { ThemePicker } from "@/components/docs/theme-picker";
 import { siteConfig } from "@/lib/site";
 
-export const baseOptions = (): BaseLayoutProps => ({
+interface BaseOptionsConfig {
+  /** Show the theme picker. The home page has its own swatches. Default true. */
+  themePicker?: boolean;
+}
+
+export const baseOptions = ({
+  themePicker = true,
+}: BaseOptionsConfig = {}): BaseLayoutProps => ({
   links: [
     { active: "nested-url", text: "Docs", url: "/docs" },
     { active: "nested-url", text: "Components", url: "/docs/components" },
     { active: "nested-url", text: "Blocks", url: "/docs/blocks" },
     { children: <GitHubStarsLink />, secondary: true, type: "custom" },
-    { children: <ThemePicker />, secondary: true, type: "custom" },
+    ...(themePicker
+      ? [
+          {
+            children: <ThemePicker />,
+            secondary: true,
+            type: "custom",
+          } as const,
+        ]
+      : []),
   ],
   nav: {
     title: (
