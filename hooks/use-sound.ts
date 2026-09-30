@@ -4,7 +4,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useAudioContext } from "@/hooks/use-audio-context";
 import { subscribeFrame } from "@/lib/audio/frame-loop";
+import { createFrameEmitter } from "@/lib/audio/frame-source";
 import type { FrameSource } from "@/lib/audio/types";
+
+const RAMP_SECONDS = 0.005;
 
 export interface UseSoundOptions {
   /** 0..1 gain. Default 1. */
@@ -41,6 +44,15 @@ const bufferCache = new WeakMap<
   Map<string, Promise<AudioBuffer>>
 >();
 
+const fetchAndDecode = async (context: BaseAudioContext, src: string) => {
+  const response = await fetch(src);
+  if (!response.ok) {
+    throw new Error(`Could not load ${src}: ${response.status}`);
+  }
+  const data = await response.arrayBuffer();
+  return context.decodeAudioData(data);
+};
+
 /** Fetches and decodes a sound once per context. */
 export const loadAudioBuffer = (
   context: BaseAudioContext,
@@ -55,18 +67,16 @@ export const loadAudioBuffer = (
   if (cached) {
     return cached;
   }
-  const loading = fetch(src)
-    .then((response) => {
-      if (!response.ok) {
-        throw new Error(`Could not load ${src}: ${response.status}`);
-      }
-      return response.arrayBuffer();
-    })
-    .then((data) => context.decodeAudioData(data));
+  const loading = fetchAndDecode(context, src);
   cache.set(src, loading);
-  loading.catch(() => {
-    cache?.delete(src);
-  });
+  const forgetOnFailure = async () => {
+    try {
+      await loading;
+    } catch {
+      cache?.delete(src);
+    }
+  };
+  forgetOnFailure();
   return loading;
 };
 
@@ -74,6 +84,58 @@ interface Voice {
   node: AudioBufferSourceNode;
   startedAt: number;
 }
+
+interface LoadResult {
+  src: string;
+  buffer: AudioBuffer | null;
+  failure: Error | null;
+}
+
+/** Loads a sound by URL, or passes an `AudioBuffer` straight through. */
+const useSoundBuffer = (
+  context: AudioContext | null,
+  src: string | AudioBuffer | null
+) => {
+  const [result, setResult] = useState<LoadResult | null>(null);
+
+  useEffect(() => {
+    if (!(context && typeof src === "string")) {
+      return;
+    }
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const buffer = await loadAudioBuffer(context, src);
+        if (!cancelled) {
+          setResult({ buffer, failure: null, src });
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setResult({
+            buffer: null,
+            failure: error instanceof Error ? error : new Error(String(error)),
+            src,
+          });
+        }
+      }
+    };
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [context, src]);
+
+  if (!src) {
+    return { buffer: null, failure: null };
+  }
+  if (typeof src !== "string") {
+    return { buffer: src, failure: null };
+  }
+  if (result?.src !== src) {
+    return { buffer: null, failure: null };
+  }
+  return { buffer: result.buffer, failure: result.failure };
+};
 
 /** Low-latency playback of a short sound, decoded into memory. */
 export const useSound = (
@@ -88,26 +150,11 @@ export const useSound = (
   }: UseSoundOptions = {}
 ): SoundController => {
   const { context } = useAudioContext();
-  const [buffer, setBuffer] = useState<AudioBuffer | null>(null);
-  const [error, setError] = useState<Error | null>(null);
+  const { buffer, failure } = useSoundBuffer(context, src);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [output, setOutput] = useState<GainNode | null>(null);
   const voicesRef = useRef<Voice[]>([]);
-  const [progressSubscribers] = useState(
-    () => new Set<(value: number) => void>()
-  );
-
-  useEffect(() => {
-    if (!context) {
-      return;
-    }
-    const gain = context.createGain();
-    setOutput(gain);
-    return () => {
-      gain.disconnect();
-      setOutput(null);
-    };
-  }, [context]);
+  const progress = useMemo(() => createFrameEmitter<number>(), []);
+  const output = useMemo(() => context?.createGain() ?? null, [context]);
 
   useEffect(() => {
     if (!(context && output)) {
@@ -126,39 +173,9 @@ export const useSound = (
 
   useEffect(() => {
     if (output && context) {
-      output.gain.setTargetAtTime(volume, context.currentTime, 0.005);
+      output.gain.setTargetAtTime(volume, context.currentTime, RAMP_SECONDS);
     }
   }, [context, output, volume]);
-
-  useEffect(() => {
-    if (!src) {
-      setBuffer(null);
-      return;
-    }
-    if (typeof src !== "string") {
-      setBuffer(src);
-      return;
-    }
-    if (!context) {
-      return;
-    }
-    let cancelled = false;
-    setError(null);
-    loadAudioBuffer(context, src)
-      .then((decoded) => {
-        if (!cancelled) {
-          setBuffer(decoded);
-        }
-      })
-      .catch((error: unknown) => {
-        if (!cancelled) {
-          setError(error instanceof Error ? error : new Error(String(error)));
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [context, src]);
 
   const stop = useCallback(() => {
     for (const voice of voicesRef.current) {
@@ -177,9 +194,7 @@ export const useSound = (
       return;
     }
     if (context.state === "suspended") {
-      context.resume().catch(() => {
-        // Resumed on the next gesture instead.
-      });
+      context.resume();
     }
     if (interrupt) {
       stop();
@@ -196,9 +211,7 @@ export const useSound = (
       voicesRef.current = voicesRef.current.filter((item) => item !== voice);
       if (voicesRef.current.length === 0) {
         setIsPlaying(false);
-        for (const subscriber of progressSubscribers) {
-          subscriber(0);
-        }
+        progress.emit(0);
       }
     });
     node.start();
@@ -212,7 +225,7 @@ export const useSound = (
     maxVoices,
     output,
     playbackRate,
-    progressSubscribers,
+    progress,
     stop,
   ]);
 
@@ -229,29 +242,22 @@ export const useSound = (
       const value = loop
         ? (elapsed % buffer.duration) / buffer.duration
         : Math.min(1, elapsed / buffer.duration);
-      for (const subscriber of progressSubscribers) {
-        subscriber(value);
-      }
+      progress.emit(value);
     });
-  }, [buffer, context, isPlaying, loop, playbackRate, progressSubscribers]);
+  }, [buffer, context, isPlaying, loop, playbackRate, progress]);
 
   useEffect(() => stop, [stop]);
 
-  const progress = useMemo<FrameSource<number>>(
-    () => ({
-      subscribe: (listener) => {
-        progressSubscribers.add(listener);
-        return () => {
-          progressSubscribers.delete(listener);
-        };
-      },
-    }),
-    [progressSubscribers]
+  useEffect(
+    () => () => {
+      output?.disconnect();
+    },
+    [output]
   );
 
   return {
     duration: buffer?.duration ?? 0,
-    error,
+    error: failure,
     isLoaded: buffer !== null,
     isPlaying,
     output,

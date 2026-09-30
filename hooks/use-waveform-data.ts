@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { getSharedAudioContext } from "@/hooks/use-audio-context";
 import { loadAudioBuffer } from "@/hooks/use-sound";
@@ -21,6 +21,17 @@ export interface WaveformData {
 }
 
 const peakCache = new WeakMap<AudioBuffer, Map<number, Float32Array>>();
+
+const loudestInRange = (data: Float32Array, start: number, end: number) => {
+  let peak = 0;
+  for (let sample = start; sample < end; sample += 1) {
+    const magnitude = Math.abs(data[sample] ?? 0);
+    if (magnitude > peak) {
+      peak = magnitude;
+    }
+  }
+  return peak;
+};
 
 /** Reduces an audio buffer to `samples` peaks, 0..1, cached per buffer. */
 export const computePeaks = (
@@ -43,14 +54,10 @@ export const computePeaks = (
     const data = buffer.getChannelData(channel);
     for (let index = 0; index < samples; index += 1) {
       const start = index * bucket;
-      const end = Math.min(data.length, start + bucket);
-      let peak = peaks[index] ?? 0;
-      for (let sample = start; sample < end; sample += 1) {
-        const magnitude = Math.abs(data[sample] ?? 0);
-        if (magnitude > peak) {
-          peak = magnitude;
-        }
-      }
+      const peak = Math.max(
+        peaks[index] ?? 0,
+        loudestInRange(data, start, Math.min(data.length, start + bucket))
+      );
       peaks[index] = peak;
       loudest = Math.max(loudest, peak);
     }
@@ -64,30 +71,30 @@ export const computePeaks = (
   return peaks;
 };
 
+interface LoadResult {
+  key: string;
+  data: WaveformData;
+}
+
+const IDLE: WaveformData = {
+  duration: 0,
+  error: null,
+  peaks: null,
+  status: "idle",
+};
+
+const LOADING: WaveformData = { ...IDLE, status: "loading" };
+
 /** Decodes a file (or takes an `AudioBuffer`) and reduces it to waveform peaks. */
 export const useWaveformData = (
   src: string | AudioBuffer | null,
   { samples = 512 }: UseWaveformDataOptions = {}
 ): WaveformData => {
-  const [data, setData] = useState<WaveformData>({
-    duration: 0,
-    error: null,
-    peaks: null,
-    status: "idle",
-  });
+  const [result, setResult] = useState<LoadResult | null>(null);
+  const key = typeof src === "string" ? `${samples}:${src}` : "";
 
   useEffect(() => {
-    if (!src) {
-      setData({ duration: 0, error: null, peaks: null, status: "idle" });
-      return;
-    }
     if (typeof src !== "string") {
-      setData({
-        duration: src.duration,
-        error: null,
-        peaks: computePeaks(src, samples),
-        status: "ready",
-      });
       return;
     }
     const context = getSharedAudioContext();
@@ -95,32 +102,56 @@ export const useWaveformData = (
       return;
     }
     let cancelled = false;
-    setData((previous) => ({ ...previous, error: null, status: "loading" }));
-    loadAudioBuffer(context, src)
-      .then((buffer) => {
+    const load = async () => {
+      try {
+        const buffer = await loadAudioBuffer(context, src);
         if (!cancelled) {
-          setData({
-            duration: buffer.duration,
-            error: null,
-            peaks: computePeaks(buffer, samples),
-            status: "ready",
+          setResult({
+            data: {
+              duration: buffer.duration,
+              error: null,
+              peaks: computePeaks(buffer, samples),
+              status: "ready",
+            },
+            key: `${samples}:${src}`,
           });
         }
-      })
-      .catch((error: unknown) => {
+      } catch (error) {
         if (!cancelled) {
-          setData({
-            duration: 0,
-            error: error instanceof Error ? error : new Error(String(error)),
-            peaks: null,
-            status: "error",
+          setResult({
+            data: {
+              ...IDLE,
+              error: error instanceof Error ? error : new Error(String(error)),
+              status: "error",
+            },
+            key: `${samples}:${src}`,
           });
         }
-      });
+      }
+    };
+    load();
     return () => {
       cancelled = true;
     };
   }, [samples, src]);
 
-  return data;
+  const direct = useMemo<WaveformData | null>(() => {
+    if (!src || typeof src === "string") {
+      return null;
+    }
+    return {
+      duration: src.duration,
+      error: null,
+      peaks: computePeaks(src, samples),
+      status: "ready",
+    };
+  }, [samples, src]);
+
+  if (!src) {
+    return IDLE;
+  }
+  if (direct) {
+    return direct;
+  }
+  return result?.key === key ? result.data : LOADING;
 };
