@@ -1,0 +1,112 @@
+---
+title: Sound Pad
+description: A trigger pad with modes, a hotkey, playback progress and an accent colour.
+---
+
+<ComponentPreview name="sound-pad-demo" />
+
+## Installation
+
+```npm
+npx shadcn@latest add @audiocn/sound-pad
+```
+
+## Usage
+
+```tsx
+const airhorn = useSound("/sounds/airhorn.mp3");
+
+<SoundPad hotkey="1" onTrigger={airhorn.play} playing={airhorn.isPlaying}>
+  <SoundPadLabel>Airhorn</SoundPadLabel>
+  <SoundPadShortcut />
+  <SoundPadProgress source={airhorn.progress} />
+</SoundPad>;
+```
+
+The pad plays nothing itself. It reports triggers; [`useSound`](/docs/hooks/use-sound)
+or your own engine does the playback.
+
+## Anatomy
+
+```tsx
+<SoundPadGrid>
+  <SoundPad>
+    <SoundPadIcon />
+    <SoundPadLabel />
+    <SoundPadShortcut />
+    <SoundPadProgress />
+  </SoundPad>
+</SoundPadGrid>
+```
+
+## Modes
+
+| Mode | Behaviour |
+| --- | --- |
+| `one-shot` | Every press triggers; pressing again restarts |
+| `toggle` | Press to start, press again to stop |
+| `hold` | Plays while held |
+| `loop` | Like toggle, and marks the pad as looping |
+
+## Examples
+
+### A grid with hotkeys
+
+Press 1–8 while the grid has focus. Whoosh toggles and the drum roll plays only
+while held.
+
+<ComponentPreview name="sound-pad-grid" />
+
+## Theming
+
+| Variable or attribute | Meaning |
+| --- | --- |
+| `--pad-accent` | Set by `accent`, default `primary` |
+| `--pad-progress` | Live progress, 0..1 |
+| `data-playing`, `data-pressed`, `data-mode`, `data-loading` | State |
+
+## Accessibility
+
+A pad is a real `<button>`. In toggle and loop modes it has `aria-pressed`. The
+grid moves focus between pads with the arrow keys, and hotkeys are announced
+with `aria-keyshortcuts`. Global hotkeys never fire while someone is typing in a
+field.
+
+## API reference
+
+### SoundPad
+
+<PropsTable
+  rows={[
+    ["onTrigger", "() => void", null, null],
+    ["onStop", "() => void", null, null],
+    ["playing", "boolean", "false", null],
+    ["mode", '"one-shot" | "toggle" | "hold" | "loop"', '"one-shot"', null],
+    ["hotkey", "string", null, "Active when the grid enables hotkeys."],
+    ["loading", "boolean", "false", "The sound is not ready yet."],
+    ["accent", "string", null, "A CSS colour."],
+    ["variant", '"default" | "outline" | "ghost"', '"default"', null],
+    ["size", '"sm" | "default" | "lg"', '"default"', null],
+    ["disabled", "boolean", "false", null],
+  ]}
+/>
+
+### SoundPadGrid
+
+<PropsTable
+  rows={[
+    ["columns", "number", "4", "Also settable with a class."],
+    ["hotkeys", "boolean", "false", "Listen for pad hotkeys."],
+    ["hotkeyScope", '"focus" | "global"', '"focus"', "global listens on the whole page."],
+  ]}
+/>
+
+### SoundPadProgress
+
+<PropsTable
+  rows={[
+    ["value", "number", null, "0..1, declarative."],
+    ["source", "FrameSource<number> | null", null, "Smooth progress with no renders."],
+    ["variant", '"bar" | "fill" | "ring"', '"bar"', null],
+  ]}
+/>

@@ -1,0 +1,84 @@
+---
+title: Track List
+description: A list of tracks with active and playing states and arrow-key navigation.
+---
+
+<ComponentPreview name="track-list-demo" />
+
+## Installation
+
+```npm
+npx shadcn@latest add @audiocn/track-list
+```
+
+## Usage
+
+```tsx
+<TrackList>
+  {tracks.map((track, index) => (
+    <TrackListItem
+      active={track.id === current}
+      key={track.id}
+      onSelect={() => play(track)}
+      playing={track.id === current && playing}
+    >
+      <TrackListItemIndex>{index + 1}</TrackListItemIndex>
+      <TrackListItemContent>
+        <TrackListItemTitle>{track.title}</TrackListItemTitle>
+      </TrackListItemContent>
+    </TrackListItem>
+  ))}
+</TrackList>
+```
+
+`TrackListItemIndex` shows its children, or a small animated equaliser while
+the item is playing.
+
+## Anatomy
+
+```tsx
+<TrackList>
+  <TrackListItem>
+    <TrackListItemIndex />
+    <TrackListItemArtwork />
+    <TrackListItemContent>
+      <TrackListItemTitle />
+      <TrackListItemDescription />
+    </TrackListItemContent>
+    <TrackListItemDuration />
+    <TrackListItemActions />
+  </TrackListItem>
+</TrackList>
+```
+
+## Accessibility
+
+- Up and Down move between items; Home and End jump; Enter or Space selects.
+- The current item has `aria-current`.
+- Buttons inside `TrackListItemActions` stay reachable with Tab and do not
+  select the item.
+
+Reordering is a recipe with your drag-and-drop library of choice, not built in.
+
+## API reference
+
+### TrackList
+
+<PropsTable
+  rows={[
+    ["size", '"sm" | "default" | "lg"', '"default"', "Row height."],
+    ["variant", '"default" | "outline"', '"default"', null],
+  ]}
+/>
+
+### TrackListItem
+
+<PropsTable
+  rows={[
+    ["active", "boolean", "false", "The current track."],
+    ["playing", "boolean", "false", "The current track, playing."],
+    ["disabled", "boolean", "false", null],
+    ["onSelect", "() => void", null, "Click, Enter or Space."],
+    ["render", "ReactElement | function", "<li>", null],
+  ]}
+/>

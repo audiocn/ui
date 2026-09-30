@@ -1,0 +1,131 @@
+---
+title: Channel Strip
+description: One channel of a mixer, as a row or a console strip, composed from the parts you need.
+---
+
+<ComponentPreview name="channel-strip-demo" />
+
+## Installation
+
+```npm
+npx shadcn@latest add @audiocn/channel-strip
+```
+
+`channel-strip` is layout and context only. Install the meters, faders and
+toggles you put inside it separately, or install a
+[block](/docs/blocks/system-audio-mixer) that brings everything.
+
+## Usage
+
+```tsx
+import {
+  ChannelStrip,
+  ChannelStripHeader,
+  ChannelStripMeter,
+  ChannelStripTitle,
+} from "@/components/ui/channel-strip";
+```
+
+```tsx
+<ChannelStrip muted={muted}>
+  <ChannelStripHeader>
+    <ChannelStripTitle>Microphone</ChannelStripTitle>
+  </ChannelStripHeader>
+  <ChannelStripMeter>
+    <LevelMeter source={analyser.meter} />
+  </ChannelStripMeter>
+</ChannelStrip>
+```
+
+Every part is optional. The smallest useful strip is a title, a meter and a
+mute toggle.
+
+## Anatomy
+
+```tsx
+<ChannelStrip>
+  <ChannelStripHeader>
+    <ChannelStripIcon />
+    <ChannelStripText>
+      <ChannelStripTitle />
+      <ChannelStripDescription />
+    </ChannelStripText>
+    <ChannelStripStatus />
+    <ChannelStripActions />
+  </ChannelStripHeader>
+  <ChannelStripMeter />
+  <ChannelStripFader />
+  <ChannelStripValue />
+  <ChannelStripControls />
+  <ChannelStripNotice />
+</ChannelStrip>
+```
+
+## Examples
+
+### Console strips
+
+With `orientation="vertical"`, the meter and fader stand side by side.
+
+<ComponentPreview name="channel-strip-console" />
+
+### Notices
+
+<ComponentPreview name="channel-strip-notices" />
+
+## How it passes settings down
+
+A strip provides its `orientation`, `size` and `disabled` state to the audiocn
+components inside it, so meters and faders line up without extra props. When
+the strip is `muted` or `dimmed`, meters inside it render dimmed. Explicit props
+on a child always win. `useChannelStrip()` reads the strip's state in your own
+parts.
+
+## Layout
+
+The strip is a CSS grid with named areas: `header`, `meter`, `fader`,
+`value`, `controls` and `notice`. Each part places itself in its area, so you
+can rearrange the strip by overriding `grid-template-areas` with a class.
+
+## Theming
+
+| Variable or attribute | Meaning |
+| --- | --- |
+| `--channel-accent` | Set by `accent`, drawn as a colour tag |
+| `--channel-strip-width` | Width of a vertical strip, default `6.5rem` |
+| `data-muted`, `data-solo`, `data-dimmed`, `data-selected`, `data-disabled` | Channel state |
+| `data-clipping` | A meter inside the strip is clipping |
+| `data-orientation`, `data-variant`, `data-size` | Current settings |
+
+## Accessibility
+
+The strip is a `group` named by `ChannelStripTitle`. A notice is a `status`,
+or an `alert` for the `destructive` variant. State is never shown by colour
+alone: pair a muted strip with a pressed mute toggle and a status label.
+
+## API reference
+
+### ChannelStrip
+
+<PropsTable
+  rows={[
+    ["orientation", '"horizontal" | "vertical"', "from Mixer", "Horizontal is a row; vertical is a console strip."],
+    ["variant", '"default" | "card" | "ghost" | "master"', '"default"', null],
+    ["size", '"sm" | "default" | "lg"', "from Mixer", "Passed to controls inside."],
+    ["muted", "boolean", "false", "Styling and context only."],
+    ["solo", "boolean", "false", null],
+    ["dimmed", "boolean", "false", "Silenced by another channel's solo."],
+    ["selected", "boolean", "false", null],
+    ["disabled", "boolean", "false", "Disables every control inside."],
+    ["accent", "string", null, "A CSS colour for the colour tag."],
+    ["render", "ReactElement | function", "<div>", null],
+  ]}
+/>
+
+### ChannelStripStatus
+
+<PropsTable rows={[["tone", '"default" | "live" | "muted" | "warning" | "error"', '"default"', "Rendered with the shadcn Badge."]]} />
+
+### ChannelStripNotice
+
+<PropsTable rows={[["variant", '"default" | "warning" | "destructive"', '"default"', "Children can include an action button."]]} />

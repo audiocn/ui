@@ -1,0 +1,139 @@
+---
+title: Audio Player
+description: A composable audio player with transport, seeking, time, volume, rate, loop and keyboard shortcuts.
+---
+
+<ComponentPreview name="audio-player-demo" />
+
+## Installation
+
+```npm
+npx shadcn@latest add @audiocn/audio-player
+```
+
+## Usage
+
+```tsx
+import { AudioPlayer, AudioPlayerPlay, AudioPlayerSeek } from "@/components/ui/audio-player";
+```
+
+```tsx
+<AudioPlayer src="/episode.mp3">
+  <AudioPlayerPlay />
+  <AudioPlayerSeek />
+</AudioPlayer>
+```
+
+Every part is optional. A play button and a seek bar is a complete player.
+Buttons show a text label unless you pass an icon as children, so the component
+works with any icon set.
+
+## Anatomy
+
+```tsx
+<AudioPlayer>
+  <AudioPlayerArtwork />
+  <AudioPlayerTitle />
+  <AudioPlayerDescription />
+  <AudioPlayerControls>
+    <AudioPlayerPrevious />
+    <AudioPlayerSkipBack />
+    <AudioPlayerPlay />
+    <AudioPlayerSkipForward />
+    <AudioPlayerNext />
+  </AudioPlayerControls>
+  <AudioPlayerTime />
+  <AudioPlayerSeek />
+  <AudioPlayerTime type="remaining" />
+  <AudioPlayerVolume />
+  <AudioPlayerRate />
+  <AudioPlayerLoop />
+</AudioPlayer>
+```
+
+## Examples
+
+### Compact
+
+<ComponentPreview name="audio-player-compact" />
+
+### With a waveform and a playlist
+
+The [Music Player](/docs/blocks/music-player) block uses a
+[Waveform](/docs/components/waveform) as the seek bar and a
+[Track List](/docs/components/track-list) for the queue.
+
+### Your own player state
+
+Create the player with [`useAudioPlayer`](/docs/hooks/use-audio-player) and pass
+it in, to reach it from outside, route it into a mixer or analyse it.
+
+```tsx
+const player = useAudioPlayer({ src });
+const analyser = useAudioAnalyser(player.element);
+
+<AudioPlayer player={player}>…</AudioPlayer>;
+```
+
+`useAudioPlayerContext()` reads the player from inside any part.
+
+## Keyboard
+
+While focus is inside the player:
+
+| Key | Action |
+| --- | --- |
+| Space or K | Play or pause |
+| Left / Right | Seek 5 s |
+| Shift + Left / Right | Seek 15 s |
+| Up / Down | Volume |
+| M | Mute |
+| Home / End | Start or end |
+
+## Theming
+
+| Data attribute | Meaning |
+| --- | --- |
+| `data-playing`, `data-paused`, `data-loading`, `data-ended`, `data-error`, `data-muted` | Player state, on the root |
+
+## API reference
+
+### AudioPlayer
+
+<PropsTable
+  rows={[
+    ["src", "string", null, null],
+    ["player", "AudioPlayerController", null, "Use an external player from useAudioPlayer."],
+    ["autoPlay / loop / muted", "boolean", "false", null],
+    ["volume", "number", "1", "0..1."],
+    ["playbackRate", "number", "1", null],
+    ["preload", '"none" | "metadata" | "auto"', '"metadata"', null],
+    ["crossOrigin", '"anonymous" | "use-credentials"', null, "Needed to analyse remote audio."],
+    ["onPlay / onPause / onEnded", "() => void", null, null],
+    ["onTimeUpdate", "(time) => void", null, null],
+    ["onPrevious / onNext", "() => void", null, "Enable the previous and next buttons."],
+    ["onError", "(error: MediaError | null) => void", null, null],
+    ["shortcuts", "boolean", "true", "Keyboard shortcuts while focus is inside."],
+  ]}
+/>
+
+### AudioPlayerPlay
+
+<PropsTable rows={[["children", "ReactNode | ({ playing, loading }) => ReactNode", null, "An icon, or a function of the state."]]} />
+
+### AudioPlayerSkipBack, AudioPlayerSkipForward
+
+<PropsTable rows={[["seconds", "number", "10", null]]} />
+
+### AudioPlayerTime
+
+<PropsTable
+  rows={[
+    ["type", '"current" | "remaining" | "duration"', '"current"', null],
+    ["format", "(seconds, type) => string", "formatTime", null],
+  ]}
+/>
+
+### AudioPlayerRate
+
+<PropsTable rows={[["rates", "number[]", "[0.5, 0.75, 1, 1.25, 1.5, 2]", "Cycles on click."]]} />

@@ -1,0 +1,109 @@
+---
+title: Waveform
+description: A static waveform of a clip with a smooth playhead, seeking, hover time, regions and markers.
+---
+
+<ComponentPreview name="waveform-demo" />
+
+## Installation
+
+```npm
+npx shadcn@latest add @audiocn/waveform
+```
+
+## Usage
+
+```tsx
+import { Waveform } from "@/components/ui/waveform";
+```
+
+```tsx
+const player = useAudioPlayer({ src });
+const { peaks, duration } = useWaveformData(src);
+
+<Waveform
+  duration={duration}
+  onSeekCommitted={player.seek}
+  peaks={peaks}
+  time={player.time}
+/>;
+```
+
+Pass `time` (a frame source) for a playhead that moves every frame without
+re-rendering React, or `currentTime` for plain controlled use.
+
+## Anatomy
+
+```tsx
+<Waveform>
+  <WaveformCanvas />
+  <WaveformCursor />
+  <WaveformHover />
+  <WaveformRegion />
+  <WaveformMarker />
+</Waveform>
+```
+
+## Examples
+
+### Variants
+
+<ComponentPreview name="waveform-variants" />
+
+### Regions and markers
+
+<ComponentPreview name="waveform-regions" />
+
+## Theming
+
+| Variable or attribute | Meaning |
+| --- | --- |
+| `--waveform` | Unplayed colour, default `muted-foreground` |
+| `--waveform-progress` | Played colour, default `primary` |
+| `--waveform-cursor` | Playhead colour |
+| `--waveform-position` | Live playhead position, 0..1 |
+| `data-loading`, `data-dragging`, `data-disabled` | State |
+
+## Accessibility
+
+When interactive, the waveform is a slider with `aria-valuetext` such as
+"1:24 of 3:40". Arrow keys seek by `step`, Shift by `largeStep`, and Home and
+End jump to the ends. Region edges are separate sliders.
+
+## API reference
+
+### Waveform
+
+<PropsTable
+  rows={[
+    ["peaks", "ArrayLike<number> | null", null, "0..1, from useWaveformData."],
+    ["duration", "number", null, "Seconds."],
+    ["currentTime", "number", null, "Controlled playhead in seconds."],
+    ["defaultCurrentTime", "number", "0", null],
+    ["time", "FrameSource<number> | null", null, "A smooth playhead with no renders."],
+    ["onSeek", "(time) => void", null, "While seeking."],
+    ["onSeekCommitted", "(time) => void", null, "On release or after keyboard seeking."],
+    ["step / largeStep", "number", "5 / 15", "Seconds for the keyboard."],
+    ["variant", '"bars" | "line" | "mirror"', '"bars"', null],
+    ["barWidth / barGap / barRadius", "number", "2 / 1 / 1", "Pixels."],
+    ["interactive", "boolean", "true", "false is display only."],
+    ["loading", "boolean", "false", "Shows a skeleton."],
+    ["disabled", "boolean", "false", null],
+  ]}
+/>
+
+### WaveformRegion
+
+<PropsTable
+  rows={[
+    ["start / end", "number", null, "Seconds."],
+    ["onValueChange", "({ start, end }) => void", null, null],
+    ["resizable", "boolean", "true", "Drag the edges."],
+    ["draggable", "boolean", "true", "Drag the whole region."],
+    ["minLength", "number", "0.1", "Seconds."],
+  ]}
+/>
+
+### WaveformMarker
+
+<PropsTable rows={[["time", "number", null, "Seconds. Children become the label."]]} />
