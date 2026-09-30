@@ -119,7 +119,7 @@ const MixerPad = ({
       accent={sound.accent}
       hotkey={sound.hotkey}
       loading={!player.isLoaded}
-      onTrigger={player.play}
+      onTrigger={() => player.play()}
       playing={player.isPlaying}
       size="sm"
     >
@@ -226,7 +226,7 @@ export const SystemAudioMixer = ({
           </Tabs>
           <Button
             aria-label="Reset mixer"
-            onClick={mixer.reset}
+            onClick={() => mixer.reset()}
             size="icon-sm"
             variant="ghost"
           >
@@ -256,7 +256,7 @@ export const SystemAudioMixer = ({
                     <AudioDeviceSelect
                       devices={devices.devices}
                       loading={devices.isLoading}
-                      onRequestPermission={devices.requestPermission}
+                      onRequestPermission={() => devices.requestPermission()}
                       onValueChange={setDeviceId}
                       permission={
                         devices.permission === "unsupported"
@@ -335,7 +335,7 @@ export const SystemAudioMixer = ({
                 <Button
                   aria-label={player.playing ? "Pause music" : "Play music"}
                   disabled={!track}
-                  onClick={player.toggle}
+                  onClick={() => player.toggle()}
                   size="icon-xs"
                   variant="ghost"
                 >

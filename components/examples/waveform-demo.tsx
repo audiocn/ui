@@ -23,7 +23,7 @@ const WaveformDemo = () => {
         className="h-20"
         duration={waveform.duration}
         loading={waveform.status !== "ready"}
-        onSeekCommitted={player.seek}
+        onSeekCommitted={(value) => player.seek(value)}
         peaks={waveform.peaks}
         time={player.time}
       >
@@ -34,7 +34,7 @@ const WaveformDemo = () => {
       <Button
         className="self-start"
         disabled={!track}
-        onClick={player.toggle}
+        onClick={() => player.toggle()}
         size="sm"
         variant="outline"
       >

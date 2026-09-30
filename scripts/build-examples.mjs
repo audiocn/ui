@@ -5,13 +5,12 @@ const root = process.cwd();
 const examplesDir = path.join(root, "components/examples");
 const outFile = path.join(root, "components/docs/example-registry.tsx");
 
-const files = (await readdir(examplesDir))
-  .filter((file) => file.endsWith(".tsx"))
-  .toSorted();
+const entries = await readdir(examplesDir);
+const files = entries.filter((file) => file.endsWith(".tsx")).toSorted();
 
 const entries = files
   .map((file) => {
-    const name = file.replace(/\.tsx$/, "");
+    const name = file.replace(/\.tsx$/u, "");
     return `  "${name}": dynamic(() => import("@/components/examples/${name}")),`;
   })
   .join("\n");

@@ -241,7 +241,7 @@ export const MusicPlayer = ({
               currentTime={player.currentTime}
               duration={waveform.duration || player.duration}
               loading={waveform.status === "loading"}
-              onSeekCommitted={player.seek}
+              onSeekCommitted={(value) => player.seek(value)}
               peaks={waveform.peaks}
               time={player.time}
             >

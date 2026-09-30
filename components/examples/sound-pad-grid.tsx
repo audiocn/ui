@@ -26,8 +26,8 @@ const Pad = ({ sound }: { sound: DemoSoundSource }) => {
       hotkey={sound.hotkey}
       loading={!player.isLoaded}
       mode={mode}
-      onStop={player.stop}
-      onTrigger={player.play}
+      onStop={() => player.stop()}
+      onTrigger={() => player.play()}
       playing={player.isPlaying}
     >
       <SoundPadLabel>{sound.label}</SoundPadLabel>

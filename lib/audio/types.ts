@@ -29,7 +29,7 @@ export interface VisualFrame {
 
 /** Anything that can push frames to subscribers. */
 export interface FrameSource<T> {
-  subscribe: (callback: (frame: T) => void) => () => void;
+  subscribe: (listener: (frame: T) => void) => () => void;
 }
 
 export type MeterZoneName = "ok" | "warn" | "clip";

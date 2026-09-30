@@ -22,7 +22,7 @@ const SoundPadDemo = () => {
       className="w-40"
       hotkey="1"
       loading={!airhorn.isLoaded}
-      onTrigger={airhorn.play}
+      onTrigger={() => airhorn.play()}
       playing={airhorn.isPlaying}
     >
       <SoundPadIcon>

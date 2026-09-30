@@ -110,8 +110,8 @@ const Pad = ({ sound, bus, stopSignal, onChange, onRemove }: PadProps) => {
             hotkey={sound.hotkey}
             loading={!player.isLoaded}
             mode={mode}
-            onStop={player.stop}
-            onTrigger={player.play}
+            onStop={() => player.stop()}
+            onTrigger={() => player.play()}
             playing={player.isPlaying}
           />
         }

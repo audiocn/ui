@@ -72,7 +72,7 @@ export const MixerMasterStrip = ({ mixer, meter }: MixerMasterStripProps) => (
         aria-label="Master volume"
         max={6}
         min={-60}
-        onValueChange={mixer.setMasterGain}
+        onValueChange={(value) => mixer.setMasterGain(value)}
         silenceAtMin
         size="sm"
         taper="audio"
@@ -90,7 +90,7 @@ export const MixerMasterStrip = ({ mixer, meter }: MixerMasterStripProps) => (
     <ChannelStripControls>
       <MuteToggle
         aria-label="Mute master"
-        onPressedChange={mixer.setMasterMuted}
+        onPressedChange={(value) => mixer.setMasterMuted(value)}
         pressed={mixer.master.muted}
         size="sm"
       >

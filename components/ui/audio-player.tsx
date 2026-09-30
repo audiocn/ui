@@ -577,8 +577,8 @@ export const AudioPlayerVolume = ({
       className={cn("w-32", className)}
       data-slot="audio-player-volume"
       muted={player.muted}
-      onMutedChange={player.setMuted}
-      onValueChange={player.setVolume}
+      onMutedChange={(value) => player.setMuted(value)}
+      onValueChange={(value) => player.setVolume(value)}
       value={player.volume}
       {...props}
     >

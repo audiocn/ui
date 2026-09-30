@@ -25,10 +25,10 @@ export const createFrameEmitter = <T>(): FrameEmitter<T> => {
     get latest() {
       return latest;
     },
-    subscribe: (callback) => {
-      subscribers.add(callback);
+    subscribe: (listener) => {
+      subscribers.add(listener);
       return () => {
-        subscribers.delete(callback);
+        subscribers.delete(listener);
       };
     },
   };
@@ -74,11 +74,11 @@ export const createFrameRelay = <T>(): FrameRelay<T> => {
       source = next;
       attach();
     },
-    subscribe: (callback) => {
-      subscribers.add(callback);
+    subscribe: (listener) => {
+      subscribers.add(listener);
       attach();
       return () => {
-        subscribers.delete(callback);
+        subscribers.delete(listener);
         if (subscribers.size === 0) {
           release();
         }

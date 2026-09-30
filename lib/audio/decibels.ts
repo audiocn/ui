@@ -112,10 +112,10 @@ export const formatDb = (db: number, options: FormatDbOptions = {}): string => {
 };
 
 /** Sample peak of a block of samples, in dBFS. */
-export const peakDb = (samples: ArrayLike<number>): number => {
+export const peakDb = (samples: Iterable<number>): number => {
   let peak = 0;
-  for (let index = 0; index < samples.length; index += 1) {
-    const magnitude = Math.abs(samples[index] ?? 0);
+  for (const sample of samples) {
+    const magnitude = Math.abs(sample);
     if (magnitude > peak) {
       peak = magnitude;
     }
@@ -124,14 +124,15 @@ export const peakDb = (samples: ArrayLike<number>): number => {
 };
 
 /** RMS level of a block of samples, in dBFS. */
-export const rmsDb = (samples: ArrayLike<number>): number => {
-  if (samples.length === 0) {
+export const rmsDb = (samples: Iterable<number>): number => {
+  let sumOfSquares = 0;
+  let count = 0;
+  for (const sample of samples) {
+    sumOfSquares += sample * sample;
+    count += 1;
+  }
+  if (count === 0) {
     return SILENCE_DB;
   }
-  let sumOfSquares = 0;
-  for (let index = 0; index < samples.length; index += 1) {
-    const sample = samples[index] ?? 0;
-    sumOfSquares += sample * sample;
-  }
-  return gainToDb(Math.sqrt(sumOfSquares / samples.length));
+  return gainToDb(Math.sqrt(sumOfSquares / count));
 };

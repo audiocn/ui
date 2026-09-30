@@ -150,7 +150,7 @@ const MixerDemo = () => {
           <ChannelStripFader>
             <Fader
               aria-label="Master volume"
-              onValueChange={mixer.setMasterGain}
+              onValueChange={(value) => mixer.setMasterGain(value)}
               size="sm"
               value={mixer.master.gainDb}
             />

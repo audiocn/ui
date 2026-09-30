@@ -209,7 +209,7 @@ export const MicSetup = ({
             <AudioDeviceSelect
               devices={devices.devices}
               loading={devices.isLoading}
-              onRequestPermission={devices.requestPermission}
+              onRequestPermission={() => devices.requestPermission()}
               onValueChange={setDeviceId}
               permission={
                 devices.permission === "unsupported"
