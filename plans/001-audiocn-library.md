@@ -1,6 +1,6 @@
 # 001 — audiocn: a shadcn audio component library
 
-Status: PLANNED (2026-09-30). Nothing is built yet.
+Status: IMPLEMENTED (2026-09-30). See "Changes made while building" at the end.
 
 ## Summary
 
@@ -344,3 +344,36 @@ Not planned yet, and not blocking Phase 0: landing page design, CI, versioning a
 ## Open questions
 
 - Whether to ship Radix variants of `audio-device-select` and the blocks before Videorc adoption.
+
+## Changes made while building
+
+The specs in plans 002–008 were written before any code. These are the places
+where the build departs from them, and why.
+
+- **Layout.** Source files live at the paths a consumer gets
+  (`components/ui`, `hooks`, `lib/audio`, `components/blocks`) instead of
+  `registry/audiocn/`. Imports are then identical in the docs app and after
+  install, and the CLI's standard alias rewriting is all that is needed.
+- **Props tables** are written in MDX with a `PropsTable` component.
+  `fumadocs-typescript` needs the TypeScript 7 native API, which this repo does
+  not use.
+- **Imperative handles** use an `actionsRef` prop, following Base UI's naming.
+  `ref` stays a plain DOM ref, so components still work as Base UI `render`
+  targets.
+- **Tapers** expose `toPosition` and `toValue` (not `toDb`), because the same
+  interface serves log scales for frequency and time.
+- **Master strip** is `ChannelStrip variant="master"`, as planned in plan 006.
+- **Extra parts** that the specs lacked but the layouts needed:
+  `LevelMeterChannels`, `KnobDial`, `ChannelStripText`, `useAudioConfig`
+  (the context strips and mixers pass down), `useReducedMotion`,
+  `createFrameRelay` and `createAnalyserTap`.
+- **Level meter semantics** set `role="meter"` and its ARIA values directly
+  on the DOM, instead of using Base UI `Meter`, so updates skip React renders.
+- **Mixer channels** gained a `monitor` field: a per-channel send to the
+  speakers, off by default for the microphone to avoid feedback.
+- **Demo audio** is synthesised in the browser with `OfflineAudioContext`, so no
+  audio files ship. Blocks default to empty track and sound lists; the docs pass
+  the generated audio in.
+- **Theme picker** offers four colour themes defined in `app/globals.css`
+  rather than switching shadcn presets.
+
