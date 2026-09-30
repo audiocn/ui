@@ -675,6 +675,53 @@
           "type": "registry:ui"
         }
       ]
+    },
+    {
+      "name": "system-audio-mixer",
+      "type": "registry:block",
+      "title": "System Audio Mixer",
+      "description": "The complete mixer: microphone, system audio, music and sound pads with meters, faders, mute, solo, monitor and ducking, a limited master and a mixed output stream, all running on Web Audio.",
+      "dependencies": [
+        "@phosphor-icons/react"
+      ],
+      "registryDependencies": [
+        "button",
+        "switch",
+        "tabs",
+        "popover",
+        "@audiocn/mixer",
+        "@audiocn/channel-strip",
+        "@audiocn/level-meter",
+        "@audiocn/fader",
+        "@audiocn/channel-toggle",
+        "@audiocn/audio-device-select",
+        "@audiocn/sound-pad",
+        "@audiocn/use-mixer",
+        "@audiocn/use-web-audio-mixer",
+        "@audiocn/use-microphone",
+        "@audiocn/use-system-audio",
+        "@audiocn/use-audio-devices",
+        "@audiocn/use-audio-player",
+        "@audiocn/use-sound",
+        "@audiocn/use-audio-context"
+      ],
+      "files": [
+        {
+          "path": "components/blocks/system-audio-mixer/system-audio-mixer.tsx",
+          "type": "registry:block"
+        },
+        {
+          "path": "components/blocks/system-audio-mixer/mixer-source-strip.tsx",
+          "type": "registry:block"
+        },
+        {
+          "path": "components/blocks/system-audio-mixer/mixer-master-strip.tsx",
+          "type": "registry:block"
+        }
+      ],
+      "categories": [
+        "mixer"
+      ]
     }
   ]
 }
