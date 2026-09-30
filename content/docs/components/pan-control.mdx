@@ -21,9 +21,9 @@ import { PanControl } from "@/components/ui/pan-control";
 <PanControl value={pan} onValueChange={setPan} />
 ```
 
-The value runs from −1 (left) to 1 (right). Dragging near the centre snaps to it, and double-clicking returns to it. `formatPan` turns a value into "L30", "C" or "R30".
+The value runs from −1 (left) to 1 (right). Dragging near the centre snaps to it, and double-clicking returns to it. `formatPan` turns a value into "L30", "C" or "R30", and `parsePan` reads that text back.
 
-For a rotary pan, use a [Knob](/docs/components/knob) with `min={-1}`, `max={1}`, `origin={0}` and `format={formatPan}`.
+For a rotary pan, use a [Knob](/docs/components/knob) with `min={-1}`, `max={1}`, `origin={0}` `format={formatPan}` and `parse={parsePan}`.
 
 ## Accessibility
 

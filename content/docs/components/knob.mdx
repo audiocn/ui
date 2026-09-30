@@ -21,7 +21,16 @@ import { Knob, KnobLabel, KnobValue } from "@/components/ui/knob";
 <Knob min={-24} max={24} origin={0} value={gain} onValueChange={setGain} />
 ```
 
-Drag up to increase and down to decrease. Hold Alt for fine control, and double-click to reset.
+Drag up to increase and down to decrease.
+
+| Action | Result |
+| --- | --- |
+| Drag | Turns the knob |
+| Shift+drag, Shift+wheel | Ten times finer, for precise adjustment. Press or release Shift mid-drag without a jump |
+| Double-click the dial, Alt+click | Resets to `resetValue` |
+| Double-click the value or label, Enter on the dial | Type a value; Enter applies it, Escape cancels |
+
+The value keeps one width across the whole range, so the layout never moves while you turn it.
 
 ## Anatomy
 
@@ -58,7 +67,7 @@ Style the SVG parts with `stroke-*` and `fill-*` classes.
 
 ## Accessibility
 
-The dial is a focusable slider with `aria-valuetext` from `format`, named by `KnobLabel`. It supports the same keys as the [fader](/docs/components/fader#keyboard).
+The dial is a focusable slider with `aria-valuetext` from `format`, named by `KnobLabel`. It supports the same keys as the [fader](/docs/components/fader#keyboard), and Enter opens the value editor.
 
 ## API reference
 
@@ -70,16 +79,21 @@ The dial is a focusable slider with `aria-valuetext` from `format`, named by `Kn
       "onValueChange",
       "(value, details) => void",
       null,
-      "details.reason: drag, keyboard, wheel or reset.",
+      "details.reason: drag, keyboard, wheel, reset or input.",
     ],
     ["onValueCommitted", "(value) => void", null, null],
     ["min / max", "number", "0 / 100", null],
-    ["step / largeStep / fineStep", "number", "1 / 10 / step ÷ 10", null],
+    [
+      "step / largeStep / fineStep",
+      "number",
+      "1 / 10 / step ÷ 10",
+      "fineStep applies to Shift+drag, Shift+wheel and Alt+arrow.",
+    ],
     [
       "resetValue",
       "number",
       "defaultValue ?? min",
-      "Double-click restores it.",
+      "Double-click or Alt+click restores it.",
     ],
     [
       "origin",
@@ -98,7 +112,26 @@ The dial is a focusable slider with `aria-valuetext` from `format`, named by `Kn
     ["scale", '"linear" | "log"', '"linear"', null],
     ["allowWheel", "boolean", "false", null],
     ["format", "(value: number) => string", "String", null],
+    [
+      "parse",
+      "(text: string) => number | null",
+      "parseKnobValue",
+      'Reads a typed value. The default takes the first number and reads "k" as thousands. Use parsePan for pan knobs.',
+    ],
     ["size", '"sm" | "default" | "lg"', '"default"', null],
     ["disabled", "boolean", "false", null],
+  ]}
+/>
+
+### KnobValue
+
+<PropsTable
+  rows={[
+    [
+      "editable",
+      "boolean",
+      "true",
+      "Double-click, or Enter on the dial, to type a value.",
+    ],
   ]}
 />

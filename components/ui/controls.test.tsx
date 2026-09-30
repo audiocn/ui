@@ -5,8 +5,14 @@ import { describe, expect, it, vi } from "vitest";
 import { AudioDeviceSelect } from "@/components/ui/audio-device-select";
 import { MuteToggle } from "@/components/ui/channel-toggle";
 import { Fader } from "@/components/ui/fader";
-import { Knob, KnobDial } from "@/components/ui/knob";
-import { formatPan, PanControl } from "@/components/ui/pan-control";
+import {
+  Knob,
+  KnobDial,
+  KnobLabel,
+  KnobValue,
+  parseKnobValue,
+} from "@/components/ui/knob";
+import { formatPan, PanControl, parsePan } from "@/components/ui/pan-control";
 import {
   ParameterSlider,
   ParameterSliderControl,
@@ -109,6 +115,76 @@ describe("Knob", () => {
     expect(dial.style.getPropertyValue("--knob-angle")).not.toBe("");
     expect(dial.style.getPropertyValue("--from-test")).toBe("1");
   });
+
+  it("resets on Alt+click", () => {
+    const onValueChange = vi.fn();
+    render(
+      <Knob aria-label="Gain" defaultValue={50} onValueChange={onValueChange} />
+    );
+    const dial = screen.getByRole("slider");
+    fireEvent.keyDown(dial, { key: "ArrowUp" });
+    fireEvent.pointerDown(dial, { altKey: true, button: 0 });
+    expect(onValueChange).toHaveBeenLastCalledWith(50, { reason: "reset" });
+  });
+
+  it("drags ten times finer with Shift, without jumping when Shift changes", () => {
+    const onValueChange = vi.fn();
+    render(
+      <Knob aria-label="Gain" defaultValue={50} onValueChange={onValueChange} />
+    );
+    const dial = screen.getByRole("slider");
+    dial.setPointerCapture = vi.fn();
+    dial.hasPointerCapture = vi.fn(() => true);
+    dial.releasePointerCapture = vi.fn();
+    fireEvent.pointerDown(dial, { button: 0, clientY: 100 });
+    // 20px up is a tenth of the 200px sensitivity: 10 units, or 1 with Shift.
+    fireEvent.pointerMove(dial, { clientY: 80, shiftKey: true });
+    expect(onValueChange).toHaveBeenLastCalledWith(51, expect.anything());
+    fireEvent.pointerMove(dial, { clientY: 60 });
+    expect(onValueChange).toHaveBeenLastCalledWith(61, expect.anything());
+  });
+
+  it("edits the value on double-click and returns focus to the dial", () => {
+    const onValueCommitted = vi.fn();
+    render(
+      <Knob defaultValue={50} onValueCommitted={onValueCommitted}>
+        <KnobDial />
+        <KnobValue />
+        <KnobLabel>Gain</KnobLabel>
+      </Knob>
+    );
+    fireEvent.doubleClick(screen.getByText("50"));
+    const input = screen.getByRole("textbox", { name: "Value" });
+    fireEvent.change(input, { target: { value: "72" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(onValueCommitted).toHaveBeenLastCalledWith(72);
+    expect(screen.getByText("72")).toBeInTheDocument();
+    expect(screen.getByRole("slider")).toHaveFocus();
+  });
+
+  it("opens the editor from the label or Enter, and Escape cancels", () => {
+    const onValueCommitted = vi.fn();
+    render(
+      <Knob defaultValue={50} onValueCommitted={onValueCommitted}>
+        <KnobDial />
+        <KnobValue />
+        <KnobLabel>Gain</KnobLabel>
+      </Knob>
+    );
+    fireEvent.doubleClick(screen.getByText("Gain"));
+    const input = screen.getByRole("textbox", { name: "Value" });
+    fireEvent.change(input, { target: { value: "10" } });
+    fireEvent.keyDown(input, { key: "Escape" });
+    expect(onValueCommitted).not.toHaveBeenCalled();
+    fireEvent.keyDown(screen.getByRole("slider"), { key: "Enter" });
+    expect(screen.getByRole("textbox", { name: "Value" })).toHaveValue("50");
+  });
+
+  it("reads typed values", () => {
+    expect(parseKnobValue("\u221212 dB")).toBe(-12);
+    expect(parseKnobValue("1.2k")).toBe(1200);
+    expect(parseKnobValue("gain")).toBeNull();
+  });
 });
 
 describe("PanControl", () => {
@@ -116,6 +192,11 @@ describe("PanControl", () => {
     expect(formatPan(0)).toBe("C");
     expect(formatPan(-0.3)).toBe("L30");
     expect(formatPan(1)).toBe("R100");
+    expect(parsePan("L30")).toBe(-0.3);
+    expect(parsePan("r15")).toBe(0.15);
+    expect(parsePan("C")).toBe(0);
+    expect(parsePan("-50")).toBe(-0.5);
+    expect(parsePan("left")).toBeNull();
   });
 
   it("describes its value", () => {

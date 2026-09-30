@@ -9,7 +9,7 @@ import {
   KnobTrack,
   KnobValue,
 } from "@/components/ui/knob";
-import { formatPan } from "@/components/ui/pan-control";
+import { formatPan, parsePan } from "@/components/ui/pan-control";
 import { formatDb } from "@/lib/audio/decibels";
 
 const formatHz = (hz: number) =>
@@ -38,6 +38,7 @@ const KnobDemo = () => (
       max={1}
       min={-1}
       origin={0}
+      parse={parsePan}
       step={0.05}
     >
       <KnobDial>

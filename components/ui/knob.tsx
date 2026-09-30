@@ -35,7 +35,12 @@ const PRECISION = 1e6;
 const DEGREES_TO_RADIANS = Math.PI / 180;
 const HALF_TURN = 180;
 
-export type KnobChangeReason = "drag" | "keyboard" | "wheel" | "reset";
+export type KnobChangeReason =
+  | "drag"
+  | "keyboard"
+  | "wheel"
+  | "reset"
+  | "input";
 
 export interface KnobChangeDetails {
   reason: KnobChangeReason;
@@ -50,6 +55,12 @@ interface KnobContextValue {
   labelId: string;
   disabled: boolean;
   format: (value: number) => string;
+  parse: (text: string) => number | null;
+  /** Characters in the widest value, for a steady value label. */
+  valueWidth: number;
+  /** A typed value is being entered in KnobValue. */
+  editing: boolean;
+  setEditing: (editing: boolean) => void;
 }
 
 const KnobContext = createContext<KnobContextValue | null>(null);
@@ -90,6 +101,38 @@ const useKnobDial = () => {
 };
 
 const roundValue = (value: number) => Math.round(value * PRECISION) / PRECISION;
+
+/** Points along the range sampled to find the widest value text. */
+const WIDTH_SAMPLES = 24;
+
+/** Characters in the widest value along the range, so the value keeps one width. */
+const widestValue = (
+  format: (value: number) => string,
+  taper: Taper,
+  snap: (value: number) => number
+) => {
+  let widest = 0;
+  for (let index = 0; index <= WIDTH_SAMPLES; index += 1) {
+    const sample = snap(taper.toValue(index / WIDTH_SAMPLES));
+    widest = Math.max(widest, format(sample).length);
+  }
+  return widest;
+};
+
+const NUMBER = /[-+]?(?:\d+\.?\d*|\.\d+)/u;
+const THOUSANDS = /\d\s*k/iu;
+const THOUSAND = 1000;
+
+/** The first number in the text. "−" counts as a minus and "k" as thousands. */
+export const parseKnobValue = (text: string): number | null => {
+  const normalized = text.replaceAll("\u2212", "-");
+  const match = NUMBER.exec(normalized);
+  if (!match) {
+    return null;
+  }
+  const number = Number(match[0]);
+  return THOUSANDS.test(normalized) ? number * THOUSAND : number;
+};
 
 const angleFor = (position: number, arc: number) => -arc / 2 + position * arc;
 
@@ -151,9 +194,13 @@ const incrementFor = (
   return event.shiftKey ? dial.largeStep : dial.step;
 };
 
+/**
+ * The next position, from the movement since the last pointer event, so
+ * pressing or releasing Shift mid-drag changes the speed without a jump.
+ */
 const dragPosition = (
   event: PointerEvent<HTMLDivElement>,
-  start: { x: number; y: number; position: number },
+  last: { x: number; y: number; position: number },
   dial: KnobDialContextValue,
   arc: number
 ) => {
@@ -166,10 +213,10 @@ const dragPosition = (
   }
   const delta =
     dial.dragDirection === "vertical"
-      ? start.y - event.clientY
-      : event.clientX - start.x;
-  const fine = event.altKey ? FINE_FACTOR : 1;
-  return clamp(start.position + (delta / dial.sensitivity) * fine, 0, 1);
+      ? last.y - event.clientY
+      : event.clientX - last.x;
+  const fine = event.shiftKey ? FINE_FACTOR : 1;
+  return clamp(last.position + (delta / dial.sensitivity) * fine, 0, 1);
 };
 
 const useDialWheel = (
@@ -185,16 +232,19 @@ const useDialWheel = (
     }
     const onWheel = (event: WheelEvent) => {
       const { current } = latest;
+      // Shift turns the wheel sideways on some systems.
+      const delta = event.deltaY || event.deltaX;
       if (
         !current.allowWheel ||
         document.activeElement !== element ||
-        event.deltaY === 0
+        delta === 0
       ) {
         return;
       }
       event.preventDefault();
-      const increment = event.altKey ? current.fineStep : current.step;
-      const direction = event.deltaY < 0 ? 1 : -1;
+      const fine = event.shiftKey || event.altKey;
+      const increment = fine ? current.fineStep : current.step;
+      const direction = delta < 0 ? 1 : -1;
       const next = current.quantize(
         current.latestRef.current + direction * increment,
         increment
@@ -215,7 +265,7 @@ export const KnobDial = ({
   style,
   ...props
 }: ComponentProps<"div">) => {
-  const { arc, disabled, format, labelId, position, value } =
+  const { arc, disabled, format, labelId, position, setEditing, value } =
     useKnob("KnobDial");
   const dial = useKnobDial();
   const dialRef = useRef<HTMLDivElement>(null);
@@ -225,8 +275,18 @@ export const KnobDial = ({
   const [dragging, setDragging] = useState(false);
   useDialWheel(dialRef, dial);
 
+  const reset = () => {
+    dial.change(dial.resetValue, { reason: "reset" });
+    dial.commit(dial.resetValue);
+  };
+
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (disabled) {
+      return;
+    }
+    if (event.key === "Enter") {
+      event.preventDefault();
+      setEditing(true);
       return;
     }
     const increment = incrementFor(event, dial);
@@ -244,6 +304,11 @@ export const KnobDial = ({
     if (disabled || event.button !== 0) {
       return;
     }
+    if (event.altKey) {
+      event.preventDefault();
+      reset();
+      return;
+    }
     event.currentTarget.setPointerCapture(event.pointerId);
     event.currentTarget.focus();
     dragRef.current = {
@@ -255,12 +320,13 @@ export const KnobDial = ({
   };
 
   const handlePointerMove = (event: PointerEvent<HTMLDivElement>) => {
-    const start = dragRef.current;
-    if (!start) {
+    const last = dragRef.current;
+    if (!last) {
       return;
     }
-    const next = dragPosition(event, start, dial, arc);
-    const increment = event.altKey ? dial.fineStep : dial.step;
+    const next = dragPosition(event, last, dial, arc);
+    dragRef.current = { position: next, x: event.clientX, y: event.clientY };
+    const increment = event.shiftKey ? dial.fineStep : dial.step;
     dial.change(dial.quantize(dial.taper.toValue(next), increment), {
       event: event.nativeEvent,
       reason: "drag",
@@ -297,11 +363,9 @@ export const KnobDial = ({
       data-dragging={dragging ? "" : undefined}
       data-slot="knob-dial"
       onDoubleClick={() => {
-        if (disabled) {
-          return;
+        if (!disabled) {
+          reset();
         }
-        dial.change(dial.resetValue, { reason: "reset" });
-        dial.commit(dial.resetValue);
       }}
       onKeyDown={handleKeyDown}
       onLostPointerCapture={endDrag}
@@ -392,15 +456,109 @@ export const KnobPointer = ({
   );
 };
 
-export const KnobValue = ({ className, ...props }: ComponentProps<"span">) => {
-  const { format, value } = useKnob("KnobValue");
+const focusDial = (from: HTMLElement) => {
+  from
+    .closest("[data-slot='knob']")
+    ?.querySelector<HTMLElement>("[data-slot='knob-dial']")
+    ?.focus();
+};
+
+/** The inline editor KnobValue shows while a value is typed. */
+const KnobValueInput = ({
+  className,
+  style,
+}: Pick<ComponentProps<"input">, "className" | "style">) => {
+  const { format, parse, setEditing, value } = useKnob("KnobValue");
+  const dial = useKnobDial();
+  const [draft, setDraft] = useState(() => format(value));
+  const doneRef = useRef(false);
+  const focusInput = useCallback((node: HTMLInputElement | null) => {
+    node?.focus();
+    node?.select();
+  }, []);
+
+  const finish = (apply: boolean) => {
+    if (doneRef.current) {
+      return;
+    }
+    doneRef.current = true;
+    setEditing(false);
+    const parsed = apply ? parse(draft) : null;
+    if (parsed === null || Number.isNaN(parsed)) {
+      return;
+    }
+    const next = dial.quantize(
+      clamp(parsed, dial.min, dial.max),
+      Math.min(dial.fineStep, dial.step)
+    );
+    dial.change(next, { reason: "input" });
+    dial.commit(next);
+  };
+
+  return (
+    <input
+      aria-label="Value"
+      className={cn(
+        "bg-background ring-ring/50 h-4 w-(--knob-value-width) min-w-0 rounded-sm p-0 text-center font-mono text-xs tabular-nums ring-1 outline-none",
+        className
+      )}
+      data-slot="knob-value-input"
+      onBlur={() => finish(true)}
+      onChange={(event) => setDraft(event.target.value)}
+      onKeyDown={(event) => {
+        if (event.key !== "Enter" && event.key !== "Escape") {
+          return;
+        }
+        event.preventDefault();
+        const input = event.currentTarget;
+        finish(event.key === "Enter");
+        focusDial(input);
+      }}
+      ref={focusInput}
+      style={style}
+      value={draft}
+    />
+  );
+};
+
+export interface KnobValueProps extends ComponentProps<"span"> {
+  /** Double-click the value, or press Enter on the dial, to type one. Default true. */
+  editable?: boolean;
+}
+
+export const KnobValue = ({
+  editable = true,
+  className,
+  style,
+  onDoubleClick,
+  ...props
+}: KnobValueProps) => {
+  const { disabled, editing, format, setEditing, value, valueWidth } =
+    useKnob("KnobValue");
+  const widthStyle = {
+    "--knob-value-width": `${valueWidth}ch`,
+    ...style,
+  } as CSSProperties;
+
+  if (editable && editing) {
+    return <KnobValueInput className={className} style={widthStyle} />;
+  }
+
   return (
     <span
       className={cn(
-        "text-muted-foreground font-mono text-xs tabular-nums",
+        "text-muted-foreground inline-block min-w-(--knob-value-width) text-center font-mono text-xs whitespace-nowrap tabular-nums",
+        editable && !disabled && "cursor-text",
         className
       )}
       data-slot="knob-value"
+      onDoubleClick={(event) => {
+        onDoubleClick?.(event);
+        if (editable && !disabled) {
+          setEditing(true);
+        }
+      }}
+      style={widthStyle}
       {...props}
     >
       {format(value)}
@@ -408,13 +566,23 @@ export const KnobValue = ({ className, ...props }: ComponentProps<"span">) => {
   );
 };
 
-export const KnobLabel = ({ className, ...props }: ComponentProps<"span">) => {
-  const { labelId } = useKnob("KnobLabel");
+export const KnobLabel = ({
+  className,
+  onDoubleClick,
+  ...props
+}: ComponentProps<"span">) => {
+  const { disabled, labelId, setEditing } = useKnob("KnobLabel");
   return (
     <span
       className={cn("text-xs font-medium", className)}
       data-slot="knob-label"
       id={labelId}
+      onDoubleClick={(event) => {
+        onDoubleClick?.(event);
+        if (!disabled) {
+          setEditing(true);
+        }
+      }}
       {...props}
     />
   );
@@ -450,9 +618,9 @@ export interface KnobProps extends Omit<
   step?: number;
   /** Default 10. */
   largeStep?: number;
-  /** Alt+arrow and Alt+drag. Default: `step / 10`. */
+  /** Shift+drag, Shift+wheel and Alt+arrow. Default: `step / 10`. */
   fineStep?: number;
-  /** Double-click restores this. Default `defaultValue` or `min`. */
+  /** Double-click or Alt+click restores this. Default `defaultValue` or `min`. */
   resetValue?: number;
   /** Where the arc starts; the centre for bipolar knobs. Default `min`. */
   origin?: number;
@@ -467,6 +635,8 @@ export interface KnobProps extends Omit<
   /** The wheel adjusts the value while focused. Default false. */
   allowWheel?: boolean;
   format?: (value: number) => string;
+  /** Reads a typed value. Default: the first number, with "k" as thousands. */
+  parse?: (text: string) => number | null;
   size?: AudioSize;
   disabled?: boolean;
 }
@@ -543,6 +713,7 @@ export const Knob = ({
   scale = "linear",
   allowWheel = false,
   format = String,
+  parse = parseKnobValue,
   size: sizeProp,
   disabled: disabledProp,
   className,
@@ -578,9 +749,39 @@ export const Knob = ({
   const originValue = clamp(origin ?? min, min, max);
   const originPosition = taper.toPosition(originValue);
 
+  const [editing, setEditing] = useState(false);
+
+  const valueWidth = useMemo(
+    () => widestValue(format, taper, (next) => quantize(next, step)),
+    [format, quantize, step, taper]
+  );
+
   const contextValue = useMemo<KnobContextValue>(
-    () => ({ arc, disabled, format, labelId, originPosition, position, value }),
-    [arc, disabled, format, labelId, originPosition, position, value]
+    () => ({
+      arc,
+      disabled,
+      editing,
+      format,
+      labelId,
+      originPosition,
+      parse,
+      position,
+      setEditing,
+      value,
+      valueWidth,
+    }),
+    [
+      arc,
+      disabled,
+      editing,
+      format,
+      labelId,
+      originPosition,
+      parse,
+      position,
+      value,
+      valueWidth,
+    ]
   );
 
   const dialContext = useMemo<KnobDialContextValue>(
