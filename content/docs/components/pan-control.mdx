@@ -1,0 +1,51 @@
+---
+title: Pan Control
+description: Left and right balance with a fill from the centre and a centre detent.
+---
+
+<ComponentPreview name="pan-control-demo" />
+
+## Installation
+
+```npm
+npx shadcn@latest add @audiocn/pan-control
+```
+
+## Usage
+
+```tsx
+import { PanControl } from "@/components/ui/pan-control";
+```
+
+```tsx
+<PanControl value={pan} onValueChange={setPan} />
+```
+
+The value runs from −1 (left) to 1 (right). Dragging near the centre snaps to
+it, and double-clicking returns to it. `formatPan` turns a value into "L30",
+"C" or "R30".
+
+For a rotary pan, use a [Knob](/docs/components/knob) with `min={-1}`,
+`max={1}`, `origin={0}` and `format={formatPan}`.
+
+## Accessibility
+
+The thumb is a slider named "Pan", with `aria-valuetext` such as "30% left"
+or "Center".
+
+## API reference
+
+<PropsTable
+  rows={[
+    ["value", "number", null, "−1 to 1."],
+    ["defaultValue", "number", "0", null],
+    ["onValueChange", "(value) => void", null, null],
+    ["onValueCommitted", "(value) => void", null, null],
+    ["step", "number", "0.05", null],
+    ["largeStep", "number", "0.25", null],
+    ["detent", "boolean", "true", "Snap to the centre while dragging near it."],
+    ["format", "(value: number) => string", "formatPan", null],
+    ["size", '"sm" | "default" | "lg"', '"default"', null],
+    ["disabled", "boolean", "false", null],
+  ]}
+/>

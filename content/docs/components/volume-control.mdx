@@ -1,0 +1,67 @@
+---
+title: Volume Control
+description: A simple volume slider with a mute button, for players.
+---
+
+<ComponentPreview name="volume-control-demo" />
+
+## Installation
+
+```npm
+npx shadcn@latest add @audiocn/volume-control
+```
+
+## Usage
+
+```tsx
+import { VolumeControl } from "@/components/ui/volume-control";
+```
+
+```tsx
+<VolumeControl value={volume} onValueChange={setVolume} muted={muted} onMutedChange={setMuted} />
+```
+
+Unlike the mixer components, the volume here runs from 0 to 1, the same as
+`HTMLMediaElement.volume`. The `perceptual` curve gives the slider more travel
+at low volumes, where ears are most sensitive. Unmuting at zero restores the
+last audible volume.
+
+## Anatomy
+
+```tsx
+<VolumeControl>
+  <VolumeControlMute />
+  <VolumeControlSlider />
+  <VolumeControlValue />
+</VolumeControl>
+```
+
+## Examples
+
+### In a popover
+
+<ComponentPreview name="volume-control-popover" />
+
+## Theming
+
+The mute button has `data-level` of `muted`, `low`, `medium` or `high`, so
+icons can switch with CSS alone, as in the first example.
+
+## API reference
+
+<PropsTable
+  rows={[
+    ["value", "number", null, "0..1."],
+    ["defaultValue", "number", "1", null],
+    ["onValueChange", "(value) => void", null, null],
+    ["onValueCommitted", "(value) => void", null, null],
+    ["muted", "boolean", null, null],
+    ["defaultMuted", "boolean", "false", null],
+    ["onMutedChange", "(muted) => void", null, null],
+    ["step", "number", "0.05", "Slider step."],
+    ["curve", '"linear" | "perceptual"', '"perceptual"', "How slider position maps to volume."],
+    ["orientation", '"horizontal" | "vertical"', '"horizontal"', null],
+    ["size", '"sm" | "default" | "lg"', '"default"', null],
+    ["disabled", "boolean", "false", null],
+  ]}
+/>

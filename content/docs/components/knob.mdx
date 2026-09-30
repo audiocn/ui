@@ -1,0 +1,88 @@
+---
+title: Knob
+description: A rotary control for dense layouts, drawn in SVG.
+---
+
+<ComponentPreview name="knob-demo" />
+
+## Installation
+
+```npm
+npx shadcn@latest add @audiocn/knob
+```
+
+## Usage
+
+```tsx
+import { Knob, KnobLabel, KnobValue } from "@/components/ui/knob";
+```
+
+```tsx
+<Knob min={-24} max={24} origin={0} value={gain} onValueChange={setGain} />
+```
+
+Drag up to increase and down to decrease. Hold Alt for fine control, and
+double-click to reset.
+
+## Anatomy
+
+```tsx
+<Knob>
+  <KnobDial>
+    <KnobTrack />
+    <KnobRange />
+    <KnobPointer />
+  </KnobDial>
+  <KnobValue />
+  <KnobLabel />
+</Knob>
+```
+
+`KnobTrack`, `KnobRange` and `KnobPointer` are SVG elements inside a
+100 × 100 view box, so you can add your own shapes next to them.
+
+## Examples
+
+### Sizes and disabled
+
+<ComponentPreview name="knob-sizes" />
+
+## Theming
+
+| Variable or attribute | Meaning |
+| --- | --- |
+| `--knob-size` | Set by `size` |
+| `--knob-angle` | The pointer angle, live, for custom skins |
+| `data-dragging` | On the dial while dragging |
+| `data-at-origin` | The value sits at `origin` |
+
+Style the SVG parts with `stroke-*` and `fill-*` classes.
+
+## Accessibility
+
+The dial is a focusable slider with `aria-valuetext` from `format`, named by
+`KnobLabel`. It supports the same keys as the
+[fader](/docs/components/fader#keyboard).
+
+## API reference
+
+<PropsTable
+  rows={[
+    ["value", "number", null, null],
+    ["defaultValue", "number", null, null],
+    ["onValueChange", "(value, details) => void", null, "details.reason: drag, keyboard, wheel or reset."],
+    ["onValueCommitted", "(value) => void", null, null],
+    ["min / max", "number", "0 / 100", null],
+    ["step / largeStep / fineStep", "number", "1 / 10 / step ÷ 10", null],
+    ["resetValue", "number", "defaultValue ?? min", "Double-click restores it."],
+    ["origin", "number", "min", "Where the arc starts; the centre for bipolar knobs."],
+    ["arc", "number", "270", "Sweep in degrees."],
+    ["dragDirection", '"vertical" | "horizontal" | "circular"', '"vertical"', null],
+    ["sensitivity", "number", "200", "Pixels of drag for the full range."],
+    ["scale", '"linear" | "log"', '"linear"', null],
+    ["allowWheel", "boolean", "false", null],
+    ["format", "(value: number) => string", "String", null],
+    ["size", '"sm" | "default" | "lg"', '"default"', null],
+    ["disabled", "boolean", "false", null],
+  ]}
+/>
