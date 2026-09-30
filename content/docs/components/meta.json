@@ -9,6 +9,7 @@
     "clip-indicator",
     "bar-visualizer",
     "electric-bar-visualizer",
+    "electric-waveform",
     "live-waveform",
     "waveform",
     "spectrum",

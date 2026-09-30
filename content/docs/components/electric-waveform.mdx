@@ -1,0 +1,105 @@
+---
+title: Electric Waveform
+description: One electric line across the width, with a crackling white-hot core, a tall glow, forks off the peaks and sparks.
+---
+
+<ComponentPreview name="electric-waveform-demo" />
+
+## Installation
+
+```npm
+npx shadcn@latest add @audiocn/electric-waveform
+```
+
+## Usage
+
+```tsx
+import { ElectricWaveform } from "@/components/ui/electric-waveform";
+```
+
+```tsx
+<ElectricWaveform
+  aria-label="Voice activity"
+  className="text-primary h-32"
+  source={analyser.visual}
+/>
+```
+
+The line follows the text colour, so it changes with your theme, and in dark mode its core runs white-hot. It shares its look and variables with the [electric bar visualizer](/docs/components/electric-bar-visualizer).
+
+The waveform fills its container, so size it with classes. It paints on the animation frame without re-rendering React, redraws on resize and picks up theme changes on its own.
+
+## Examples
+
+### Wave and scope
+
+`wave` draws a smooth wave shaped by the frequency bands, calm enough for a voice assistant. `scope` draws the signal itself, like an oscilloscope, and starts each frame on a rising zero crossing so steady tones stand still.
+
+<ComponentPreview name="electric-waveform-modes" />
+
+### Intensity, arcs and sparks
+
+`intensity` sets how jagged and restless the line is. `arcs` fork off the peaks and `sparks` fly when the level rises quickly.
+
+<ComponentPreview name="electric-waveform-intensity" />
+
+### Idle and loading
+
+With no signal the line rests flat and hums. `loading` runs a pulse along it, for connecting or thinking states.
+
+<ComponentPreview name="electric-waveform-states" />
+
+### Microphone
+
+<ComponentPreview name="electric-waveform-microphone" />
+
+## Theming
+
+| Variable or attribute | Meaning |
+| --- | --- |
+| `--electric` | Line color, default `currentColor` |
+| `--electric-core` | Core color, default `--electric` mixed toward white by `--electric-heat` |
+| `--electric-heat` | How white-hot the core runs, default `0%` in light mode and `70%` in dark mode |
+| `--electric-glow` | Glow color, default `--electric` |
+| `--electric-glow-size` | Glow blur, default `0.5rem` |
+| `data-mode` | `wave` or `scope` |
+| `data-active` | The signal is above the floor |
+| `data-loading` | The loading pulse is running |
+
+## Accessibility
+
+The root has `role="img"` and the label "Audio waveform". Pass `aria-label` to describe what it shows, or `aria-hidden` when it is decorative next to a labelled meter.
+
+The flicker changes brightness by at most 12% and each jagged shape holds for at least 40 ms, so nothing flashes. With reduced motion the line is smooth and still, with no crackle, forks or sparks, and redraws four times a second.
+
+## API reference
+
+<PropsTable
+  rows={[
+    ["source", "FrameSource<VisualFrame> | null", null, null],
+    [
+      "mode",
+      '"wave" | "scope"',
+      '"wave"',
+      "wave follows the frequency bands; scope draws the signal.",
+    ],
+    ["loading", "boolean", "false", "Run a pulse along the line."],
+    [
+      "intensity",
+      "number",
+      "0.6",
+      "How jagged and restless the line is, 0..1.",
+    ],
+    ["arcs", "boolean", "true", "Forks of lightning branch off the peaks."],
+    ["sparks", "boolean", "true", "Sparks fly off the peaks on sudden rises."],
+    ["sensitivity", "number", "1", "Visual gain."],
+    ["lineWidth", "number", "3", "Pixels."],
+    ["fadeEdges", "boolean", "true", "Fade the left and right ends."],
+    [
+      "actionsRef",
+      "Ref<ElectricWaveformActions>",
+      null,
+      "{ paint(frame), clear() }.",
+    ],
+  ]}
+/>

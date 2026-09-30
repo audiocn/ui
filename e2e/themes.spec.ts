@@ -5,6 +5,7 @@ const pages = [
   "/docs/components/channel-toggle",
   "/docs/components/db-readout",
   "/docs/components/electric-bar-visualizer",
+  "/docs/components/electric-waveform",
   "/docs/blocks/soundboard",
 ];
 

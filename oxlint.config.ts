@@ -84,7 +84,7 @@ export default defineConfig({
               {
                 allow: ["layout", "color", "typography", "effects", "[--*"],
                 pattern:
-                  "^(BarVisualizer|ElectricBarVisualizer|LiveWaveform|Spectrum|Waveform|DbReadout|DbScale|ClipIndicator|LevelMeter.*|Knob.*|Fader.*)$",
+                  "^(BarVisualizer|ElectricBarVisualizer|ElectricWaveform|LiveWaveform|Spectrum|Waveform|DbReadout|DbScale|ClipIndicator|LevelMeter.*|Knob.*|Fader.*)$",
               },
               {
                 allow: ["layout", "spacing", "shape", "color", "[--*"],

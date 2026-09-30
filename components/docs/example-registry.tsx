@@ -81,6 +81,21 @@ export const examples: Record<string, ComponentType | undefined> = {
   "electric-bar-visualizer-states": dynamic(
     () => import("@/components/examples/electric-bar-visualizer-states")
   ),
+  "electric-waveform-demo": dynamic(
+    () => import("@/components/examples/electric-waveform-demo")
+  ),
+  "electric-waveform-intensity": dynamic(
+    () => import("@/components/examples/electric-waveform-intensity")
+  ),
+  "electric-waveform-microphone": dynamic(
+    () => import("@/components/examples/electric-waveform-microphone")
+  ),
+  "electric-waveform-modes": dynamic(
+    () => import("@/components/examples/electric-waveform-modes")
+  ),
+  "electric-waveform-states": dynamic(
+    () => import("@/components/examples/electric-waveform-states")
+  ),
   "fader-bipolar": dynamic(() => import("@/components/examples/fader-bipolar")),
   "fader-demo": dynamic(() => import("@/components/examples/fader-demo")),
   "fader-silence": dynamic(() => import("@/components/examples/fader-silence")),

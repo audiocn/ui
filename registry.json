@@ -350,6 +350,24 @@
       ]
     },
     {
+      "name": "electric-waveform",
+      "type": "registry:ui",
+      "title": "Electric Waveform",
+      "description": "One electric line across the width: a crackling, white-hot trace with a tall glow, forks off the peaks and sparks. Follows the frequency bands as a smooth wave, or the signal itself like an oscilloscope.",
+      "registryDependencies": [
+        "@audiocn/core",
+        "@audiocn/electric",
+        "@audiocn/use-frame-source",
+        "@audiocn/use-reduced-motion"
+      ],
+      "files": [
+        {
+          "path": "components/ui/electric-waveform.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
       "name": "live-waveform",
       "type": "registry:ui",
       "title": "Live Waveform",
