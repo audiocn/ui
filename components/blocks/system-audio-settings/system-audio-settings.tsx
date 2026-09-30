@@ -214,6 +214,17 @@ export const SystemAudioSettings = ({
               </AlertDescription>
             </Alert>
           )}
+          {system.status === "denied" ? (
+            <Alert variant="destructive">
+              <WarningIcon />
+              <AlertTitle>Capture was not started</AlertTitle>
+              <AlertDescription>
+                No screen or tab was shared. Turn capture on again and approve
+                the browser&apos;s sharing request. If access is blocked, allow
+                screen sharing in your browser or system settings.
+              </AlertDescription>
+            </Alert>
+          ) : null}
           {system.status === "no-audio" ? (
             <Alert variant="destructive">
               <WarningIcon />
