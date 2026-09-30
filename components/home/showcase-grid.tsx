@@ -45,9 +45,36 @@ const LEFT: ShowcaseItem[] = [
     label: "Parameter sliders",
     tile: "eq",
   },
+  {
+    href: "/docs/components/live-waveform",
+    label: "Live waveform",
+    tile: "live-waveform",
+  },
 ];
 
-const RIGHT: ShowcaseItem[] = [];
+const RIGHT: ShowcaseItem[] = [
+  {
+    href: "/docs/components/level-meter",
+    label: "Level meters",
+    tile: "meters",
+  },
+  {
+    href: "/docs/components/channel-toggle",
+    label: "Channel controls",
+    tile: "channel",
+  },
+  { href: "/docs/components/fader", label: "Faders", tile: "faders" },
+  {
+    href: "/docs/components/audio-device-select",
+    label: "Output",
+    tile: "output",
+  },
+  {
+    href: "/docs/components/audio-player",
+    label: "Audio player",
+    tile: "compact-player",
+  },
+];
 
 const Column = ({
   items,
