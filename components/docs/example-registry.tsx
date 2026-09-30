@@ -5,6 +5,12 @@ import dynamic from "next/dynamic";
 import type { ComponentType } from "react";
 
 export const examples: Record<string, ComponentType | undefined> = {
+  "clip-indicator-demo": dynamic(() => import("@/components/examples/clip-indicator-demo")),
+  "clip-indicator-latching": dynamic(() => import("@/components/examples/clip-indicator-latching")),
+  "db-readout-demo": dynamic(() => import("@/components/examples/db-readout-demo")),
+  "db-readout-zones": dynamic(() => import("@/components/examples/db-readout-zones")),
+  "db-scale-demo": dynamic(() => import("@/components/examples/db-scale-demo")),
+  "db-scale-vertical": dynamic(() => import("@/components/examples/db-scale-vertical")),
   "frame-source-demo": dynamic(() => import("@/components/examples/frame-source-demo")),
   "level-meter-ballistics": dynamic(() => import("@/components/examples/level-meter-ballistics")),
   "level-meter-css-level": dynamic(() => import("@/components/examples/level-meter-css-level")),
