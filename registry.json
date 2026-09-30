@@ -756,6 +756,67 @@
       "categories": [
         "microphone"
       ]
+    },
+    {
+      "name": "system-audio-settings",
+      "type": "registry:block",
+      "title": "System Audio Settings",
+      "description": "Turn system audio capture on, set its level, watch its meter and explain what the browser will capture.",
+      "dependencies": [
+        "@phosphor-icons/react"
+      ],
+      "registryDependencies": [
+        "alert",
+        "badge",
+        "card",
+        "field",
+        "switch",
+        "@audiocn/level-meter",
+        "@audiocn/parameter-slider",
+        "@audiocn/use-audio-analyser",
+        "@audiocn/use-audio-context",
+        "@audiocn/use-system-audio"
+      ],
+      "files": [
+        {
+          "path": "components/blocks/system-audio-settings/system-audio-settings.tsx",
+          "type": "registry:block"
+        }
+      ],
+      "categories": [
+        "system-audio"
+      ]
+    },
+    {
+      "name": "quick-audio-popover",
+      "type": "registry:block",
+      "title": "Quick Audio Popover",
+      "description": "Compact microphone and system audio controls behind one toolbar button that shows a live level.",
+      "dependencies": [
+        "@phosphor-icons/react"
+      ],
+      "registryDependencies": [
+        "button",
+        "field",
+        "popover",
+        "separator",
+        "switch",
+        "@audiocn/audio-device-select",
+        "@audiocn/bar-visualizer",
+        "@audiocn/use-audio-analyser",
+        "@audiocn/use-audio-devices",
+        "@audiocn/use-microphone",
+        "@audiocn/use-system-audio"
+      ],
+      "files": [
+        {
+          "path": "components/blocks/quick-audio-popover/quick-audio-popover.tsx",
+          "type": "registry:block"
+        }
+      ],
+      "categories": [
+        "microphone"
+      ]
     }
   ]
 }
