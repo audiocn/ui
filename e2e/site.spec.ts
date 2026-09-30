@@ -28,8 +28,8 @@ test("the public sitemap includes every concrete page and robots permits indexin
   const response = await request.get("/sitemap.xml");
   expect(response.status()).toBe(200);
   const xml = await response.text();
-  const urls = [...xml.matchAll(/<loc>(?<url>[^<]+)<\/loc>/gu)].map(
-    (match) => match.groups?.url
+  const urls = (xml.match(/<loc>[^<]+<\/loc>/gu) ?? []).map((tag) =>
+    tag.replace("<loc>", "").replace("</loc>", "")
   );
   const expected = [
     siteConfig.url,
@@ -50,6 +50,30 @@ test("docs pages keep their own canonical URL", async ({ page }) => {
     "href",
     `${siteConfig.url}/docs/components/level-meter`
   );
+});
+
+test("shared docs links have an image and the page's own social title", async ({
+  page,
+  request,
+}) => {
+  await page.goto("/docs/components/level-meter");
+  await expect(page.locator('meta[property="og:title"]')).toHaveAttribute(
+    "content",
+    "Level Meter"
+  );
+  await expect(page.locator('meta[name="twitter:card"]')).toHaveAttribute(
+    "content",
+    "summary_large_image"
+  );
+  await expect(
+    page.locator('meta[property="og:image"]').first()
+  ).toHaveAttribute("content", /\/opengraph-image/u);
+  const image = await request.get("/opengraph-image");
+  expect(image.status()).toBe(200);
+  expect(image.headers()["content-type"]).toContain("image/png");
+  const bytes = await image.body();
+  expect(bytes.readUInt32BE(16)).toBe(1200);
+  expect(bytes.readUInt32BE(20)).toBe(630);
 });
 
 test("missing docs pages offer a way back to the documentation", async ({

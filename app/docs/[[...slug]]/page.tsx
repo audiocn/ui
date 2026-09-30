@@ -7,6 +7,7 @@ import {
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
+import { getSocialMetadata } from "@/lib/social-metadata";
 import { source } from "@/lib/source";
 import { getMDXComponents } from "@/mdx-components";
 
@@ -48,6 +49,7 @@ export const generateMetadata = async ({
   }
 
   return {
+    ...getSocialMetadata(page.data.title, page.data.description),
     alternates: { canonical: page.url },
     description: page.data.description,
     title: page.data.title,

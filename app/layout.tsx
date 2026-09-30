@@ -6,6 +6,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { siteConfig } from "@/lib/site";
+import { getSocialMetadata } from "@/lib/social-metadata";
 import { cn } from "@/lib/utils";
 
 const outfitHeading = Outfit({
@@ -21,6 +22,7 @@ const fontMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  ...getSocialMetadata(siteConfig.name),
   alternates: { canonical: "/" },
   description: siteConfig.description,
   metadataBase: new URL(siteConfig.url),
