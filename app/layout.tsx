@@ -4,6 +4,7 @@ import { DM_Sans, Geist_Mono, Outfit } from "next/font/google";
 
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { siteConfig } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
@@ -46,7 +47,9 @@ const RootLayout = ({
   >
     <body className="flex min-h-svh flex-col">
       <ThemeProvider>
-        <RootProvider theme={{ enabled: false }}>{children}</RootProvider>
+        <RootProvider theme={{ enabled: false }}>
+          <TooltipProvider>{children}</TooltipProvider>
+        </RootProvider>
       </ThemeProvider>
     </body>
   </html>

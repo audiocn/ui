@@ -5,10 +5,13 @@
   "type": "module",
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "pnpm registry:build && next build",
     "start": "next start",
     "postinstall": "fumadocs-mdx",
+    "registry:build": "shadcn build",
     "typecheck": "fumadocs-mdx && tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "check": "ultracite check",
     "fix": "ultracite fix"
   },
