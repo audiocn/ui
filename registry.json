@@ -452,6 +452,22 @@
           "type": "registry:ui"
         }
       ]
+    },
+    {
+      "name": "audio-device-select",
+      "type": "registry:ui",
+      "title": "Audio Device Select",
+      "description": "A microphone, speaker or source picker with loading, permission, None and disconnected-device states, and a slot for a live preview.",
+      "registryDependencies": [
+        "select",
+        "button"
+      ],
+      "files": [
+        {
+          "path": "components/ui/audio-device-select.tsx",
+          "type": "registry:ui"
+        }
+      ]
     }
   ]
 }
