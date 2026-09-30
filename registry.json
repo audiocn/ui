@@ -817,6 +817,35 @@
       "categories": [
         "microphone"
       ]
+    },
+    {
+      "name": "soundboard",
+      "type": "registry:block",
+      "title": "Soundboard",
+      "description": "A grid of sound pads with global hotkeys, per-pad mode and volume in a context menu, master volume, stop all, and drag-and-drop to add sounds.",
+      "dependencies": [
+        "@phosphor-icons/react"
+      ],
+      "registryDependencies": [
+        "button",
+        "context-menu",
+        "empty",
+        "label",
+        "switch",
+        "@audiocn/sound-pad",
+        "@audiocn/volume-control",
+        "@audiocn/use-audio-context",
+        "@audiocn/use-sound"
+      ],
+      "files": [
+        {
+          "path": "components/blocks/soundboard/soundboard.tsx",
+          "type": "registry:block"
+        }
+      ],
+      "categories": [
+        "sounds"
+      ]
     }
   ]
 }
