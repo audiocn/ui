@@ -501,6 +501,43 @@
           "type": "registry:hook"
         }
       ]
+    },
+    {
+      "name": "channel-strip",
+      "type": "registry:ui",
+      "title": "Channel Strip",
+      "description": "One channel of a mixer: header, status, meter, fader, value, controls and a notice, as a row or a console strip. The master strip is a variant.",
+      "dependencies": [
+        "@base-ui/react",
+        "class-variance-authority"
+      ],
+      "registryDependencies": [
+        "badge",
+        "@audiocn/use-audio-config"
+      ],
+      "files": [
+        {
+          "path": "components/ui/channel-strip.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "mixer",
+      "type": "registry:ui",
+      "title": "Mixer",
+      "description": "The container for channel strips: shared meter settings, keyboard navigation between strips, a master area and an empty state.",
+      "registryDependencies": [
+        "@audiocn/core",
+        "@audiocn/use-audio-config",
+        "@audiocn/channel-strip"
+      ],
+      "files": [
+        {
+          "path": "components/ui/mixer.tsx",
+          "type": "registry:ui"
+        }
+      ]
     }
   ]
 }
