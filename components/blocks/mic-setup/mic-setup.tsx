@@ -223,7 +223,7 @@ export const MicSetup = ({
             <AudioDeviceSelectPreview className="relative">
               {active ? null : (
                 <Button
-                  className="absolute inset-0 m-auto w-fit"
+                  className="absolute inset-0 z-10 m-auto w-fit"
                   onClick={() => setStarted(true)}
                   size="xs"
                   variant="outline"
