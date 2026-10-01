@@ -619,7 +619,8 @@ const useSvgId = () => `knob${useId().replaceAll(/[^\w-]/gu, "")}`;
 export const KnobCap = ({ className, ...props }: ComponentProps<"g">) => {
   const { arc, position } = useKnob("KnobCap");
   const id = useSvgId();
-  const dot = pointAt(angleFor(position, arc), CAP.dotDistance);
+  const angle = angleFor(position, arc);
+  const dot = pointAt(angle, CAP.dotDistance);
   return (
     <g
       className={cn(
@@ -630,6 +631,16 @@ export const KnobCap = ({ className, ...props }: ComponentProps<"g">) => {
       {...props}
     >
       <defs>
+        <filter height="100%" id={`${id}-grain`} width="100%" x="0" y="0">
+          <feTurbulence
+            baseFrequency={0.9}
+            numOctaves={3}
+            seed={7}
+            type="fractalNoise"
+          />
+          <feColorMatrix type="saturate" values="0" />
+          <feComposite in2="SourceGraphic" operator="in" />
+        </filter>
         <radialGradient id={`${id}-halo`}>
           <stop
             className="[stop-color:var(--knob-cap-shade)]"
@@ -701,6 +712,16 @@ export const KnobCap = ({ className, ...props }: ComponentProps<"g">) => {
           data-slot="knob-cap-face"
         />
       </foreignObject>
+      <circle
+        cx={CENTER}
+        cy={CENTER}
+        data-slot="knob-cap-grain"
+        filter={`url(#${id}-grain)`}
+        opacity={0.25}
+        pointerEvents="none"
+        r={CAP.face}
+        transform={`rotate(${angle} ${CENTER} ${CENTER})`}
+      />
       <circle
         className="fill-(--knob-cap-shade)/85 stroke-(--knob-cap-shade)/45"
         cx={dot.x}

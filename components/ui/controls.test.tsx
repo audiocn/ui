@@ -283,7 +283,7 @@ describe("Knob", () => {
     ).toHaveLength(0);
   });
 
-  it("turns the cap's dot with the value", () => {
+  it("turns the cap's grain with the dot while keeping the lighting fixed", () => {
     const { container } = render(
       <Knob aria-label="Volume" defaultValue={50}>
         <KnobDial>
@@ -292,12 +292,20 @@ describe("Knob", () => {
       </Knob>
     );
     const dot = () => container.querySelector("[data-slot='knob-cap-dot']");
+    const grain = container.querySelector("[data-slot='knob-cap-grain']");
+    const face = container.querySelector("[data-slot='knob-cap-face']");
+    const faceMarkup = face?.outerHTML;
+    expect(grain).toHaveAttribute("transform", "rotate(0 50 50)");
     // At the middle of the arc the dot is straight up.
     expect(Number(dot()?.getAttribute("cx"))).toBeCloseTo(50);
     expect(Number(dot()?.getAttribute("cy"))).toBeLessThan(50);
     fireEvent.keyDown(screen.getByRole("slider"), { key: "End" });
     expect(Number(dot()?.getAttribute("cx"))).toBeGreaterThan(50);
     expect(Number(dot()?.getAttribute("cy"))).toBeGreaterThan(50);
+    expect(grain).toHaveAttribute("transform", "rotate(135 50 50)");
+    fireEvent.keyDown(screen.getByRole("slider"), { key: "Home" });
+    expect(grain).toHaveAttribute("transform", "rotate(-135 50 50)");
+    expect(face?.outerHTML).toBe(faceMarkup);
   });
 
   it("reads typed values", () => {
