@@ -6,6 +6,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useEffectEvent,
   useId,
   useLayoutEffect,
   useMemo,
@@ -270,42 +271,45 @@ const dragPosition = (
 
 const useDialWheel = (
   elementRef: RefObject<HTMLDivElement | null>,
-  dial: KnobDialContextValue
+  dial: KnobDialContextValue,
+  disabled: boolean
 ) => {
-  const latest = useLatest(dial);
-
-  useEffect(() => {
-    const element = elementRef.current;
-    if (!element) {
-      return;
-    }
-    const onWheel = (event: WheelEvent) => {
-      const { current } = latest;
+  const { allowWheel } = dial;
+  const onWheel = useEffectEvent(
+    (event: WheelEvent, element: HTMLDivElement) => {
       // Shift turns the wheel sideways on some systems.
       const delta = event.deltaY || event.deltaX;
-      if (
-        !current.allowWheel ||
-        document.activeElement !== element ||
-        delta === 0
-      ) {
+      if (disabled || document.activeElement !== element || delta === 0) {
         return;
       }
       event.preventDefault();
       const fine = event.shiftKey || event.altKey;
-      const increment = fine ? current.fineStep : current.step;
+      const increment = fine ? dial.fineStep : dial.step;
       const direction = delta < 0 ? 1 : -1;
-      const next = current.quantize(
-        current.latestRef.current + direction * increment,
+      const next = dial.quantize(
+        dial.latestRef.current + direction * increment,
         increment
       );
-      current.change(next, { event, reason: "wheel" });
-      current.commit(next);
+      dial.change(next, { event, reason: "wheel" });
+      dial.commit(next);
+    }
+  );
+
+  // A non-passive listener blocks scrolling, so only attach one when the
+  // wheel is allowed.
+  useEffect(() => {
+    const element = elementRef.current;
+    if (!(element && allowWheel)) {
+      return;
+    }
+    const listener = (event: WheelEvent) => {
+      onWheel(event, element);
     };
-    element.addEventListener("wheel", onWheel, { passive: false });
+    element.addEventListener("wheel", listener, { passive: false });
     return () => {
-      element.removeEventListener("wheel", onWheel);
+      element.removeEventListener("wheel", listener);
     };
-  }, [elementRef, latest]);
+  }, [allowWheel, elementRef]);
 };
 
 export const KnobDial = ({
@@ -320,7 +324,7 @@ export const KnobDial = ({
   const dialRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<DragState | null>(null);
   const [dragging, setDragging] = useState(false);
-  useDialWheel(dialRef, dial);
+  useDialWheel(dialRef, dial, disabled);
 
   const reset = () => {
     dial.change(dial.resetValue, { reason: "reset" });
@@ -553,22 +557,24 @@ export const KnobScale = ({
   const litFrom = Math.min(originPosition, position) - TICK_EPSILON;
   const litTo = Math.max(originPosition, position) + TICK_EPSILON;
   const count = Math.max(1, Math.round(ticks));
+  // One step for the long ticks drawn and the detents they click on.
+  const majorStep = Math.max(1, Math.round(majorEvery));
 
   useEffect(() => {
     const majors: number[] = [];
-    for (let index = 0; index <= count; index += Math.max(1, majorEvery)) {
+    for (let index = 0; index <= count; index += majorStep) {
       majors.push(index / count);
     }
     setDetents(majors);
     return () => {
       setDetents(null);
     };
-  }, [count, majorEvery, setDetents]);
+  }, [count, majorStep, setDetents]);
 
   const marks = Array.from({ length: count + 1 }, (_, index) => {
     const tickPosition = index / count;
     const angle = angleFor(tickPosition, arc);
-    const major = index % majorEvery === 0;
+    const major = index % majorStep === 0;
     const inner = pointAt(angle, major ? SCALE.majorInner : SCALE.minorInner);
     const outer = pointAt(angle, major ? SCALE.majorOuter : SCALE.minorOuter);
     const lit = tickPosition >= litFrom && tickPosition <= litTo;

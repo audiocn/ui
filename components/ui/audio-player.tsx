@@ -3,7 +3,14 @@
 import { mergeProps } from "@base-ui/react/merge-props";
 import { Slider as SliderPrimitive } from "@base-ui/react/slider";
 import { useRender } from "@base-ui/react/use-render";
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useEffectEvent,
+  useMemo,
+  useState,
+} from "react";
 import type {
   ComponentProps,
   CSSProperties,
@@ -149,9 +156,15 @@ const PlayerRoot = ({
     [onNext, onPrevious, player]
   );
 
+  // Reports time changes, not every render of a parent with an inline
+  // callback.
+  const reportTime = useEffectEvent((time: number) => {
+    onTimeUpdate?.(time);
+  });
+
   useEffect(() => {
-    onTimeUpdate?.(currentTime);
-  }, [currentTime, onTimeUpdate]);
+    reportTime(currentTime);
+  }, [currentTime]);
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     onKeyDown?.(event);

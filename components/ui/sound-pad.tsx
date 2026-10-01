@@ -114,6 +114,11 @@ export const SoundPadGrid = ({
     return () => {
       if (padsRef.current.get(key) === handlers) {
         padsRef.current.delete(key);
+        // A pad going away (disabled, loading, unmounted) mid-hold won't see
+        // its keyup, so release it now.
+        if (heldRef.current.delete(key)) {
+          handlers.release();
+        }
       }
     };
   }, []);
@@ -158,11 +163,24 @@ export const SoundPadGrid = ({
     const up = (event: globalThis.KeyboardEvent) => {
       handleUp(event.key);
     };
+    const held = heldRef.current;
+    const pads = padsRef.current;
+    // Keyups never arrive once the window loses focus or this subscription
+    // ends, so release what is held then.
+    const releaseHeld = () => {
+      for (const key of held) {
+        pads.get(key)?.release();
+      }
+      held.clear();
+    };
     document.addEventListener("keydown", down);
     document.addEventListener("keyup", up);
+    window.addEventListener("blur", releaseHeld);
     return () => {
       document.removeEventListener("keydown", down);
       document.removeEventListener("keyup", up);
+      window.removeEventListener("blur", releaseHeld);
+      releaseHeld();
     };
   }, [handleDown, handleUp, hotkeyScope, hotkeys]);
 
@@ -446,6 +464,7 @@ export const SoundPadProgress = ({
   source,
   variant = "bar",
   className,
+  style,
   ...props
 }: SoundPadProgressProps) => {
   const elementRef = useRef<HTMLDivElement>(null);
@@ -458,20 +477,18 @@ export const SoundPadProgress = ({
     );
   });
 
-  useEffect(() => {
-    if (value !== undefined) {
-      elementRef.current?.style.setProperty(
-        "--pad-progress",
-        clamp(value, 0, 1).toFixed(4)
-      );
-    }
-  }, [value]);
-
-  useEffect(() => {
-    if (!playing && value === undefined) {
-      elementRef.current?.style.setProperty("--pad-progress", "0");
-    }
-  }, [playing, value]);
+  // A declarative value, or 0 once playback stops. While a source plays it
+  // stays undefined, so React leaves the source's per-frame writes alone.
+  let progress: string | undefined;
+  if (value !== undefined) {
+    progress = clamp(value, 0, 1).toFixed(4);
+  } else if (!playing) {
+    progress = "0";
+  }
+  const progressStyle = {
+    "--pad-progress": progress,
+    ...style,
+  } as CSSProperties;
 
   if (variant === "ring") {
     return (
@@ -484,6 +501,7 @@ export const SoundPadProgress = ({
         data-slot="sound-pad-progress"
         data-variant={variant}
         ref={elementRef}
+        style={progressStyle}
         {...props}
       >
         <div className="size-full rounded-full bg-[conic-gradient(var(--pad-accent)_calc(var(--pad-progress)*360deg),color-mix(in_oklch,var(--pad-accent)_20%,transparent)_0)] [mask:radial-gradient(farthest-side,transparent_calc(100%-3px),black_calc(100%-3px))]" />
@@ -502,6 +520,7 @@ export const SoundPadProgress = ({
       data-slot="sound-pad-progress"
       data-variant={variant}
       ref={elementRef}
+      style={progressStyle}
       {...props}
     >
       <div

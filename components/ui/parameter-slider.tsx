@@ -157,9 +157,12 @@ export const ParameterSlider = ({
   );
   const value = valueProp ?? uncontrolled;
   const latestRef = useRef(value);
+  // Every commit, not only when `value` changes: a controlled parent that
+  // rejects a change re-renders with the same value, and the ref must drop
+  // the rejected one.
   useLayoutEffect(() => {
     latestRef.current = value;
-  }, [value]);
+  });
   const decimals = decimalsProp ?? decimalsOf(step);
   const labelId = useId();
   const descriptionId = useId();
