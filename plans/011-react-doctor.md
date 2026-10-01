@@ -124,7 +124,7 @@ A local, non-shipped config with `ignore.overrides` for the 42 waived findings. 
 
 ## Outcome
 
-`pnpm doctor` now reports **no issues**, from 59 at the start. Unit tests, typecheck, `ultracite check` and all 603 e2e tests pass. Each batch shipped as its own commit on `main`.
+`pnpm react-doctor` now reports **no issues**, from 59 at the start. Unit tests, typecheck, `ultracite check` and all 603 e2e tests pass. Each batch shipped as its own commit on `main`.
 
 Where the work departed from the plan:
 
@@ -133,7 +133,7 @@ Where the work departed from the plan:
 - **Batch 3.** `components/blocks/blocks.test.tsx` renders each block twice. It checks that DOM ids stay unique and that a label toggles its own switch. Both checks fail on the old ids.
 - **Batch 5.** `web-threads` strips `undefined` props before merging `DEFAULTS`. Destructuring defaults would have been cleaner, but oxlint counts each one toward `complexity` (24, over the limit of 20).
 - **Batch 6.** With `minimumReleaseAge` on, every `pnpm add` failed. pnpm 10 re-checks locked versions, and 156 of them came from that day's dependency update. They are exempted by exact version in `minimumReleaseAgeExclude`. **Delete that list after 2026-10-08.** `trustPolicy` also rejected `semver@6.3.1`, a legitimate 2023 backport, so that exact version is exempt.
-- **Batch 7 / Decision 3.** `react-doctor install --yes` would also add skill files for 15 coding agents, a git pre-commit hook and a GitHub Actions workflow. Only the dev dependency and the `doctor` script were added. Run `npx react-doctor install` to opt into the rest.
+- **Batch 7 / Decision 3.** `react-doctor install --yes` would also add skill files for 15 coding agents, a git pre-commit hook and a GitHub Actions workflow. Only the dev dependency and a `react-doctor` script were added. It isn't called `doctor`, because `pnpm doctor` is a built-in pnpm command that shadows a script of that name. Run `npx react-doctor install` to opt into the rest.
 
 Notes:
 
