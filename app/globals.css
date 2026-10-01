@@ -63,6 +63,8 @@
   --channel-mute: var(--destructive);
   --channel-solo: oklch(0.795 0.184 86.047);
   --channel-monitor: oklch(0.623 0.214 259.815);
+  --code: var(--sidebar);
+  --code-foreground: var(--sidebar-foreground);
 }
 
 .dark {
@@ -109,6 +111,8 @@
   --channel-mute: var(--destructive);
   --channel-solo: oklch(0.852 0.199 91.936);
   --channel-monitor: oklch(0.707 0.165 254.624);
+  --code: var(--sidebar);
+  --code-foreground: var(--sidebar-foreground);
 }
 
 [data-theme="ocean"] {
@@ -243,6 +247,8 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+  --color-code: var(--code);
+  --color-code-foreground: var(--code-foreground);
 }
 
 @layer base {

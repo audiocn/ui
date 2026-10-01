@@ -2,6 +2,7 @@ import { pageSchema } from "fumadocs-core/source/schema";
 import { defineConfig, defineDocs } from "fumadocs-mdx/config";
 
 import { codeThemes } from "./lib/docs/code-themes";
+import { remarkInstallCommand } from "./lib/docs/remark-install-command";
 
 export const docs = defineDocs({
   dir: "content/docs",
@@ -19,5 +20,7 @@ export const docs = defineDocs({
 export default defineConfig({
   mdxOptions: {
     rehypeCodeOptions: { themes: codeThemes },
+    remarkNpmOptions: false,
+    remarkPlugins: [remarkInstallCommand],
   },
 });

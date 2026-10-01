@@ -29,6 +29,19 @@ const SHADCN_FILES = [
   "components/ui/tooltip.tsx",
 ];
 
+/**
+ * Code Block Command and its dependencies, added from chanhdai.com's registry.
+ * They stay as upstream writes them, so `shadcn add --diff` shows only real
+ * changes.
+ */
+const NCDAI_FILES = [
+  "components/code-block-command.tsx",
+  "components/copy-button.tsx",
+  "components/icon-swap.tsx",
+  "components/tabs.tsx",
+  "hooks/use-copy-to-clipboard.ts",
+];
+
 export default defineConfig({
   extends: [core, react, next, shadcn],
   ignorePatterns: [
@@ -49,6 +62,20 @@ export default defineConfig({
         "jsx-a11y/label-has-associated-control": "off",
         "react/function-component-definition": "off",
         "shadcn/no-inline-styles": "off",
+        "shadcn/no-restyle": "off",
+      },
+    },
+    {
+      files: NCDAI_FILES,
+      rules: {
+        "eslint/func-style": "off",
+        "eslint/no-use-before-define": "off",
+        "eslint/sort-keys": "off",
+        "react/function-component-definition": "off",
+        "react/memo-dependencies": "off",
+        "react/todo": "off",
+        "shadcn/no-arbitrary-values": "off",
+        "shadcn/no-raw-colors": "off",
         "shadcn/no-restyle": "off",
       },
     },

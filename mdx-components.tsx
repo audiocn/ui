@@ -4,9 +4,11 @@ import { Tab, Tabs } from "fumadocs-ui/components/tabs";
 import { TypeTable } from "fumadocs-ui/components/type-table";
 import defaultMdxComponents from "fumadocs-ui/mdx";
 import type { MDXComponents } from "mdx/types";
+import type { ComponentProps } from "react";
 
 import { ComponentPreview } from "@/components/docs/component-preview";
 import { ComponentSource } from "@/components/docs/component-source";
+import { InstallCommand } from "@/components/docs/install-command";
 import { PropsTable } from "@/components/docs/props-table";
 
 export const getMDXComponents = (
@@ -16,6 +18,9 @@ export const getMDXComponents = (
   Callout,
   ComponentPreview,
   ComponentSource,
+  InstallCommand: (props: ComponentProps<typeof InstallCommand>) => (
+    <InstallCommand className="my-4" {...props} />
+  ),
   PropsTable,
   Step,
   Steps,

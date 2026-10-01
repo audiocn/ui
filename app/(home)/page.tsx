@@ -2,7 +2,7 @@ import { ArrowRightIcon } from "@phosphor-icons/react/ssr";
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { CopyCommand } from "@/components/home/copy-command";
+import { InstallCommand } from "@/components/docs/install-command";
 import { HeroThreads } from "@/components/home/hero-threads";
 import { ShowcaseGrid } from "@/components/home/showcase-grid";
 import { ThemeSwatches } from "@/components/home/theme-swatches";
@@ -62,9 +62,11 @@ const Page = () => (
             Browse components
           </Button>
         </div>
-        <CopyCommand
-          command={`npx shadcn@latest add ${siteConfig.registryNamespace}/mixer`}
-        />
+        <div className="w-full max-w-md text-left">
+          <InstallCommand
+            command={`npx shadcn@latest add ${siteConfig.registryNamespace}/mixer`}
+          />
+        </div>
       </div>
     </section>
     <div className="mx-auto flex w-full max-w-7xl flex-col px-4 pb-24 sm:px-6">
