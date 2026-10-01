@@ -4,6 +4,59 @@ for (const width of [375, 1440]) {
   test.describe(`channel strip at ${width}px`, () => {
     test.use({ viewport: { height: 900, width } });
 
+    for (const orientation of ["horizontal", "vertical"]) {
+      test(`${orientation} fader track reaches both meter edges`, async ({
+        page,
+      }) => {
+        await page.goto("/docs/components/channel-strip");
+        const strip = page
+          .locator(
+            `[data-slot="channel-strip"][data-orientation="${orientation}"]`
+          )
+          .first();
+        await strip.scrollIntoViewIfNeeded();
+        const meter = strip.locator('[data-slot="level-meter-track"]').first();
+        const track = strip.locator('[data-slot="fader-track"]');
+        const meterBounds = await meter.boundingBox();
+        const trackBounds = await track.boundingBox();
+        if (!(meterBounds && trackBounds)) {
+          throw new Error("Meter or fader track is missing");
+        }
+        const axis = orientation === "horizontal" ? "x" : "y";
+        const length = orientation === "horizontal" ? "width" : "height";
+        expect(trackBounds[axis]).toBeCloseTo(meterBounds[axis], 1);
+        expect(trackBounds[axis] + trackBounds[length]).toBeCloseTo(
+          meterBounds[axis] + meterBounds[length],
+          1
+        );
+
+        const slider = strip.getByRole("slider");
+        const checkEndpoint = async (key: "Home" | "End") => {
+          await expect(async () => {
+            await slider.press(key);
+            await expect(slider).toHaveAttribute(
+              "aria-valuenow",
+              key === "Home" ? "0" : "1"
+            );
+          }).toPass();
+          const thumbBounds = await strip
+            .locator('[data-slot="fader-thumb"]')
+            .boundingBox();
+          if (!thumbBounds) {
+            throw new Error("Fader thumb is missing");
+          }
+          const atStart =
+            orientation === "horizontal" ? key === "Home" : key === "End";
+          expect(thumbBounds[axis] + thumbBounds[length] / 2).toBeCloseTo(
+            meterBounds[axis] + (atStart ? 0 : meterBounds[length]),
+            1
+          );
+        };
+        await checkEndpoint("Home");
+        await checkEndpoint("End");
+      });
+    }
+
     test("keeps equal space above and below its content", async ({ page }) => {
       await page.goto("/docs/components/channel-strip");
       const strip = page.locator('[data-slot="channel-strip"]').first();

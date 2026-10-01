@@ -375,7 +375,7 @@ export const ChannelStripFader = ({
   return (
     <div
       className={cn(
-        "flex min-h-0 min-w-0 [grid-area:fader]",
+        "flex min-h-0 min-w-0 [grid-area:fader] [&_[data-slot=fader-control]]:p-0 [&_[data-slot=fader-scale]]:p-0",
         orientation === "horizontal"
           ? "w-full items-center"
           : "h-full justify-center",
