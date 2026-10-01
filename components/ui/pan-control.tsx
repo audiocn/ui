@@ -40,7 +40,7 @@ export const parsePan = (text: string): number | null => {
   return side === "L" ? -Math.abs(amount) : amount;
 };
 
-const describePan = (value: number): string => {
+export const describePan = (value: number): string => {
   const amount = Math.round(Math.abs(value) * PERCENT);
   if (amount === 0) {
     return "Center";

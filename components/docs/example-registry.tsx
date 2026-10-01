@@ -172,6 +172,9 @@ export const examples: Record<string, ComponentType | undefined> = {
   "pan-control-demo": dynamic(
     () => import("@/components/examples/pan-control-demo")
   ),
+  "pan-control-knob": dynamic(
+    () => import("@/components/examples/pan-control-knob")
+  ),
   "parameter-slider-demo": dynamic(
     () => import("@/components/examples/parameter-slider-demo")
   ),

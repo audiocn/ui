@@ -23,11 +23,13 @@ import { PanControl } from "@/components/ui/pan-control";
 
 The value runs from −1 (left) to 1 (right). Dragging near the centre snaps to it, and double-clicking returns to it. `formatPan` turns a value into "L30", "C" or "R30", and `parsePan` reads that text back.
 
-For a rotary pan, use a [Knob](/docs/components/knob) with `min={-1}`, `max={1}`, `origin={0}` `format={formatPan}` and `parse={parsePan}`.
+For a rotary pan, use a [Knob](/docs/components/knob) with `min={-1}`, `max={1}`, `origin={0}`, `format={formatPan}`, and `parse={parsePan}`:
+
+<ComponentPreview name="pan-control-knob" />
 
 ## Accessibility
 
-The thumb is a slider named "Pan", with `aria-valuetext` such as "30% left" or "Center".
+The thumb is a slider named "Pan", with `aria-valuetext` such as "30% left" or "Center". The knob example uses `describePan` for the same text on its dial, while `formatPan` keeps the visible value short. Both support arrow keys, Page Up, Page Down, Home and End.
 
 ## API reference
 
