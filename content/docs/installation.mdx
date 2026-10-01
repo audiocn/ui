@@ -80,6 +80,15 @@ export const MicLevel = ({ peakDb }: { peakDb: number }) => (
 
 The paths follow the aliases in your `components.json`, so they adapt to projects with a `src` folder or custom aliases.
 
+## Radix projects
+
+The components are built on Base UI, and the CLI installs `@base-ui/react` next to Radix. Your own components keep Radix; only the audiocn files import Base UI. A few things to know:
+
+- `channel-strip` uses the shadcn `badge`. If you have customised yours, answer **No** when the CLI asks to overwrite `badge.tsx`. The current shadcn badge also adds the `cn` package; remove it from `package.json` if you keep your own badge.
+- `audio-device-select` and the blocks compose shadcn components through Base UI APIs (`render`, the Select `items` prop), so they need a Base UI project. Every other item works in both.
+- The six audio tokens land in your global CSS. If your theme already has status colours, point the tokens at them instead (see [Theming](/docs/concepts/theming)).
+- The code compiles against an ES2022 `lib`.
+
 ## Install everything
 
 Every block pulls in the components it uses. The full mixer installs most of the library in one step:
