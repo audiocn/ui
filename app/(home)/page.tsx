@@ -1,4 +1,5 @@
 import { ArrowRightIcon } from "@phosphor-icons/react/ssr";
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { CopyCommand } from "@/components/home/copy-command";
@@ -7,7 +8,13 @@ import { ShowcaseGrid } from "@/components/home/showcase-grid";
 import { ThemeSwatches } from "@/components/home/theme-swatches";
 import { Button } from "@/components/ui/button";
 import { siteConfig } from "@/lib/site";
+import { getPageMetadata } from "@/lib/social-metadata";
 import { source } from "@/lib/source";
+
+export const metadata: Metadata = getPageMetadata({
+  pathname: "/",
+  title: siteConfig.name,
+});
 
 const componentCount = source
   .getPages()

@@ -12,7 +12,7 @@ import {
   resolveContributorsRepository,
 } from "@/lib/contributors";
 import type { Contributor } from "@/lib/contributors";
-import { getSocialMetadata } from "@/lib/social-metadata";
+import { getPageMetadata } from "@/lib/social-metadata";
 
 const AVATAR_SIZE_PX = 48;
 const DESCRIPTION =
@@ -22,12 +22,11 @@ const DESCRIPTION =
 // own instead of waiting for a redeploy. Segment config must be a literal.
 export const revalidate = 3600;
 
-export const metadata: Metadata = {
-  ...getSocialMetadata("audiocn contributors", DESCRIPTION),
-  alternates: { canonical: "/contributors" },
+export const metadata: Metadata = getPageMetadata({
   description: DESCRIPTION,
+  pathname: "/contributors",
   title: "Contributors",
-};
+});
 
 const numberFormatter = new Intl.NumberFormat("en-US");
 

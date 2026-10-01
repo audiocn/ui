@@ -45,7 +45,7 @@ test("shared docs links have an image and the page's own social title", async ({
   await page.goto("/docs/components/level-meter");
   await expect(page.locator('meta[property="og:title"]')).toHaveAttribute(
     "content",
-    "Level Meter"
+    "Level Meter for React — audiocn"
   );
   await expect(page.locator('meta[name="twitter:card"]')).toHaveAttribute(
     "content",

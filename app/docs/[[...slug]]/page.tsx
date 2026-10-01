@@ -7,7 +7,7 @@ import {
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import { getSocialMetadata } from "@/lib/social-metadata";
+import { getPageMetadata } from "@/lib/social-metadata";
 import { source } from "@/lib/source";
 import { getMDXComponents } from "@/mdx-components";
 
@@ -48,12 +48,18 @@ export const generateMetadata = async ({
     notFound();
   }
 
-  return {
-    ...getSocialMetadata(page.data.title, page.data.description),
-    alternates: { canonical: page.url },
-    description: page.data.description,
-    title: page.data.title,
-  };
+  const isReactExample =
+    page.url.startsWith("/docs/components/") ||
+    page.url.startsWith("/docs/blocks/");
+  const defaultTitle = isReactExample
+    ? `${page.data.title} for React`
+    : page.data.title;
+
+  return getPageMetadata({
+    description: page.data.seoDescription ?? page.data.description,
+    pathname: page.url,
+    title: page.data.seoTitle ?? defaultTitle,
+  });
 };
 
 export default Page;

@@ -1,3 +1,4 @@
+import { pageSchema } from "fumadocs-core/source/schema";
 import { defineConfig, defineDocs } from "fumadocs-mdx/config";
 
 import { codeThemes } from "./lib/docs/code-themes";
@@ -8,6 +9,10 @@ export const docs = defineDocs({
     postprocess: {
       includeProcessedMarkdown: true,
     },
+    schema: pageSchema.extend({
+      seoDescription: pageSchema.shape.description,
+      seoTitle: pageSchema.shape.description,
+    }),
   },
 });
 

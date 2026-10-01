@@ -8,7 +8,7 @@ import { SiteFooter } from "@/components/docs/site-footer";
 import { ThemeProvider } from "@/components/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { siteConfig } from "@/lib/site";
-import { getSocialMetadata } from "@/lib/social-metadata";
+import { getPageMetadata } from "@/lib/social-metadata";
 import { cn } from "@/lib/utils";
 
 const outfitHeading = Outfit({
@@ -24,12 +24,10 @@ const fontMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  ...getSocialMetadata(siteConfig.name),
-  alternates: { canonical: "/" },
-  description: siteConfig.description,
+  ...getPageMetadata({ pathname: "/", title: siteConfig.name }),
   metadataBase: new URL(siteConfig.url),
   title: {
-    default: `${siteConfig.name} — audio components for shadcn/ui`,
+    default: siteConfig.title,
     template: `%s — ${siteConfig.name}`,
   },
 };

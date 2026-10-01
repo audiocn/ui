@@ -1,9 +1,10 @@
 export const siteConfig = {
   description:
-    "Audio components for React, built the shadcn way: level meters, visualizers, faders, channel strips, a complete mixer, players and sound pads.",
+    "Copy-and-paste audio components for React and shadcn/ui. Build mixers, players, meters, knobs and waveforms with accessible UI you own.",
   githubRepo: "TheOrcDev/audiocn",
   name: "audiocn",
   registryNamespace: "@audiocn",
   registryUrl: "https://audiocn.dev/r/{name}.json",
+  title: "audiocn — Audio components for React and shadcn/ui",
   url: "https://audiocn.dev",
 } as const;
