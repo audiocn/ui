@@ -9,18 +9,18 @@ Level meters, visualizers, faders, knobs, channel strips, a complete mixer, play
 Copy, paste, make them yours.</p>
 
 <p>
-  <a href="https://audiocn.dev/docs/components"><picture><source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/badge/components-23.svg?logo=lu:AudioLines&amp;mode=dark&amp;valueColor=10b981" /><img src="https://shieldcn.dev/badge/components-23.svg?logo=lu:AudioLines&amp;mode=light&amp;valueColor=10b981" alt="23 components" /></picture></a>
-  <a href="https://audiocn.dev/docs/blocks"><picture><source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/badge/blocks-6.svg?logo=lu:LayoutDashboard&amp;mode=dark&amp;valueColor=10b981" /><img src="https://shieldcn.dev/badge/blocks-6.svg?logo=lu:LayoutDashboard&amp;mode=light&amp;valueColor=10b981" alt="6 blocks" /></picture></a>
-  <a href="https://audiocn.dev/docs/hooks/use-audio-analyser"><picture><source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/badge/hooks-16.svg?logo=lu:Webhook&amp;mode=dark&amp;valueColor=10b981" /><img src="https://shieldcn.dev/badge/hooks-16.svg?logo=lu:Webhook&amp;mode=light&amp;valueColor=10b981" alt="16 hooks" /></picture></a>
-  <a href="./license.md"><picture><source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/badge/license-MIT.svg?logo=lu:Scale&amp;mode=dark&amp;valueColor=10b981" /><img src="https://shieldcn.dev/badge/license-MIT.svg?logo=lu:Scale&amp;mode=light&amp;valueColor=10b981" alt="MIT licence" /></picture></a>
+  <a href="https://audiocn.dev/docs/components"><img src="https://shieldcn.dev/badge/components-23.svg?logo=lu:AudioLines&amp;mode=light&amp;valueColor=10b981" alt="23 components" /></a>
+  <a href="https://audiocn.dev/docs/blocks"><img src="https://shieldcn.dev/badge/blocks-6.svg?logo=lu:LayoutDashboard&amp;mode=light&amp;valueColor=10b981" alt="6 blocks" /></a>
+  <a href="https://audiocn.dev/docs/hooks/use-audio-analyser"><img src="https://shieldcn.dev/badge/hooks-16.svg?logo=lu:Webhook&amp;mode=light&amp;valueColor=10b981" alt="16 hooks" /></a>
+  <a href="./license.md"><img src="https://shieldcn.dev/badge/license-MIT.svg?logo=lu:Scale&amp;mode=light&amp;valueColor=10b981" alt="MIT licence" /></a>
 </p>
 
 <p>
-  <a href="https://react.dev"><picture><source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/badge/React-19.svg?logo=react&amp;variant=outline&amp;mode=dark" /><img src="https://shieldcn.dev/badge/React-19.svg?logo=react&amp;variant=outline&amp;mode=light" alt="React 19" /></picture></a>
-  <a href="https://ui.shadcn.com/docs/registry"><picture><source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/badge/shadcn%2Fui-registry.svg?logo=shadcnui&amp;variant=outline&amp;mode=dark" /><img src="https://shieldcn.dev/badge/shadcn%2Fui-registry.svg?logo=shadcnui&amp;variant=outline&amp;mode=light" alt="shadcn/ui registry" /></picture></a>
-  <a href="https://tailwindcss.com"><picture><source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/badge/Tailwind%20CSS-v4.svg?logo=tailwindcss&amp;variant=outline&amp;mode=dark" /><img src="https://shieldcn.dev/badge/Tailwind%20CSS-v4.svg?logo=tailwindcss&amp;variant=outline&amp;mode=light" alt="Tailwind CSS v4" /></picture></a>
-  <a href="https://base-ui.com"><picture><source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/badge/built%20on-Base%20UI.svg?logo=lu:Component&amp;variant=outline&amp;mode=dark" /><img src="https://shieldcn.dev/badge/built%20on-Base%20UI.svg?logo=lu:Component&amp;variant=outline&amp;mode=light" alt="Built on Base UI" /></picture></a>
-  <a href="https://developer.mozilla.org/docs/Web/API/Web_Audio_API"><picture><source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/badge/Web%20Audio-API.svg?logo=lu:AudioWaveform&amp;variant=outline&amp;mode=dark" /><img src="https://shieldcn.dev/badge/Web%20Audio-API.svg?logo=lu:AudioWaveform&amp;variant=outline&amp;mode=light" alt="Web Audio API" /></picture></a>
+  <a href="https://react.dev"><img src="https://shieldcn.dev/badge/React-19.svg?logo=react&amp;variant=secondary&amp;mode=dark" alt="React 19" /></a>
+  <a href="https://ui.shadcn.com/docs/registry"><img src="https://shieldcn.dev/badge/shadcn%2Fui-registry.svg?logo=shadcnui&amp;variant=secondary&amp;mode=dark" alt="shadcn/ui registry" /></a>
+  <a href="https://tailwindcss.com"><img src="https://shieldcn.dev/badge/Tailwind%20CSS-v4.svg?logo=tailwindcss&amp;variant=secondary&amp;mode=dark" alt="Tailwind CSS v4" /></a>
+  <a href="https://base-ui.com"><img src="https://shieldcn.dev/badge/built%20on-Base%20UI.svg?logo=lu:Component&amp;variant=secondary&amp;mode=dark" alt="Built on Base UI" /></a>
+  <a href="https://developer.mozilla.org/docs/Web/API/Web_Audio_API"><img src="https://shieldcn.dev/badge/Web%20Audio-API.svg?logo=lu:AudioWaveform&amp;variant=secondary&amp;mode=dark" alt="Web Audio API" /></a>
 </p>
 
 <p>
