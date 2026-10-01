@@ -16,7 +16,7 @@ The test for every component: a developer who knows shadcn/ui should be able to 
 8. **State is exposed as data attributes**, so users style states with Tailwind (`data-[clipping]:ring-2`). Boolean attributes are present or absent.
 9. **Controlled and uncontrolled.** Every stateful control takes `value`, `defaultValue`, `onValueChange` and `onValueCommitted`, matching Base UI's names.
 10. **`render` prop for polymorphism**, through Base UI's `useRender`, on parts where swapping the element makes sense (buttons, triggers, items).
-11. **React 19:** `ref` is a normal prop, no `forwardRef`.
+11. **React 19.2+:** `ref` is a normal prop, no `forwardRef`. A value an effect reads but shouldn't re-run for (a callback prop, a paint option) goes through `useEffectEvent`, not a latest-ref.
 12. **`"use client"`** at the top of every file that uses state, effects or browser APIs.
 13. **No icon imports in `ui` components.** Icons are children. Blocks and examples use Phosphor.
 14. **No layout opinions baked in.** Width, height and spacing come from `className`. Canvas components fill their container; there is no `height` prop.

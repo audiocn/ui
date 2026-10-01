@@ -16,7 +16,7 @@ Copy, paste, make them yours.</p>
 </p>
 
 <p>
-  <a href="https://react.dev"><img src="https://shieldcn.dev/badge/React-19.svg?logo=react&amp;variant=secondary&amp;mode=dark" alt="React 19" /></a>
+  <a href="https://react.dev"><img src="https://shieldcn.dev/badge/React-19.2.svg?logo=react&amp;variant=secondary&amp;mode=dark" alt="React 19.2" /></a>
   <a href="https://ui.shadcn.com/docs/registry"><img src="https://shieldcn.dev/badge/shadcn%2Fui-registry.svg?logo=shadcnui&amp;variant=secondary&amp;mode=dark" alt="shadcn/ui registry" /></a>
   <a href="https://tailwindcss.com"><img src="https://shieldcn.dev/badge/Tailwind%20CSS-v4.svg?logo=tailwindcss&amp;variant=secondary&amp;mode=dark" alt="Tailwind CSS v4" /></a>
   <a href="https://base-ui.com"><img src="https://shieldcn.dev/badge/built%20on-Base%20UI.svg?logo=lu:Component&amp;variant=secondary&amp;mode=dark" alt="Built on Base UI" /></a>
@@ -157,7 +157,7 @@ Plus `useAudioContext`, `useFrameSource`, `useLevel`, `useClipHold`, `useReduced
 
 ## Quick start
 
-audiocn is a [shadcn registry](https://ui.shadcn.com/docs/registry). You need React 19, Tailwind CSS v4 and a project set up with shadcn/ui.
+audiocn is a [shadcn registry](https://ui.shadcn.com/docs/registry). You need React 19.2 or later, Tailwind CSS v4 and a project set up with shadcn/ui.
 
 **1. Add the registry** to `components.json`:
 
