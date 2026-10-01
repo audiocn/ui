@@ -51,6 +51,18 @@ The value keeps one width across the whole range, so the layout never moves whil
 
 ## Examples
 
+### Drag directions
+
+Choose `dragDirection` to match how you want to move the dial:
+
+- `vertical`, the default: drag up to increase the value, down to decrease it.
+- `horizontal`: drag right to increase the value, left to decrease it.
+- `circular`: turn clockwise to increase the value, anticlockwise to decrease it.
+
+Hold Shift for finer control in all three modes. For vertical and horizontal drags, `sensitivity` sets the distance in pixels for the full range. The default is `200`.
+
+<ComponentPreview name="knob-drag-directions" />
+
 ### Sizes and disabled
 
 <ComponentPreview name="knob-sizes" />

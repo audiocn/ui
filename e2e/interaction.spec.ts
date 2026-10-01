@@ -82,13 +82,45 @@ test("fader values keep their width across the whole range", async ({
   expect(new Set(snapshots)).toEqual(new Set([before]));
 });
 
-test("knobs turn when circled, finer with Shift, reset with Alt+click and take typed values", async ({
-  page,
-}) => {
-  await page.goto("/docs/components/knob");
-  const preview = page.locator('[data-slot="component-preview"]').first();
-  await preview.scrollIntoViewIfNeeded();
-  const dial = preview.getByRole("slider").first();
+for (const direction of ["Vertical", "Horizontal"] as const) {
+  test(`knobs drag in the ${direction.toLowerCase()} direction, finer with Shift`, async ({
+    page,
+  }) => {
+    await page.goto("/docs/components/knob#drag-directions");
+    const dial = page.getByRole("slider", { exact: true, name: direction });
+    await dial.scrollIntoViewIfNeeded();
+    const box = await dial.boundingBox();
+    if (!box) {
+      throw new Error("The knob is not visible.");
+    }
+    const x = box.x + box.width / 2;
+    const y = box.y + box.height / 2;
+    const along = (pixels: number) =>
+      direction === "Vertical"
+        ? ([x, y - pixels] as const)
+        : ([x + pixels, y] as const);
+
+    await expect(dial).toHaveAttribute("aria-valuenow", "0");
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.keyboard.down("Shift");
+    await page.mouse.move(...along(50), { steps: 8 });
+    // 50 of 200 pixels over 48 dB is 12 dB, or 1.2 dB with Shift.
+    await expect(dial).toHaveAttribute("aria-valuenow", "1.2");
+    await page.keyboard.up("Shift");
+    await expect(dial).toHaveAttribute("aria-valuenow", "1.2");
+    await page.mouse.move(...along(95), { steps: 8 });
+    await expect(dial).toHaveAttribute("aria-valuenow", "12");
+    await page.mouse.move(...along(45), { steps: 8 });
+    await expect(dial).toHaveAttribute("aria-valuenow", "0");
+    await page.mouse.up();
+  });
+}
+
+test("knobs turn when circled, finer with Shift", async ({ page }) => {
+  await page.goto("/docs/components/knob#drag-directions");
+  const dial = page.getByRole("slider", { exact: true, name: "Circular" });
+  await dial.scrollIntoViewIfNeeded();
   const box = await dial.boundingBox();
   if (!box) {
     throw new Error("The knob is not visible.");
@@ -115,11 +147,18 @@ test("knobs turn when circled, finer with Shift, reset with Alt+click and take t
   // A third of the arc is 16 dB more, across the gap at the bottom.
   await page.mouse.move(...around(247.5), { steps: 8 });
   await expect(dial).toHaveAttribute("aria-valuenow", "17");
+  await page.mouse.move(...around(157.5), { steps: 8 });
+  await expect(dial).toHaveAttribute("aria-valuenow", "1");
   await page.mouse.up();
+});
 
-  await page.keyboard.down("Alt");
-  await page.mouse.click(x, y);
-  await page.keyboard.up("Alt");
+test("knobs reset with Alt+click and take typed values", async ({ page }) => {
+  await page.goto("/docs/components/knob");
+  const preview = page.locator('[data-slot="component-preview"]').first();
+  const dial = preview.getByRole("slider", { exact: true, name: "Gain" });
+  await dial.press("ArrowUp");
+  await expect(dial).toHaveAttribute("aria-valuenow", "1");
+  await dial.click({ modifiers: ["Alt"] });
   await expect(dial).toHaveAttribute("aria-valuenow", "0");
 
   await preview.locator('[data-slot="knob-value"]').first().dblclick();
