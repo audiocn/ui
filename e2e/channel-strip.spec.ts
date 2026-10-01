@@ -61,6 +61,52 @@ for (const width of [375, 1440]) {
   test.describe(`channel strip at ${width}px`, () => {
     test.use({ viewport: { height: 900, width } });
 
+    for (const component of ["mixer", "channel-strip"]) {
+      test(`${component} console tracks and readout align with the button centre`, async ({
+        page,
+      }) => {
+        await page.goto(`/docs/components/${component}`);
+        const strip = page
+          .locator('[data-slot="channel-strip"][data-orientation="vertical"]')
+          .first();
+        await strip.scrollIntoViewIfNeeded();
+        const offsets = await strip.evaluate((element) => {
+          const controls = element.querySelector(
+            '[data-slot="channel-strip-controls"]'
+          );
+          const value = element.querySelector(
+            '[data-slot="channel-strip-value"]'
+          );
+          if (!(controls && value)) {
+            throw new Error("Strip controls or readout is missing");
+          }
+          const buttons = controls.querySelectorAll("button");
+          const mute = buttons[0]?.getBoundingClientRect();
+          const solo = buttons[1]?.getBoundingClientRect();
+          if (!(mute && solo)) {
+            throw new Error("Mute or Solo button is missing");
+          }
+          const centre = (mute.right + solo.left) / 2;
+          const tracks = [
+            ...element.querySelectorAll(
+              '[data-slot="level-meter-track"], [data-slot="fader-track"]'
+            ),
+          ].map((track) => track.getBoundingClientRect());
+          const left = Math.min(...tracks.map((track) => track.left));
+          const right = Math.max(...tracks.map((track) => track.right));
+          const text = document.createRange();
+          text.selectNodeContents(value);
+          const readout = text.getBoundingClientRect();
+          return {
+            readout: (readout.left + readout.right) / 2 - centre,
+            tracks: (left + right) / 2 - centre,
+          };
+        });
+        expect.soft(Math.abs(offsets.tracks)).toBeLessThan(0.5);
+        expect.soft(Math.abs(offsets.readout)).toBeLessThan(0.5);
+      });
+    }
+
     for (const orientation of ["horizontal", "vertical"]) {
       test(`${orientation} fader track reaches both meter edges`, async ({
         page,

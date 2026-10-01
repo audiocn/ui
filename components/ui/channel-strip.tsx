@@ -378,7 +378,7 @@ export const ChannelStripFader = ({
         "flex min-h-0 min-w-0 [grid-area:fader] [&_[data-slot=fader-control]]:p-0 [&_[data-slot=fader-scale]]:p-0",
         orientation === "horizontal"
           ? "w-full items-center [&_[data-slot=fader-control]:only-child]:my-[calc((var(--fader-track-size)-var(--fader-thumb-size))/2)]"
-          : "h-full justify-center",
+          : "h-full justify-center [&_[data-slot=fader-control]:only-child]:mx-[calc((var(--fader-track-size)-var(--fader-thumb-size))/2)]",
         className
       )}
       data-slot="channel-strip-fader"
@@ -394,7 +394,7 @@ export const ChannelStripValue = ({
   <div
     className={cn(
       // Wide enough for "−60.0 dB", so dragging a fader never resizes the row.
-      "text-muted-foreground flex min-w-[8ch] items-center justify-end font-mono text-xs whitespace-nowrap tabular-nums [grid-area:value]",
+      "text-muted-foreground flex min-w-[8ch] items-center justify-end font-mono text-xs whitespace-nowrap tabular-nums [grid-area:value] group-data-[orientation=vertical]/channel-strip:justify-center",
       className
     )}
     data-slot="channel-strip-value"

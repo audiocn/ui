@@ -80,9 +80,11 @@ Parts place themselves on a CSS grid by area name: `header`, `meter`, `fader`, `
 
 A row measures its own width with a container query. Below 36rem it puts the header on its own line, with the meter and fader full width underneath, so rows stay readable on phones and in narrow panels. From 36rem up the header sits beside the meter in a column `--channel-strip-header-width` wide. Set that variable on a mixer to align every row; the header wraps its status and actions onto a second line before it truncates the title.
 
-`ChannelStripFader` removes the fader's end padding so its track and scale reach the meter's edges in both orientations. At minimum and maximum, the thumb's centre aligns with the track edge. For track-only faders, horizontal strips centre the visible meter and fader tracks as a group, while keeping the fader's full thumb and pointer target.
+`ChannelStripFader` removes the fader's end padding so its track and scale reach the meter's edges in both orientations. At minimum and maximum, the thumb's centre aligns with the track edge. For track-only faders, strips centre the visible meter and fader tracks as a group in both orientations, while keeping the fader's full thumb and pointer target.
 
 Horizontal strips reserve a notice row only when you include `ChannelStripNotice`, so strips without a notice keep equal top and bottom spacing.
+
+`ChannelStripValue` centres its content in vertical strips and aligns it to the right in horizontal strips.
 
 A vertical strip keeps its width inside a mixer. When the strips do not fit, the mixer's channels scroll instead of squeezing them.
 
