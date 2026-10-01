@@ -50,6 +50,7 @@ import { useAudioContext } from "@/hooks/use-audio-context";
 import { useAudioDevices } from "@/hooks/use-audio-devices";
 import { useMicrophone } from "@/hooks/use-microphone";
 import { dbToGain } from "@/lib/audio/decibels";
+import type { FrameSource, MeterFrame } from "@/lib/audio/types";
 
 const CHECK_DURATION_MS = 3000;
 
@@ -94,6 +95,71 @@ const judge = (peakDb: number): CheckResult => {
   return "good";
 };
 
+/** Runs the microphone through a gain stage and analyses the result. */
+const useMicInput = (
+  stream: MediaStream | null,
+  gainDb: number,
+  muted: boolean
+) => {
+  const { context } = useAudioContext();
+  const gainNode = useMemo(() => context?.createGain() ?? null, [context]);
+
+  useEffect(() => {
+    if (!(context && gainNode && stream)) {
+      return;
+    }
+    const source = context.createMediaStreamSource(stream);
+    source.connect(gainNode);
+    return () => source.disconnect();
+  }, [context, gainNode, stream]);
+
+  useEffect(() => {
+    if (gainNode && context) {
+      gainNode.gain.setTargetAtTime(
+        muted ? 0 : dbToGain(gainDb),
+        context.currentTime,
+        0.01
+      );
+    }
+  }, [context, gainDb, gainNode, muted]);
+
+  return useAudioAnalyser(stream ? gainNode : null, { historySize: 120 });
+};
+
+/** Listens for a few seconds, then judges the loudest peak. */
+const useLevelCheck = (meter: FrameSource<MeterFrame>) => {
+  const [checking, setChecking] = useState(false);
+  const [result, setResult] = useState<CheckResult | null>(null);
+  const peakRef = useRef(Number.NEGATIVE_INFINITY);
+
+  useEffect(() => {
+    if (!checking) {
+      return;
+    }
+    peakRef.current = Number.NEGATIVE_INFINITY;
+    const unsubscribe = meter.subscribe((frame) => {
+      for (const level of frame.channels) {
+        peakRef.current = Math.max(peakRef.current, level.peakDb);
+      }
+    });
+    const timer = setTimeout(() => {
+      setChecking(false);
+      setResult(judge(peakRef.current));
+    }, CHECK_DURATION_MS);
+    return () => {
+      unsubscribe();
+      clearTimeout(timer);
+    };
+  }, [checking, meter]);
+
+  const start = () => {
+    setResult(null);
+    setChecking(true);
+  };
+
+  return { checking, result, start };
+};
+
 export interface MicSetupProps {
   deviceId?: string | null;
   onDeviceChange?: (deviceId: string | null) => void;
@@ -127,53 +193,8 @@ export const MicSetup = ({
 
   const devices = useAudioDevices();
   const microphone = useMicrophone({ deviceId, enabled: started });
-  const { context } = useAudioContext();
-  const gainNode = useMemo(() => context?.createGain() ?? null, [context]);
-  const analyser = useAudioAnalyser(microphone.stream ? gainNode : null, {
-    historySize: 120,
-  });
-  const [checking, setChecking] = useState(false);
-  const [result, setResult] = useState<CheckResult | null>(null);
-  const peakRef = useRef(Number.NEGATIVE_INFINITY);
-
-  useEffect(() => {
-    if (!(context && gainNode && microphone.stream)) {
-      return;
-    }
-    const source = context.createMediaStreamSource(microphone.stream);
-    source.connect(gainNode);
-    return () => source.disconnect();
-  }, [context, gainNode, microphone.stream]);
-
-  useEffect(() => {
-    if (gainNode && context) {
-      gainNode.gain.setTargetAtTime(
-        muted ? 0 : dbToGain(gainDb),
-        context.currentTime,
-        0.01
-      );
-    }
-  }, [context, gainDb, gainNode, muted]);
-
-  useEffect(() => {
-    if (!checking) {
-      return;
-    }
-    peakRef.current = Number.NEGATIVE_INFINITY;
-    const unsubscribe = analyser.meter.subscribe((frame) => {
-      for (const level of frame.channels) {
-        peakRef.current = Math.max(peakRef.current, level.peakDb);
-      }
-    });
-    const timer = setTimeout(() => {
-      setChecking(false);
-      setResult(judge(peakRef.current));
-    }, CHECK_DURATION_MS);
-    return () => {
-      unsubscribe();
-      clearTimeout(timer);
-    };
-  }, [analyser.meter, checking]);
+  const analyser = useMicInput(microphone.stream, gainDb, muted);
+  const { checking, result, start: startCheck } = useLevelCheck(analyser.meter);
 
   const setDeviceId = (next: string | null) => {
     setDeviceIdState(next);
@@ -288,10 +309,7 @@ export const MicSetup = ({
             <Button
               className="self-start"
               disabled={!active || checking}
-              onClick={() => {
-                setResult(null);
-                setChecking(true);
-              }}
+              onClick={startCheck}
               variant="outline"
             >
               {checking ? "Listening… say a few words" : "Check level"}
