@@ -1,4 +1,6 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
+import { Activity } from "react";
+import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useAudioDevices } from "@/hooks/use-audio-devices";
@@ -193,6 +195,27 @@ describe("frame sources over time", () => {
     expect(result.current.count).toBe(2);
     expect(result.current.clipping).toBe(true);
     advance(250);
+    expect(result.current.clipping).toBe(false);
+  });
+
+  it("useClipHold releases after an Activity hide and show mid-hold", () => {
+    const activity: { mode: "visible" | "hidden" } = { mode: "visible" };
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <Activity mode={activity.mode}>{children}</Activity>
+    );
+    const { result, rerender } = renderHook(
+      () => useClipHold({ holdMs: 1000 }),
+      { wrapper }
+    );
+    act(() => {
+      result.current.report(0);
+    });
+    expect(result.current.clipping).toBe(true);
+    activity.mode = "hidden";
+    rerender();
+    activity.mode = "visible";
+    rerender();
+    advance(1500);
     expect(result.current.clipping).toBe(false);
   });
 

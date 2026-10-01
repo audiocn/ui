@@ -7,17 +7,17 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useEffectEvent,
   useImperativeHandle,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
 } from "react";
-import type { ComponentProps, Ref, RefObject } from "react";
+import type { ComponentProps, CSSProperties, Ref, RefObject } from "react";
 
 import { ClipIndicator } from "@/components/ui/clip-indicator";
 import type { ClipIndicatorProps } from "@/components/ui/clip-indicator";
-import { DbReadout } from "@/components/ui/db-readout";
+import { DbReadout, readChannel } from "@/components/ui/db-readout";
 import type { DbReadoutProps } from "@/components/ui/db-readout";
 import { DbScale } from "@/components/ui/db-scale";
 import type { DbScaleProps } from "@/components/ui/db-scale";
@@ -74,6 +74,8 @@ interface LevelMeterContextValue {
   maxDb: number;
   taper: Taper;
   frames: FrameSource<MeterFrame>;
+  /** The declarative levels, when the meter has values instead of a source. */
+  declared: MeterFrame | null;
   registerChannel: (index: number, element: HTMLElement | null) => void;
 }
 
@@ -95,7 +97,10 @@ const buildZoneFill = (
 ) => {
   const direction = orientation === "horizontal" ? "to right" : "to top";
   const sorted = zones.toSorted((a, b) => a.fromDb - b.fromDb);
-  const starts = sorted.map((zone) => taper.toPosition(zone.fromDb) * 100);
+  // Rounded so the server and the browser print the same stops.
+  const starts = sorted.map((zone) =>
+    Number((taper.toPosition(zone.fromDb) * 100).toFixed(3))
+  );
 
   if (variant === "gradient") {
     const stops = sorted.map(
@@ -161,19 +166,24 @@ interface ChannelState {
   rmsLevel: number;
   hold: number;
   zone: string;
-  active: boolean;
+  /** Null until first painted, so a new painter always writes it. */
+  active: boolean | null;
 }
 
 interface PainterOptions {
   ballistics: BallisticsInput;
   channels: Map<number, HTMLElement>;
   latest: RefObject<MeterFrame | null>;
-  maxDb: number;
-  minDb: number;
   reducedMotion: boolean;
   root: RefObject<HTMLElement | null>;
-  taper: Taper;
   visible: RefObject<boolean>;
+}
+
+/** Read on every paint, so changing it doesn't rebuild the painter. */
+interface MeterScale {
+  maxDb: number;
+  minDb: number;
+  taper: Taper;
   zones: MeterZone[];
 }
 
@@ -202,7 +212,9 @@ const createMeterPainter = (options: PainterOptions) => {
     : options.ballistics;
   const states = new Map<number, ChannelState>();
   let clipUntil = 0;
-  let clippingShown = false;
+  // Null until first painted: a painter rebuilt mid-clip must still clear
+  // the attribute the previous one left.
+  let clippingShown: boolean | null = null;
   let lastAriaMs = 0;
   let lastPaintMs = 0;
 
@@ -212,7 +224,7 @@ const createMeterPainter = (options: PainterOptions) => {
       return existing;
     }
     const created: ChannelState = {
-      active: false,
+      active: null,
       element,
       hold: -1,
       level: -1,
@@ -232,12 +244,13 @@ const createMeterPainter = (options: PainterOptions) => {
     index: number,
     element: HTMLElement,
     input: ChannelLevel,
-    nowMs: number
+    nowMs: number,
+    scale: MeterScale
   ) => {
     const state = stateFor(index, element);
     const peak = state.peak.step(input.peakDb, nowMs);
     const rms = state.rms.step(input.rmsDb ?? input.peakDb, nowMs);
-    const { taper } = options;
+    const { taper } = scale;
     state.level = writePosition(
       element,
       "--meter-level",
@@ -257,7 +270,7 @@ const createMeterPainter = (options: PainterOptions) => {
       taper.toPosition(peak.holdDb)
     );
 
-    const zone = zoneForDb(peak.db, options.zones);
+    const zone = zoneForDb(peak.db, scale.zones);
     if (zone !== state.zone) {
       state.zone = zone;
       element.dataset.zone = zone;
@@ -270,7 +283,12 @@ const createMeterPainter = (options: PainterOptions) => {
     return peak.db;
   };
 
-  const paintRoot = (root: HTMLElement, loudest: number, nowMs: number) => {
+  const paintRoot = (
+    root: HTMLElement,
+    loudest: number,
+    nowMs: number,
+    scale: MeterScale
+  ) => {
     const clipping = nowMs < clipUntil;
     if (clipping !== clippingShown) {
       clippingShown = clipping;
@@ -280,16 +298,16 @@ const createMeterPainter = (options: PainterOptions) => {
       return;
     }
     lastAriaMs = nowMs;
-    const clamped = Math.min(options.maxDb, Math.max(options.minDb, loudest));
+    const clamped = Math.min(scale.maxDb, Math.max(scale.minDb, loudest));
     root.setAttribute("aria-valuenow", clamped.toFixed(1));
     root.setAttribute(
       "aria-valuetext",
-      formatDb(loudest, { floorDb: options.minDb })
+      formatDb(loudest, { floorDb: scale.minDb })
     );
-    root.dataset.zone = zoneForDb(loudest, options.zones);
+    root.dataset.zone = zoneForDb(loudest, scale.zones);
   };
 
-  return (nowMs: number) => {
+  return (nowMs: number, scale: MeterScale) => {
     if (!options.visible.current) {
       return;
     }
@@ -307,11 +325,14 @@ const createMeterPainter = (options: PainterOptions) => {
       if (input.peakDb >= CLIP_THRESHOLD_DB) {
         clipUntil = nowMs + CLIP_HOLD_MS;
       }
-      loudest = Math.max(loudest, paintChannel(index, element, input, nowMs));
+      loudest = Math.max(
+        loudest,
+        paintChannel(index, element, input, nowMs, scale)
+      );
     }
     const root = options.root.current;
     if (root) {
-      paintRoot(root, loudest, nowMs);
+      paintRoot(root, loudest, nowMs, scale);
     }
   };
 };
@@ -503,12 +524,18 @@ export const LevelMeterScale = (props: LevelMeterScaleProps) => {
 export type LevelMeterValueProps = Omit<DbReadoutProps, "source" | "value">;
 
 export const LevelMeterValue = (props: LevelMeterValueProps) => {
-  const { frames, minDb } = useLevelMeter("LevelMeterValue");
+  const { declared, frames, minDb } = useLevelMeter("LevelMeterValue");
+  // Declarative levels only change on render, so show them as a value. A
+  // stream keeps its live readout, which falls to −∞ when it stops.
+  const value = declared
+    ? readChannel(declared, props.measure ?? "peak", props.channel ?? "max")
+    : undefined;
   return (
     <DbReadout
       className="text-muted-foreground text-xs"
       floorDb={minDb}
-      source={frames}
+      source={declared ? null : frames}
+      value={value}
       {...props}
     />
   );
@@ -637,6 +664,7 @@ export const LevelMeter = ({
   className,
   children,
   ref,
+  style,
   ...props
 }: LevelMeterProps) => {
   const settings = useMeterSettings({
@@ -685,6 +713,10 @@ export const LevelMeter = ({
     declaredCount = 1;
   }
   const channelCount = declaredCount ?? observedCount ?? channelCountProp ?? 1;
+  const declared = useMemo(
+    () => (source ? null : parseLevels(declarativeKey)),
+    [declarativeKey, source]
+  );
 
   useEffect(() => {
     const frame = parseLevels(declarativeKey);
@@ -715,24 +747,27 @@ export const LevelMeter = ({
       : resolveBallistics(settings.ballistics)
   );
 
-  useEffect(
-    () =>
-      subscribeFrame(
-        createMeterPainter({
-          ballistics: JSON.parse(ballisticsKey) as BallisticsInput,
-          channels: channelsRef.current,
-          latest: latestRef,
-          maxDb,
-          minDb,
-          reducedMotion,
-          root: rootRef,
-          taper: taperFn,
-          visible: visibleRef,
-          zones,
-        })
-      ),
-    [ballisticsKey, maxDb, minDb, reducedMotion, taperFn, visibleRef, zones]
+  // Scale changes (an inline zones array, a new range) reach the painter on
+  // its next frame instead of rebuilding it and resetting the ballistics.
+  const scale = useMemo<MeterScale>(
+    () => ({ maxDb, minDb, taper: taperFn, zones }),
+    [maxDb, minDb, taperFn, zones]
   );
+  const readScale = useEffectEvent(() => scale);
+
+  useEffect(() => {
+    const paint = createMeterPainter({
+      ballistics: JSON.parse(ballisticsKey) as BallisticsInput,
+      channels: channelsRef.current,
+      latest: latestRef,
+      reducedMotion,
+      root: rootRef,
+      visible: visibleRef,
+    });
+    return subscribeFrame((nowMs) => {
+      paint(nowMs, readScale());
+    });
+  }, [ballisticsKey, reducedMotion, visibleRef]);
 
   useImperativeHandle(
     actionsRef,
@@ -752,14 +787,9 @@ export const LevelMeter = ({
   const segmentMask =
     variant === "segmented" ? buildSegmentMask(orientation, segments) : "none";
 
-  useLayoutEffect(() => {
-    const root = rootRef.current;
-    root?.style.setProperty("--meter-fill", zoneFill);
-    root?.style.setProperty("--meter-mask", segmentMask);
-  }, [segmentMask, zoneFill]);
-
   const contextValue = useMemo<LevelMeterContextValue>(
     () => ({
+      declared,
       frames,
       maxDb,
       minDb,
@@ -768,7 +798,16 @@ export const LevelMeter = ({
       taper: taperFn,
       variant,
     }),
-    [frames, maxDb, minDb, orientation, registerChannel, taperFn, variant]
+    [
+      declared,
+      frames,
+      maxDb,
+      minDb,
+      orientation,
+      registerChannel,
+      taperFn,
+      variant,
+    ]
   );
 
   const setRootRef = useCallback(
@@ -800,6 +839,13 @@ export const LevelMeter = ({
         data-variant={variant}
         ref={setRootRef}
         role="meter"
+        style={
+          {
+            "--meter-fill": zoneFill,
+            "--meter-mask": segmentMask,
+            ...style,
+          } as CSSProperties
+        }
         {...props}
       >
         {children ?? (

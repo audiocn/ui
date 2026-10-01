@@ -143,11 +143,14 @@ export const ChannelStrip = ({
       root.toggleAttribute("data-clipping", clipping);
     };
     const observer = new MutationObserver(update);
+    // childList too: a meter removed mid-clip must clear the strip.
     observer.observe(root, {
       attributeFilter: ["data-clipping"],
       attributes: true,
+      childList: true,
       subtree: true,
     });
+    update();
     return () => {
       observer.disconnect();
     };

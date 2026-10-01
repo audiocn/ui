@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useEffectEvent, useRef } from "react";
 import type { ComponentProps, CSSProperties } from "react";
 
 import { useFrameSource } from "@/hooks/use-frame-source";
@@ -42,7 +42,8 @@ export interface DbReadoutProps extends Omit<
   format?: (db: number) => string;
 }
 
-const readChannel = (
+/** The level a readout shows from one frame. */
+export const readChannel = (
   frame: MeterFrame,
   measure: "peak" | "rms",
   channel: number | "max"
@@ -112,38 +113,42 @@ export const DbReadout = ({
     }
   });
 
+  // Reads the latest props on each tick, so an inline format or zones array
+  // doesn't restart the timer (and freeze the readout) on every render.
+  const tick = useEffectEvent(() => {
+    const element = elementRef.current;
+    if (!element) {
+      return;
+    }
+    const db = peakRef.current;
+    const text = render(db);
+    if (text !== shownRef.current) {
+      shownRef.current = text;
+      if (element.firstChild) {
+        element.firstChild.nodeValue = text;
+      } else {
+        element.textContent = text;
+      }
+      element.dataset.zone = zoneForDb(db, zones);
+      element.toggleAttribute("data-silent", db <= floorDb);
+    }
+    // Without a hold, a source that stops sending frames falls to −∞.
+    if (holdMs === 0) {
+      peakRef.current = SILENCE_DB;
+    }
+  });
+
   useEffect(() => {
     if (!source) {
       return;
     }
-    const update = () => {
-      const element = elementRef.current;
-      if (!element) {
-        return;
-      }
-      const db = peakRef.current;
-      const text = format
-        ? format(db)
-        : formatDb(db, { decimals, floorDb, unit });
-      if (text !== shownRef.current) {
-        shownRef.current = text;
-        if (element.firstChild) {
-          element.firstChild.nodeValue = text;
-        } else {
-          element.textContent = text;
-        }
-        element.dataset.zone = zoneForDb(db, zones);
-        element.toggleAttribute("data-silent", db <= floorDb);
-      }
-      if (holdMs === 0) {
-        peakRef.current = SILENCE_DB;
-      }
-    };
-    const timer = setInterval(update, intervalMs);
+    const timer = setInterval(() => {
+      tick();
+    }, intervalMs);
     return () => {
       clearInterval(timer);
     };
-  }, [decimals, floorDb, format, holdMs, intervalMs, source, unit, zones]);
+  }, [intervalMs, source]);
 
   return (
     <span

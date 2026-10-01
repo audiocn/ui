@@ -53,6 +53,16 @@ export const useClipHold = ({
     }
   }, []);
 
+  const scheduleRelease = useCallback(() => {
+    clearTimer();
+    if (Number.isFinite(holdMs)) {
+      timerRef.current = setTimeout(() => {
+        timerRef.current = null;
+        update(false);
+      }, holdMs);
+    }
+  }, [clearTimer, holdMs, update]);
+
   const report = useCallback(
     (db: number) => {
       const above = db >= thresholdDb;
@@ -65,15 +75,9 @@ export const useClipHold = ({
         setCount((previous) => previous + 1);
       }
       update(true);
-      clearTimer();
-      if (Number.isFinite(holdMs)) {
-        timerRef.current = setTimeout(() => {
-          timerRef.current = null;
-          update(false);
-        }, holdMs);
-      }
+      scheduleRelease();
     },
-    [clearTimer, holdMs, thresholdDb, update]
+    [scheduleRelease, thresholdDb, update]
   );
 
   const reset = useCallback(() => {
@@ -83,7 +87,14 @@ export const useClipHold = ({
     update(false);
   }, [clearTimer, update]);
 
-  useEffect(() => clearTimer, [clearTimer]);
+  useEffect(() => {
+    // An Activity hide cancels a pending release; re-arm it on show so the
+    // light doesn't stay on.
+    if (clippingRef.current && timerRef.current === null) {
+      scheduleRelease();
+    }
+    return clearTimer;
+  }, [clearTimer, scheduleRelease]);
 
   return { clipping, count, report, reset };
 };
