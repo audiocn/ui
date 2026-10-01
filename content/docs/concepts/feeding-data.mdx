@@ -70,12 +70,21 @@ interface VisualFrame {
   history: Float32Array; // ring of recent levels, 0..1
   historyStart: number;
   historyLength: number;
+  historyUpdatedAt?: number; // newest history entry's time, in ms
+  historyIntervalMs?: number; // time between history entries
+  historyPreviousLevel?: number; // last entry removed from a full ring
   timeDomain?: Float32Array; // −1..1 samples
   peakDb: number;
 }
 ```
 
 Sources reuse their frame objects to avoid allocating on every frame. Copy a frame if you need to keep it.
+
+For smooth `LiveWaveform` scrolling, set `historyUpdatedAt` and a positive `historyIntervalMs`. Use the same clock as `requestAnimationFrame` or `performance.now()`. Update the timestamp only when you add a history entry, and keep it on the sample schedule even if a frame arrives late. Set `historyPreviousLevel` to the last value removed from a full ring so it can scroll out of view.
+
+The built-in demo and analyser sources set these fields for you. After a pause or throttled frames, they append only the new sample and restart the history clock. They do not fill missed intervals with stale levels. Custom sources that omit the timing fields still work, but their history moves one step per update.
+
+If your source uses the shared `subscribeFrame` loop from `@/lib/audio/frame-loop`, pass `"update"` as its second argument. The loop runs source updates before canvas drawing, even when you connect a source after mounting a component.
 
 ## In React state
 

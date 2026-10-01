@@ -130,11 +130,19 @@ const drawBar = (
 
 const historyLevels = (frame: VisualFrame, count: number) => {
   const available = Math.min(frame.historyLength, count);
-  const out = new Float32Array(available);
   const size = frame.history.length;
+  const includePrevious =
+    available === size &&
+    available < count &&
+    frame.historyPreviousLevel !== undefined;
+  const offset = includePrevious ? 1 : 0;
+  const out = new Float32Array(available + offset);
+  if (includePrevious) {
+    out[0] = frame.historyPreviousLevel ?? 0;
+  }
   const first = frame.historyStart + frame.historyLength - available;
   for (let index = 0; index < available; index += 1) {
-    out[index] = frame.history[(first + index) % size] ?? 0;
+    out[index + offset] = frame.history[(first + index) % size] ?? 0;
   }
   return out;
 };
@@ -145,18 +153,7 @@ const levelsFor = (
   options: DrawOptions
 ): Float32Array => {
   if (options.mode === "scrolling") {
-    if (options.variant !== "mirror") {
-      return historyLevels(frame, count);
-    }
-    const half = historyLevels(frame, Math.ceil(count / 2));
-    const out = new Float32Array(count);
-    const center = Math.floor(count / 2);
-    for (let offset = 0; offset < half.length; offset += 1) {
-      const value = half[half.length - 1 - offset] ?? 0;
-      out[center + offset] = value;
-      out[center - offset] = value;
-    }
-    return out;
+    return historyLevels(frame, count + 1);
   }
   if (options.variant !== "mirror") {
     return resampleLevels(
@@ -200,7 +197,8 @@ const drawLine = (
   context: CanvasRenderingContext2D,
   size: Size,
   frame: VisualFrame,
-  options: DrawOptions
+  options: DrawOptions,
+  scrollProgress: number
 ) => {
   const middle = size.height / 2;
   context.lineWidth = options.lineWidth;
@@ -232,7 +230,7 @@ const drawLine = (
     Math.floor(size.width / (options.barWidth + options.barGap))
   );
   const levels = levelsFor(frame, count, { ...options, variant: "bars" });
-  const offset = count - levels.length;
+  const offset = count - levels.length + 1 - scrollProgress;
   for (let index = 0; index < levels.length; index += 1) {
     const x = ((offset + index) / (count - 1)) * size.width;
     const value = clamp((levels[index] ?? 0) * options.sensitivity, 0, 1);
@@ -255,28 +253,94 @@ const drawLine = (
   context.stroke();
 };
 
+const drawLevelBar = (
+  context: CanvasRenderingContext2D,
+  size: Size,
+  options: DrawOptions,
+  x: number,
+  level: number
+) => {
+  const value = clamp(level * options.sensitivity, 0, 1);
+  const height = Math.max(options.minBarHeight, value * size.height);
+  const y = (size.height - height) / 2;
+  context.globalAlpha = 0.4 + 0.6 * value;
+  drawBar(context, x, y, options.barWidth, height, options.barRadius);
+};
+
+const drawScrollingMirror = (
+  context: CanvasRenderingContext2D,
+  size: Size,
+  frame: VisualFrame,
+  options: DrawOptions,
+  scrollProgress: number,
+  count: number
+) => {
+  const levels = historyLevels(frame, Math.ceil(count / 2) + 1);
+  const center = (size.width - options.barWidth) / 2;
+  const pitch = options.barWidth + options.barGap;
+  context.save();
+  context.beginPath();
+  context.rect(0, 0, center, size.height);
+  context.rect(center + options.barWidth, 0, center, size.height);
+  context.clip();
+  for (let age = levels.length - 1; age > 0; age -= 1) {
+    const value = levels[levels.length - 1 - age] ?? 0;
+    const distance = (age - 1 + scrollProgress) * pitch;
+    drawLevelBar(context, size, options, center - distance, value);
+    drawLevelBar(context, size, options, center + distance, value);
+  }
+  context.restore();
+  if (levels.length > 0) {
+    const newest = levels.at(-1) ?? 0;
+    const previous = levels.at(-2) ?? newest;
+    drawLevelBar(
+      context,
+      size,
+      options,
+      center,
+      previous + (newest - previous) * scrollProgress
+    );
+  }
+};
+
 const drawBars = (
   context: CanvasRenderingContext2D,
   size: Size,
   frame: VisualFrame,
-  options: DrawOptions
+  options: DrawOptions,
+  scrollProgress: number
 ) => {
   const pitch = options.barWidth + options.barGap;
   const count = Math.max(1, Math.floor((size.width + options.barGap) / pitch));
-  const levels = levelsFor(frame, count, options);
-  const offset = count - levels.length;
-  const used = count * pitch - options.barGap;
-  const left = (size.width - used) / 2;
-
-  for (let index = 0; index < levels.length; index += 1) {
-    const value = clamp((levels[index] ?? 0) * options.sensitivity, 0, 1);
-    const height = Math.max(options.minBarHeight, value * size.height);
-    const x = left + (offset + index) * pitch;
-    const y = (size.height - height) / 2;
-    context.globalAlpha = 0.4 + 0.6 * value;
-    drawBar(context, x, y, options.barWidth, height, options.barRadius);
+  if (options.mode === "scrolling" && options.variant === "mirror") {
+    drawScrollingMirror(context, size, frame, options, scrollProgress, count);
+  } else {
+    const levels = levelsFor(frame, count, options);
+    const offset = count - levels.length + 1 - scrollProgress;
+    const used = count * pitch - options.barGap;
+    const left = (size.width - used) / 2;
+    for (let index = 0; index < levels.length; index += 1) {
+      const x = left + (offset + index) * pitch;
+      drawLevelBar(context, size, options, x, levels[index] ?? 0);
+    }
   }
   context.globalAlpha = 1;
+};
+
+const historyProgress = (frame: VisualFrame | null, nowMs: number): number => {
+  const updatedAt = frame?.historyUpdatedAt;
+  const interval = frame?.historyIntervalMs;
+  if (
+    updatedAt === undefined ||
+    !Number.isFinite(updatedAt) ||
+    interval === undefined ||
+    !Number.isFinite(interval) ||
+    interval <= 0 ||
+    !frame?.historyLength
+  ) {
+    return 1;
+  }
+  return clamp((nowMs - updatedAt) / interval, 0, 1);
 };
 
 const fade = (context: CanvasRenderingContext2D, size: Size, width: number) => {
@@ -376,6 +440,7 @@ export const LiveWaveform = ({
     let framesSinceColor = COLOR_REFRESH_FRAMES;
     let lastPaintMs = 0;
     let wakeTask = noop;
+    let lastScrollProgress = 1;
     dirtyRef.current = true;
 
     const resize = () => {
@@ -403,16 +468,26 @@ export const LiveWaveform = ({
           dirtyRef.current = true;
         }
       }
-      // Nothing new to draw, no size yet, or off screen: sleep. It stays dirty
-      // while hidden, and a frame, a resize, the theme or coming back into
-      // view wakes it.
-      if (!dirtyRef.current || size.width === 0 || !visibleRef.current) {
+      const frame = frameRef.current;
+      const scrollProgress =
+        options.active && options.mode === "scrolling" && !reducedMotion
+          ? historyProgress(frame, nowMs)
+          : 1;
+      if (scrollProgress !== lastScrollProgress) {
+        dirtyRef.current = true;
+      }
+      // Off screen it stays dirty, so it repaints when it comes back.
+      if (size.width === 0 || !visibleRef.current) {
         return false;
+      }
+      if (!dirtyRef.current) {
+        return scrollProgress < 1;
       }
       if (reducedMotion && nowMs - lastPaintMs < REDUCED_MOTION_INTERVAL_MS) {
         return true;
       }
       lastPaintMs = nowMs;
+      lastScrollProgress = scrollProgress;
       dirtyRef.current = false;
 
       context.setTransform(size.ratio, 0, 0, size.ratio, 0, 0);
@@ -420,20 +495,19 @@ export const LiveWaveform = ({
       context.fillStyle = color;
       context.strokeStyle = color;
 
-      const frame = frameRef.current;
       if (!(options.active && frame)) {
         drawIdle(context, size, options);
         return false;
       }
       if (options.variant === "line") {
-        drawLine(context, size, frame, options);
+        drawLine(context, size, frame, options, scrollProgress);
       } else {
-        drawBars(context, size, frame, options);
+        drawBars(context, size, frame, options, scrollProgress);
       }
       if (options.fadeEdges) {
         fade(context, size, options.fadeWidth);
       }
-      return false;
+      return scrollProgress < 1;
     };
 
     const task = createFrameTask(tick);
