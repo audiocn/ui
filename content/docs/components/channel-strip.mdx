@@ -80,6 +80,8 @@ Parts place themselves on a CSS grid by area name: `header`, `meter`, `fader`, `
 
 A row measures its own width with a container query. Below 36rem it puts the header on its own line, with the meter and fader full width underneath, so rows stay readable on phones and in narrow panels. From 36rem up the header sits beside the meter in a column `--channel-strip-header-width` wide. Set that variable on a mixer to align every row; the header wraps its status and actions onto a second line before it truncates the title.
 
+Horizontal strips reserve a notice row only when you include `ChannelStripNotice`, so strips without a notice keep equal top and bottom spacing.
+
 A vertical strip keeps its width inside a mixer. When the strips do not fit, the mixer's channels scroll instead of squeezing them.
 
 ## Theming
