@@ -51,6 +51,53 @@ describe("history playback", () => {
     expect(frame.historyLength).toBe(16);
   });
 
+  it("gives the same position with extra paints between source updates", () => {
+    const frame = frameOf();
+    const regular = createHistoryPlayback();
+    const frequent = createHistoryPlayback();
+    for (let nowMs = 16; nowMs <= 2048; nowMs += 16) {
+      appendHistory(frame, 0.5, nowMs, 50);
+      const expected = regular.read(frame, nowMs);
+      const actual = frequent.read(frame, nowMs);
+      expect(actual.frame.historyUpdatedAt).toBe(
+        expected.frame.historyUpdatedAt
+      );
+      expect(actual.progress).toBeCloseTo(expected.progress, 10);
+      frequent.read(frame, nowMs + 4);
+      frequent.read(frame, nowMs + 8);
+      frequent.read(frame, nowMs + 12);
+    }
+  });
+
+  it.each([1, 4, 120])(
+    "keeps travel and delay bounded after a %i-entry ring wraps",
+    (size) => {
+      const frame = frameOf();
+      frame.history = new Float32Array(size);
+      const playback = createHistoryPlayback();
+      const times: number[] = [];
+      let previousPosition = 0;
+      for (let nowMs = 16; nowMs <= 16_384; nowMs += 16) {
+        appendHistory(frame, nowMs / 32_768, nowMs, 50);
+        if (frame.historyUpdatedAt === nowMs) {
+          times.push(nowMs);
+        }
+        const { frame: drawn, progress } = playback.read(frame, nowMs);
+        const position = times.indexOf(drawn.historyUpdatedAt ?? -1) + progress;
+        if (nowMs >= 192) {
+          expect(position - previousPosition).toBeCloseTo(0.25, 3);
+          const timestamp = drawn.historyUpdatedAt ?? 0;
+          expect(nowMs - timestamp).toBeGreaterThanOrEqual(36);
+          expect(nowMs - timestamp).toBeLessThan(100);
+          const newest = (drawn.historyStart + drawn.historyLength - 1) % size;
+          expect(drawn.history[newest]).toBe(timestamp / 32_768);
+        }
+        previousPosition = position;
+      }
+      expect(times).toHaveLength(256);
+    }
+  );
+
   it("copies mutable history only when a new sample arrives", () => {
     const frame = frameOf();
     const playback = createHistoryPlayback();

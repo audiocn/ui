@@ -71,7 +71,7 @@ interface VisualFrame {
   historyStart: number;
   historyLength: number;
   historyUpdatedAt?: number; // newest history entry's time, in ms
-  historyIntervalMs?: number; // time between history entries
+  historyIntervalMs?: number; // minimum wait between history entries
   historyPreviousLevel?: number; // last entry removed from a full ring
   timeDomain?: Float32Array; // −1..1 samples
   peakDb: number;
