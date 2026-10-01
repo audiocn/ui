@@ -262,6 +262,27 @@ test("soundboard rejects non-audio files with inline feedback", async ({
   await expect(pads).toHaveCount(count);
 });
 
+test("the search dialog lists docs, links and themes before anything is typed", async ({
+  page,
+}) => {
+  await page.goto("/docs");
+  const trigger = page.getByRole("button", { name: "Search" }).first();
+  await trigger.click();
+  const dialog = page.getByRole("dialog");
+  await Promise.all(
+    ["Getting started", "Components", "Blocks", "Theme"].map((heading) =>
+      expect(dialog.getByText(heading, { exact: true })).toBeVisible()
+    )
+  );
+  await dialog.getByRole("option", { exact: true, name: "Knob" }).click();
+  await expect(page).toHaveURL(/\/docs\/components\/knob$/u);
+
+  await trigger.click();
+  await page.getByRole("combobox").fill("ocean");
+  await page.getByRole("option", { exact: true, name: "Ocean" }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "ocean");
+});
+
 test("the theme picker switches themes", async ({ page }) => {
   await page.goto("/docs");
   await page.getByRole("combobox", { name: "Theme" }).first().click();

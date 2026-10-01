@@ -4,12 +4,18 @@ import type { Metadata } from "next";
 import { DM_Sans, Geist_Mono, Outfit } from "next/font/google";
 
 import "./globals.css";
+import {
+  SearchDialog,
+  SearchGroupsProvider,
+} from "@/components/docs/search-dialog";
 import { SiteFooter } from "@/components/docs/site-footer";
 import { ThemeProvider } from "@/components/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { searchGroups } from "@/lib/search-groups";
 import { siteConfig } from "@/lib/site";
 import socialImages from "@/lib/social-images.json";
 import { getPageMetadata } from "@/lib/social-metadata";
+import { source } from "@/lib/source";
 import { cn } from "@/lib/utils";
 
 const outfitHeading = Outfit({
@@ -60,15 +66,17 @@ const RootLayout = ({
   >
     <body className="flex min-h-svh flex-col">
       <ThemeProvider>
-        <RootProvider
-          search={{ enabled: !isSocialCapture }}
-          theme={{ enabled: false }}
-        >
-          <TooltipProvider>
-            <div className="flex min-h-0 flex-1 flex-col">{children}</div>
-            <SiteFooter />
-          </TooltipProvider>
-        </RootProvider>
+        <SearchGroupsProvider groups={searchGroups(source.getPageTree())}>
+          <RootProvider
+            search={{ SearchDialog, enabled: !isSocialCapture }}
+            theme={{ enabled: false }}
+          >
+            <TooltipProvider>
+              <div className="flex min-h-0 flex-1 flex-col">{children}</div>
+              <SiteFooter />
+            </TooltipProvider>
+          </RootProvider>
+        </SearchGroupsProvider>
       </ThemeProvider>
       <Analytics />
     </body>
