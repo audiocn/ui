@@ -6,7 +6,7 @@ import { InstallCommand } from "@/components/docs/install-command";
 import { HeroThreads } from "@/components/home/hero-threads";
 import { ShowcaseGrid } from "@/components/home/showcase-grid";
 import { ThemeSwatches } from "@/components/home/theme-swatches";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { siteConfig } from "@/lib/site";
 import { getPageMetadata } from "@/lib/social-metadata";
 import { source } from "@/lib/source";
@@ -50,17 +50,20 @@ const Page = () => (
           Built the shadcn way, so you own every line.
         </p>
         <div className="flex flex-wrap justify-center gap-3">
-          <Button render={<Link href="/docs" />} nativeButton={false} size="lg">
+          <Link
+            className={buttonVariants({ size: "lg" })}
+            data-slot="button"
+            href="/docs"
+          >
             Get started
-          </Button>
-          <Button
-            render={<Link href="/docs/components" />}
-            nativeButton={false}
-            size="lg"
-            variant="outline"
+          </Link>
+          <Link
+            className={buttonVariants({ size: "lg", variant: "outline" })}
+            data-slot="button"
+            href="/docs/components"
           >
             Browse components
-          </Button>
+          </Link>
         </div>
         <div className="w-full max-w-md text-left">
           <InstallCommand
@@ -78,15 +81,14 @@ const Page = () => (
       </div>
       <ShowcaseGrid />
       <div className="mt-12 flex justify-center">
-        <Button
-          render={<Link href="/docs/components" />}
-          nativeButton={false}
-          size="lg"
-          variant="outline"
+        <Link
+          className={buttonVariants({ size: "lg", variant: "outline" })}
+          data-slot="button"
+          href="/docs/components"
         >
           Browse all {componentCount} components
           <ArrowRightIcon data-icon="inline-end" />
-        </Button>
+        </Link>
       </div>
     </div>
   </main>

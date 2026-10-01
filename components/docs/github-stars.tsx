@@ -1,9 +1,10 @@
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 
 const DEFAULT_LOCALES = "en-US";
 const COMPACT: Intl.NumberFormatOptions = {
@@ -53,18 +54,16 @@ export const GitHubStars = ({
     <Tooltip>
       <TooltipTrigger
         render={
-          <Button
-            className="gap-1.5 pr-1.5 pl-2"
-            variant="ghost"
-            nativeButton={false}
-            render={
-              <a
-                aria-label={`${fullCount} stars on GitHub`}
-                href={`https://github.com/${repo}`}
-                target="_blank"
-                rel="noopener"
-              />
-            }
+          <a
+            aria-label={`${fullCount} stars on GitHub`}
+            className={cn(
+              buttonVariants({ variant: "ghost" }),
+              "gap-1.5 pr-1.5 pl-2"
+            )}
+            data-slot="button"
+            href={`https://github.com/${repo}`}
+            rel="noopener"
+            target="_blank"
           >
             <svg aria-hidden="true" viewBox="0 0 24 24">
               <path
@@ -76,7 +75,7 @@ export const GitHubStars = ({
             <span className="text-muted-foreground text-xs/none tabular-nums">
               {compactCount}
             </span>
-          </Button>
+          </a>
         }
       />
 
