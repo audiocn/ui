@@ -8,6 +8,7 @@ import { SiteFooter } from "@/components/docs/site-footer";
 import { ThemeProvider } from "@/components/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { siteConfig } from "@/lib/site";
+import socialImages from "@/lib/social-images.json";
 import { getPageMetadata } from "@/lib/social-metadata";
 import { cn } from "@/lib/utils";
 
@@ -23,9 +24,15 @@ const fontMono = Geist_Mono({
   variable: "--font-mono",
 });
 
+const homeMetadata = getPageMetadata({ pathname: "/", title: siteConfig.name });
+
 export const metadata: Metadata = {
-  ...getPageMetadata({ pathname: "/", title: siteConfig.name }),
+  ...homeMetadata,
   metadataBase: new URL(siteConfig.url),
+  openGraph: {
+    ...homeMetadata.openGraph,
+    images: [{ ...socialImages["/"], height: 630, width: 1200 }],
+  },
   title: {
     default: siteConfig.title,
     template: `%s — ${siteConfig.name}`,

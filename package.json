@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "brand:build": "node scripts/build-brand-icons.mjs",
+    "og:build": "node scripts/build-social-images.mjs",
     "dev": "pnpm examples:build && next dev",
     "build": "pnpm brand:build && pnpm examples:build && pnpm registry:build && next build",
     "start": "next start",

@@ -1,0 +1,26 @@
+{
+  "/": {
+    "alt": "audiocn: a five-channel mixer, rotary knobs and a waveform in the dark Stone theme.",
+    "url": "/og/home-6beb7ed1ed1c.png"
+  },
+  "/docs/components/mixer": {
+    "alt": "audiocn Mixer: microphone, system audio, music, sounds and master strips with faders and active meters.",
+    "url": "/og/mixer-a8f8931dfc9b.png"
+  },
+  "/docs/components/level-meter": {
+    "alt": "audiocn Level Meter: solid and segmented stereo meters with green and yellow zones, scales and peak hold.",
+    "url": "/og/level-meter-cb8243a47d5c.png"
+  },
+  "/docs/components/knob": {
+    "alt": "audiocn Knob: gain, pan and frequency rotary controls with value labels and range arcs.",
+    "url": "/og/knob-80961d6a9343.png"
+  },
+  "/docs/components/waveform": {
+    "alt": "audiocn Waveform: an audio clip with a mirrored waveform, a playhead, a selected region and a marker.",
+    "url": "/og/waveform-75564b342b06.png"
+  },
+  "/docs/components/electric-waveform": {
+    "alt": "audiocn Electric Waveform: a glowing audio trace with a bright core and branching arcs on a dark surface.",
+    "url": "/og/electric-waveform-df510fdc6caf.png"
+  }
+}

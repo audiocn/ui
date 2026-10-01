@@ -1,0 +1,130 @@
+.card {
+  background: var(--background);
+  color: var(--foreground);
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  height: 630px;
+  overflow: hidden;
+  padding: 48px 56px 40px;
+  width: 1200px;
+}
+
+.header {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.brand {
+  align-items: center;
+  display: flex;
+  font-family: var(--font-heading);
+  font-size: 28px;
+  font-weight: 600;
+  gap: 10px;
+  letter-spacing: -1px;
+}
+
+.headerLabel,
+.category,
+.footer {
+  color: var(--muted-foreground);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 1px;
+}
+
+.body {
+  align-items: stretch;
+  display: grid;
+  flex: 1;
+  gap: 36px;
+  grid-template-columns: 300px minmax(0, 1fr);
+  min-height: 0;
+}
+
+.copy {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  justify-content: center;
+}
+
+.category {
+  color: var(--meter-ok);
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.title {
+  font-family: var(--font-heading);
+  font-size: 56px;
+  font-weight: 600;
+  letter-spacing: -2.5px;
+  line-height: 1.02;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+
+.caption {
+  color: var(--muted-foreground);
+  font-size: 18px;
+  line-height: 1.55;
+  text-wrap: pretty;
+}
+
+.stage {
+  align-items: center;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  display: flex;
+  justify-content: center;
+  margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  padding: 32px;
+}
+
+.preview {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.preview[data-social-preview="knobs"] {
+  transform: scale(2.4);
+  width: 300px;
+}
+
+.preview[data-social-preview="meters"] {
+  transform: scale(1.2);
+}
+
+.homePreview {
+  display: grid;
+  gap: 22px;
+  grid-template-columns: 1fr 1fr;
+  width: 100%;
+}
+
+.homeMixer {
+  grid-column: span 2;
+}
+
+.homeKnobs {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+}
+
+.homeWaveform {
+  align-items: center;
+  display: flex;
+}
+
+.footer {
+  display: flex;
+  justify-content: space-between;
+}

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { siteConfig } from "@/lib/site";
+import socialImages from "@/lib/social-images.json";
 
 export interface SocialImage {
   alt: string;
@@ -14,16 +15,14 @@ interface PageMetadataOptions {
   image?: SocialImage;
 }
 
-const defaultImage: SocialImage = {
-  alt: "audiocn — audio components for React, built the shadcn way",
-  url: "/opengraph-image",
-};
+const images: Record<string, SocialImage | undefined> = socialImages;
+const defaultImage: SocialImage = socialImages["/"];
 
 export const getPageMetadata = ({
   title,
   pathname,
   description = siteConfig.description,
-  image = defaultImage,
+  image = images[pathname] ?? defaultImage,
 }: PageMetadataOptions): Metadata => {
   const fullTitle =
     pathname === "/" ? siteConfig.title : `${title} — ${siteConfig.name}`;

@@ -74,3 +74,55 @@ test("SEO overrides preserve the visible documentation heading", async ({
     /Browse React audio components/u
   );
 });
+
+test("each initial component card is distinct and supplies alt text on both networks", async ({
+  page,
+  request,
+}) => {
+  const imageUrls = new Set<string>();
+  for (const slug of [
+    "mixer",
+    "level-meter",
+    "knob",
+    "waveform",
+    "electric-waveform",
+  ]) {
+    // Navigations use one page; they must complete in order.
+    // eslint-disable-next-line no-await-in-loop
+    await page.goto(`/docs/components/${slug}`);
+    // eslint-disable-next-line no-await-in-loop
+    const imageUrl = await page
+      .locator('meta[property="og:image"]')
+      .getAttribute("content");
+    expect(imageUrl).toMatch(new RegExp(`/og/${slug}-[a-f0-9]+\\.png$`, "u"));
+    imageUrls.add(imageUrl ?? "");
+    // eslint-disable-next-line no-await-in-loop
+    await expect(page.locator('meta[name="twitter:image"]')).toHaveAttribute(
+      "content",
+      imageUrl ?? ""
+    );
+    // eslint-disable-next-line no-await-in-loop
+    const alt = await page
+      .locator('meta[property="og:image:alt"]')
+      .getAttribute("content");
+    expect(alt?.length).toBeGreaterThan(30);
+    // eslint-disable-next-line no-await-in-loop
+    await expect(
+      page.locator('meta[name="twitter:image:alt"]')
+    ).toHaveAttribute("content", alt ?? "");
+    // eslint-disable-next-line no-await-in-loop
+    const image = await request.get(new URL(imageUrl ?? "").pathname);
+    expect(image.status()).toBe(200);
+    expect(image.headers()["content-type"]).toContain("image/png");
+  }
+  expect(imageUrls.size).toBe(5);
+});
+
+test("the capture route is unavailable in production and absent from the sitemap", async ({
+  request,
+}) => {
+  const response = await request.get("/social-preview/home");
+  expect(response.status()).toBe(404);
+  const sitemap = await request.get("/sitemap.xml");
+  expect(await sitemap.text()).not.toContain("social-preview");
+});

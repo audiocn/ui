@@ -51,10 +51,13 @@ test("shared docs links have an image and the page's own social title", async ({
     "content",
     "summary_large_image"
   );
-  await expect(
-    page.locator('meta[property="og:image"]').first()
-  ).toHaveAttribute("content", /\/opengraph-image/u);
-  const image = await request.get("/opengraph-image");
+  const socialImage = page.locator('meta[property="og:image"]');
+  await expect(socialImage).toHaveAttribute(
+    "content",
+    /\/og\/level-meter-[a-f0-9]+\.png$/u
+  );
+  const imageUrl = await socialImage.getAttribute("content");
+  const image = await request.get(new URL(imageUrl ?? "").pathname);
   expect(image.status()).toBe(200);
   expect(image.headers()["content-type"]).toContain("image/png");
   const bytes = await image.body();
