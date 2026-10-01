@@ -328,7 +328,7 @@ describe("Knob", () => {
     expect(face?.outerHTML).toBe(faceMarkup);
   });
 
-  it("clicks as the value steps only with clickSound", () => {
+  it("clicks on graduations only with clickSound", () => {
     const start = vi.fn();
     const fakeContext = {
       createBuffer: (_channels: number, length: number) => ({
@@ -347,17 +347,50 @@ describe("Knob", () => {
       state: "running",
     };
     audio.context = fakeContext;
+    // Far enough apart that no click is held back by the 30 ms limit.
+    let now = 0;
+    vi.spyOn(performance, "now").mockImplementation(() => {
+      now += 100;
+      return now;
+    });
     try {
       const { unmount } = render(<Knob aria-label="Quiet" defaultValue={50} />);
-      fireEvent.keyDown(screen.getByRole("slider"), { key: "ArrowUp" });
+      fireEvent.keyDown(screen.getByRole("slider"), { key: "PageUp" });
       expect(start).not.toHaveBeenCalled();
       unmount();
 
-      render(<Knob aria-label="Volume" clickSound defaultValue={50} />);
-      fireEvent.keyDown(screen.getByRole("slider"), { key: "ArrowUp" });
+      // Without a scale it clicks every largeStep: 59 is silent, 60 clicks.
+      const { unmount: unmountPlain } = render(
+        <Knob aria-label="Volume" clickSound defaultValue={58} />
+      );
+      const plain = screen.getByRole("slider");
+      fireEvent.keyDown(plain, { key: "ArrowUp" });
+      expect(start).not.toHaveBeenCalled();
+      fireEvent.keyDown(plain, { key: "ArrowUp" });
       expect(start).toHaveBeenCalledTimes(1);
+      // Leaving a graduation is silent; reaching the one below clicks.
+      fireEvent.keyDown(plain, { key: "ArrowDown" });
+      expect(start).toHaveBeenCalledTimes(1);
+      fireEvent.keyDown(plain, { key: "PageDown" });
+      expect(start).toHaveBeenCalledTimes(2);
+      unmountPlain();
+
+      // With a scale it clicks on the long ticks, every 5 here.
+      render(
+        <Knob aria-label="Volume" clickSound defaultValue={33}>
+          <KnobDial>
+            <KnobScale majorEvery={5} ticks={100} />
+          </KnobDial>
+        </Knob>
+      );
+      const dial = screen.getByRole("slider");
+      fireEvent.keyDown(dial, { key: "ArrowUp" });
+      expect(start).toHaveBeenCalledTimes(2);
+      fireEvent.keyDown(dial, { key: "ArrowUp" });
+      expect(start).toHaveBeenCalledTimes(3);
     } finally {
       audio.context = null;
+      vi.restoreAllMocks();
     }
   });
 

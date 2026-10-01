@@ -89,6 +89,8 @@ interface KnobDialContextValue {
   step: number;
   taper: Taper;
   allowWheel: boolean;
+  /** KnobScale reports its long ticks, so the click sound lands on them. */
+  setDetents: (positions: readonly number[] | null) => void;
 }
 
 const KnobDialContext = createContext<KnobDialContextValue | null>(null);
@@ -546,11 +548,22 @@ export const KnobScale = ({
   ...props
 }: KnobScaleProps) => {
   const { arc, format, originPosition, position } = useKnob("KnobScale");
-  const { taper } = useKnobDial();
+  const { setDetents, taper } = useKnobDial();
   const formatLabel = formatProp ?? format;
   const litFrom = Math.min(originPosition, position) - TICK_EPSILON;
   const litTo = Math.max(originPosition, position) + TICK_EPSILON;
   const count = Math.max(1, Math.round(ticks));
+
+  useEffect(() => {
+    const majors: number[] = [];
+    for (let index = 0; index <= count; index += Math.max(1, majorEvery)) {
+      majors.push(index / count);
+    }
+    setDetents(majors);
+    return () => {
+      setDetents(null);
+    };
+  }, [count, majorEvery, setDetents]);
 
   const marks = Array.from({ length: count + 1 }, (_, index) => {
     const tickPosition = index / count;
@@ -913,7 +926,10 @@ export interface KnobProps extends Omit<
   scale?: "linear" | "log";
   /** The wheel adjusts the value while focused. Default false. */
   allowWheel?: boolean;
-  /** Plays a soft mechanical click as the value steps. Default false. */
+  /**
+   * Plays a soft click on each graduation: KnobScale's long ticks, or every
+   * `largeStep` without a scale. Default false.
+   */
   clickSound?: boolean;
   format?: (value: number) => string;
   /** Reads a typed value. Default: the first number, with "k" as thousands. */
@@ -924,16 +940,40 @@ export interface KnobProps extends Omit<
 
 /** Shortest gap between clicks, so a fast turn ticks instead of buzzing. */
 const CLICK_INTERVAL_MS = 30;
-const CLICK_SECONDS = 0.012;
-const CLICK_VOLUME = 0.35;
+const CLICK_SECONDS = 0.006;
+const CLICK_VOLUME = 0.12;
 /** Each click is pitched a little at random, like a real detent. */
-const CLICK_PITCH_SPREAD = 0.12;
-/** A noise snap over two damped tones: the body and the ring of a detent. */
+const CLICK_PITCH_SPREAD = 0.04;
+/** A short noise snap over a high, fast-damped ring: a tick, not a thud. */
 const CLICK_PARTS = [
-  { decay: 0.0006, gain: 0.5, hz: 0 },
-  { decay: 0.0018, gain: 0.45, hz: 2600 },
-  { decay: 0.004, gain: 0.25, hz: 950 },
+  { decay: 0.0004, gain: 0.6, hz: 0 },
+  { decay: 0.0012, gain: 0.4, hz: 4200 },
 ] as const;
+
+/** Positions this close to a detent count as on it. */
+const DETENT_EPSILON = 1e-9;
+
+/** Whether moving between positions reaches or passes a detent. */
+const reachesDetent = (detents: readonly number[], from: number, to: number) =>
+  detents.some((detent) =>
+    from < to
+      ? detent > from + DETENT_EPSILON && detent <= to + DETENT_EPSILON
+      : detent < from - DETENT_EPSILON && detent >= to - DETENT_EPSILON
+  );
+
+/** Whether moving between values reaches or passes a multiple of `every`. */
+const reachesMultiple = (
+  from: number,
+  to: number,
+  min: number,
+  every: number
+) => {
+  const start = roundValue((from - min) / every);
+  const end = roundValue((to - min) / every);
+  return from < to
+    ? Math.floor(end) > Math.floor(start)
+    : Math.ceil(start) > Math.ceil(end);
+};
 
 const clickBuffers = new WeakMap<BaseAudioContext, AudioBuffer>();
 let lastClickAt = Number.NEGATIVE_INFINITY;
@@ -1007,7 +1047,8 @@ interface KnobValueOptions {
   min: number;
   max: number;
   onValueChange: KnobProps["onValueChange"];
-  clickSound: boolean;
+  /** Whether a change between two values should click; null for silence. */
+  clicksBetween: ((from: number, to: number) => boolean) | null;
 }
 
 /** Controlled or uncontrolled value with change notifications. */
@@ -1018,7 +1059,7 @@ const useKnobValue = ({
   min,
   max,
   onValueChange,
-  clickSound,
+  clicksBetween,
 }: KnobValueOptions) => {
   const [uncontrolled, setUncontrolled] = useState(
     clamp(defaultValue ?? resetValue, min, max)
@@ -1029,7 +1070,8 @@ const useKnobValue = ({
 
   const change = useCallback(
     (next: number, details: KnobChangeDetails) => {
-      if (next === latestRef.current) {
+      const previous = latestRef.current;
+      if (next === previous) {
         return;
       }
       latestRef.current = next;
@@ -1037,11 +1079,11 @@ const useKnobValue = ({
         setUncontrolled(next);
       }
       onValueChange?.(next, details);
-      if (clickSound) {
+      if (clicksBetween?.(previous, next)) {
         playClick();
       }
     },
-    [clickSound, controlled, latestRef, onValueChange]
+    [clicksBetween, controlled, latestRef, onValueChange]
   );
 
   return { change, latestRef, value };
@@ -1088,8 +1130,27 @@ export const Knob = ({
   const { disabled, size } = useKnobSettings(sizeProp, disabledProp);
   const reset = resetValue ?? defaultValue ?? min;
   const labelId = useId();
+  const taper: Taper = useMemo(
+    () => (scale === "log" ? logTaper(min, max) : linearTaper(min, max)),
+    [max, min, scale]
+  );
+
+  // Clicks land on KnobScale's long ticks, or every largeStep without one.
+  const [detents, setDetents] = useState<readonly number[] | null>(null);
+  const clicksBetween = useMemo(() => {
+    if (!clickSound) {
+      return null;
+    }
+    if (detents) {
+      return (from: number, to: number) =>
+        reachesDetent(detents, taper.toPosition(from), taper.toPosition(to));
+    }
+    return (from: number, to: number) =>
+      reachesMultiple(from, to, min, largeStep);
+  }, [clickSound, detents, largeStep, min, taper]);
+
   const { change, latestRef, value } = useKnobValue({
-    clickSound,
+    clicksBetween,
     defaultValue,
     max,
     min,
@@ -1097,11 +1158,6 @@ export const Knob = ({
     resetValue: reset,
     value: valueProp,
   });
-
-  const taper: Taper = useMemo(
-    () => (scale === "log" ? logTaper(min, max) : linearTaper(min, max)),
-    [max, min, scale]
-  );
 
   const quantize = useCallback(
     (next: number, increment: number) =>
@@ -1164,6 +1220,7 @@ export const Knob = ({
       quantize,
       resetValue: reset,
       sensitivity,
+      setDetents,
       step,
       taper,
     }),
