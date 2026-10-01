@@ -904,7 +904,7 @@ export interface KnobProps extends Omit<
   origin?: number;
   /** Sweep in degrees. Default 270. */
   arc?: number;
-  /** How dragging turns the knob. Default `circular`. */
+  /** How dragging turns the knob. Default `vertical`. */
   dragDirection?: "vertical" | "horizontal" | "circular";
   /** Pixels of vertical or horizontal drag for the full range. Default 200. */
   sensitivity?: number;
@@ -986,7 +986,7 @@ export const Knob = ({
   resetValue,
   origin,
   arc = 270,
-  dragDirection = "circular",
+  dragDirection = "vertical",
   sensitivity = 200,
   scale = "linear",
   allowWheel = false,

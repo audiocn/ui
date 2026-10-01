@@ -143,12 +143,7 @@ describe("Knob", () => {
   it("drags ten times finer with Shift, without jumping when Shift changes", () => {
     const onValueChange = vi.fn();
     render(
-      <Knob
-        aria-label="Gain"
-        defaultValue={50}
-        dragDirection="vertical"
-        onValueChange={onValueChange}
-      />
+      <Knob aria-label="Gain" defaultValue={50} onValueChange={onValueChange} />
     );
     const dial = screen.getByRole("slider");
     dial.setPointerCapture = vi.fn();
@@ -165,7 +160,12 @@ describe("Knob", () => {
   it("turns from where it is grabbed when circled, and stops at its ends", () => {
     const onValueChange = vi.fn();
     render(
-      <Knob aria-label="Gain" defaultValue={50} onValueChange={onValueChange} />
+      <Knob
+        aria-label="Gain"
+        defaultValue={50}
+        dragDirection="circular"
+        onValueChange={onValueChange}
+      />
     );
     const dial = circularDial();
     // Grabbed at 3 o'clock, a quarter turn is a third of the 270° arc.
@@ -183,7 +183,12 @@ describe("Knob", () => {
   it("ignores the pointer near the centre of the dial while circling", () => {
     const onValueChange = vi.fn();
     render(
-      <Knob aria-label="Gain" defaultValue={50} onValueChange={onValueChange} />
+      <Knob
+        aria-label="Gain"
+        defaultValue={50}
+        dragDirection="circular"
+        onValueChange={onValueChange}
+      />
     );
     const dial = circularDial();
     fireEvent.pointerDown(dial, { button: 0, clientX: 90, clientY: 50 });
