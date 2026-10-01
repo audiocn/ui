@@ -12,12 +12,24 @@ import { useSound } from "@/hooks/use-sound";
 import { useDemoSounds } from "@/lib/docs/use-demo-audio";
 import type { DemoSoundSource } from "@/lib/docs/use-demo-audio";
 
+type HomeSound = Omit<DemoSoundSource, "src"> & { src: string | AudioBuffer };
+
+// The home page swaps the synthesised airhorn for the Warcraft III peon.
+// This clip is Blizzard's and not covered by the MIT licence; see license.md.
+const WORK_WORK: HomeSound = {
+  accent: "oklch(0.7 0.2 30)",
+  hotkey: "1",
+  id: "work-work",
+  label: "Work, work",
+  src: "/sounds/peon-work-work.wav",
+};
+
 const MODES: Record<string, SoundPadMode> = {
   drumroll: "hold",
   whoosh: "toggle",
 };
 
-const Pad = ({ sound }: { sound: DemoSoundSource }) => {
+const Pad = ({ sound }: { sound: HomeSound }) => {
   const mode = MODES[sound.id] ?? "one-shot";
   const player = useSound(sound.src, { loop: mode !== "one-shot" });
   return (
@@ -47,7 +59,10 @@ const SoundPadsTile = () => {
   return (
     <SoundPadGrid className="w-full" columns={4}>
       {sounds.map((sound) => (
-        <Pad key={sound.id} sound={sound} />
+        <Pad
+          key={sound.id}
+          sound={sound.id === "airhorn" ? WORK_WORK : sound}
+        />
       ))}
     </SoundPadGrid>
   );

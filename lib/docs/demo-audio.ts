@@ -1,7 +1,8 @@
 /**
  * Demo audio for the docs, synthesised in the browser with an
- * OfflineAudioContext. No audio files ship with the site, so every preview is
- * covered by the project's MIT licence.
+ * OfflineAudioContext. No audio files ship with the docs, so every preview is
+ * covered by the project's MIT licence. The home page's "Work, work" pad is the
+ * one recorded exception; see license.md.
  */
 
 const SAMPLE_RATE = 44_100;

@@ -148,7 +148,7 @@ test("every home showcase tile loads without errors", async ({ page }) => {
   });
   await page.goto("/");
   await mountShowcase(page);
-  await expect(page.getByRole("button", { name: "Airhorn" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Work, work" })).toBeVisible();
   await expect(
     page
       .getByRole("article", { name: "Music player" })
