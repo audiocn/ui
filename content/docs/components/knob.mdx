@@ -22,7 +22,7 @@ import { Knob, KnobLabel, KnobValue } from "@/components/ui/knob";
 <Knob min={-24} max={24} origin={0} value={gain} onValueChange={setGain} />
 ```
 
-Drag up to increase and down to decrease.
+Grab the dial and circle around it: clockwise increases, anticlockwise decreases. It turns from where you grab it, stops at both ends, and turns finer the further out you circle. Set `dragDirection="vertical"` to drag up and down instead.
 
 | Action | Result |
 | --- | --- |
@@ -106,10 +106,15 @@ The dial is a focusable slider with `aria-valuetext` from `format`, named by `Kn
     [
       "dragDirection",
       '"vertical" | "horizontal" | "circular"',
-      '"vertical"',
-      null,
+      '"circular"',
+      "Circular turns the knob as you circle around it. Vertical and horizontal drag in a straight line, as in most DAWs.",
     ],
-    ["sensitivity", "number", "200", "Pixels of drag for the full range."],
+    [
+      "sensitivity",
+      "number",
+      "200",
+      "Pixels of vertical or horizontal drag for the full range.",
+    ],
     ["scale", '"linear" | "log"', '"linear"', null],
     ["allowWheel", "boolean", "false", null],
     ["format", "(value: number) => string", "String", null],

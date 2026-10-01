@@ -194,28 +194,69 @@ const incrementFor = (
   return event.shiftKey ? dial.largeStep : dial.step;
 };
 
+interface DragState {
+  x: number;
+  y: number;
+  position: number;
+  /** The pointer's angle around the dial, or null too close to its centre. */
+  angle: number | null;
+}
+
+/** Share of the dial's radius around its centre where the angle is too jumpy to read. */
+const DEAD_ZONE = 0.25;
+
+/** The pointer's angle around the dial centre, clockwise from 12 o'clock. */
+const pointerAngle = (
+  event: { clientX: number; clientY: number },
+  element: HTMLElement
+): number | null => {
+  const rect = element.getBoundingClientRect();
+  const x = event.clientX - (rect.left + rect.width / 2);
+  const y = event.clientY - (rect.top + rect.height / 2);
+  if (Math.hypot(x, y) < (rect.width / 2) * DEAD_ZONE) {
+    return null;
+  }
+  return Math.atan2(x, -y) / DEGREES_TO_RADIANS;
+};
+
+/** The pointer's angle for circular drags; other drags only need its position. */
+const dragAngle = (
+  event: PointerEvent<HTMLDivElement>,
+  dial: KnobDialContextValue
+) =>
+  dial.dragDirection === "circular"
+    ? pointerAngle(event, event.currentTarget)
+    : null;
+
+/** The shortest turn from one angle to another, in -180..180 degrees. */
+const turnBetween = (from: number, to: number) =>
+  ((to - from + HALF_TURN * 3) % (HALF_TURN * 2)) - HALF_TURN;
+
 /**
  * The next position, from the movement since the last pointer event, so
  * pressing or releasing Shift mid-drag changes the speed without a jump.
+ * Circular drags add the turn since the last event, so the knob turns from
+ * where it is grabbed and stops at its ends instead of wrapping across the gap.
  */
 const dragPosition = (
   event: PointerEvent<HTMLDivElement>,
-  last: { x: number; y: number; position: number },
+  last: DragState,
+  angle: number | null,
   dial: KnobDialContextValue,
   arc: number
 ) => {
+  const fine = event.shiftKey ? FINE_FACTOR : 1;
   if (dial.dragDirection === "circular") {
-    const rect = event.currentTarget.getBoundingClientRect();
-    const x = event.clientX - (rect.left + rect.width / 2);
-    const y = event.clientY - (rect.top + rect.height / 2);
-    const angle = Math.atan2(x, -y) / DEGREES_TO_RADIANS;
-    return clamp((angle + arc / 2) / arc, 0, 1);
+    if (last.angle === null || angle === null) {
+      return last.position;
+    }
+    const turn = turnBetween(last.angle, angle);
+    return clamp(last.position + (turn / arc) * fine, 0, 1);
   }
   const delta =
     dial.dragDirection === "vertical"
       ? last.y - event.clientY
       : event.clientX - last.x;
-  const fine = event.shiftKey ? FINE_FACTOR : 1;
   return clamp(last.position + (delta / dial.sensitivity) * fine, 0, 1);
 };
 
@@ -269,9 +310,7 @@ export const KnobDial = ({
     useKnob("KnobDial");
   const dial = useKnobDial();
   const dialRef = useRef<HTMLDivElement>(null);
-  const dragRef = useRef<{ x: number; y: number; position: number } | null>(
-    null
-  );
+  const dragRef = useRef<DragState | null>(null);
   const [dragging, setDragging] = useState(false);
   useDialWheel(dialRef, dial);
 
@@ -312,6 +351,7 @@ export const KnobDial = ({
     event.currentTarget.setPointerCapture(event.pointerId);
     event.currentTarget.focus();
     dragRef.current = {
+      angle: dragAngle(event, dial),
       position: dial.taper.toPosition(dial.latestRef.current),
       x: event.clientX,
       y: event.clientY,
@@ -324,8 +364,14 @@ export const KnobDial = ({
     if (!last) {
       return;
     }
-    const next = dragPosition(event, last, dial, arc);
-    dragRef.current = { position: next, x: event.clientX, y: event.clientY };
+    const angle = dragAngle(event, dial);
+    const next = dragPosition(event, last, angle, dial, arc);
+    dragRef.current = {
+      angle,
+      position: next,
+      x: event.clientX,
+      y: event.clientY,
+    };
     const increment = event.shiftKey ? dial.fineStep : dial.step;
     dial.change(dial.quantize(dial.taper.toValue(next), increment), {
       event: event.nativeEvent,
@@ -623,9 +669,9 @@ export interface KnobProps extends Omit<
   origin?: number;
   /** Sweep in degrees. Default 270. */
   arc?: number;
-  /** How dragging turns the knob. Default `vertical`. */
+  /** How dragging turns the knob. Default `circular`. */
   dragDirection?: "vertical" | "horizontal" | "circular";
-  /** Pixels of drag for the full range. Default 200. */
+  /** Pixels of vertical or horizontal drag for the full range. Default 200. */
   sensitivity?: number;
   /** Default `linear`. */
   scale?: "linear" | "log";
@@ -705,7 +751,7 @@ export const Knob = ({
   resetValue,
   origin,
   arc = 270,
-  dragDirection = "vertical",
+  dragDirection = "circular",
   sensitivity = 200,
   scale = "linear",
   allowWheel = false,

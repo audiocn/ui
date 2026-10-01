@@ -82,7 +82,7 @@ test("fader values keep their width across the whole range", async ({
   expect(new Set(snapshots)).toEqual(new Set([before]));
 });
 
-test("knobs turn finer with Shift, reset with Alt+click and take typed values", async ({
+test("knobs turn when circled, finer with Shift, reset with Alt+click and take typed values", async ({
   page,
 }) => {
   await page.goto("/docs/components/knob");
@@ -95,16 +95,26 @@ test("knobs turn finer with Shift, reset with Alt+click and take typed values", 
   }
   const x = box.x + box.width / 2;
   const y = box.y + box.height / 2;
+  const radius = box.width * 0.4;
+  /** A point on the dial, clockwise in degrees from 12 o'clock. */
+  const around = (degrees: number) => {
+    const radians = (degrees * Math.PI) / 180;
+    return [
+      x + radius * Math.sin(radians),
+      y - radius * Math.cos(radians),
+    ] as const;
+  };
 
-  await page.mouse.move(x, y);
+  await page.mouse.move(...around(90));
   await page.mouse.down();
   await page.keyboard.down("Shift");
-  await page.mouse.move(x, y - 40, { steps: 8 });
-  // 40px of a 200px sensitivity over 48 dB is 9.6 dB, and a tenth with Shift.
-  await expect(dial).toHaveAttribute("aria-valuenow", "1");
+  await page.mouse.move(...around(157.5), { steps: 8 });
+  // A quarter of the 270° arc over 48 dB is 12 dB, and a tenth with Shift.
+  await expect(dial).toHaveAttribute("aria-valuenow", "1.2");
   await page.keyboard.up("Shift");
-  await page.mouse.move(x, y - 80, { steps: 8 });
-  await expect(dial).toHaveAttribute("aria-valuenow", "11");
+  // A third of the arc is 16 dB more, across the gap at the bottom.
+  await page.mouse.move(...around(247.5), { steps: 8 });
+  await expect(dial).toHaveAttribute("aria-valuenow", "17");
   await page.mouse.up();
 
   await page.keyboard.down("Alt");

@@ -92,6 +92,16 @@ describe("ParameterSlider", () => {
   });
 });
 
+/** The knob's dial, laid out as a 100px square at the page origin. */
+const circularDial = () => {
+  const dial = screen.getByRole("slider");
+  dial.getBoundingClientRect = () => new DOMRect(0, 0, 100, 100);
+  dial.setPointerCapture = vi.fn();
+  dial.hasPointerCapture = vi.fn(() => true);
+  dial.releasePointerCapture = vi.fn();
+  return dial;
+};
+
 describe("Knob", () => {
   it("is a slider that responds to the keyboard and double-click", () => {
     const onValueChange = vi.fn();
@@ -131,7 +141,12 @@ describe("Knob", () => {
   it("drags ten times finer with Shift, without jumping when Shift changes", () => {
     const onValueChange = vi.fn();
     render(
-      <Knob aria-label="Gain" defaultValue={50} onValueChange={onValueChange} />
+      <Knob
+        aria-label="Gain"
+        defaultValue={50}
+        dragDirection="vertical"
+        onValueChange={onValueChange}
+      />
     );
     const dial = screen.getByRole("slider");
     dial.setPointerCapture = vi.fn();
@@ -143,6 +158,39 @@ describe("Knob", () => {
     expect(onValueChange).toHaveBeenLastCalledWith(51, expect.anything());
     fireEvent.pointerMove(dial, { clientY: 60 });
     expect(onValueChange).toHaveBeenLastCalledWith(61, expect.anything());
+  });
+
+  it("turns from where it is grabbed when circled, and stops at its ends", () => {
+    const onValueChange = vi.fn();
+    render(
+      <Knob aria-label="Gain" defaultValue={50} onValueChange={onValueChange} />
+    );
+    const dial = circularDial();
+    // Grabbed at 3 o'clock, a quarter turn is a third of the 270° arc.
+    fireEvent.pointerDown(dial, { button: 0, clientX: 90, clientY: 50 });
+    fireEvent.pointerMove(dial, { clientX: 50, clientY: 90 });
+    expect(onValueChange).toHaveBeenLastCalledWith(83, expect.anything());
+    // Past the end, across the gap at the bottom, it stays at the end.
+    fireEvent.pointerMove(dial, { clientX: 10, clientY: 50 });
+    expect(onValueChange).toHaveBeenLastCalledWith(100, expect.anything());
+    // Turning back moves it straight away.
+    fireEvent.pointerMove(dial, { clientX: 50, clientY: 90 });
+    expect(onValueChange).toHaveBeenLastCalledWith(67, expect.anything());
+  });
+
+  it("ignores the pointer near the centre of the dial while circling", () => {
+    const onValueChange = vi.fn();
+    render(
+      <Knob aria-label="Gain" defaultValue={50} onValueChange={onValueChange} />
+    );
+    const dial = circularDial();
+    fireEvent.pointerDown(dial, { button: 0, clientX: 90, clientY: 50 });
+    fireEvent.pointerMove(dial, { clientX: 48, clientY: 52 });
+    // Leaving the centre picks up from there, without a jump.
+    fireEvent.pointerMove(dial, { clientX: 50, clientY: 10 });
+    expect(onValueChange).not.toHaveBeenCalled();
+    fireEvent.pointerMove(dial, { clientX: 90, clientY: 50 });
+    expect(onValueChange).toHaveBeenLastCalledWith(83, expect.anything());
   });
 
   it("edits the value on double-click and returns focus to the dial", () => {
