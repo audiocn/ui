@@ -124,6 +124,7 @@ export const useMicrophone = ({
       return;
     }
     let cancelled = false;
+    const listeners = new AbortController();
     let acquired: MediaStream | null = null;
 
     const open = async () => {
@@ -137,17 +138,17 @@ export const useMicrophone = ({
         }
         acquired = stream;
         const handleEnded = () => {
-          if (!cancelled) {
-            setResult({
-              failure: null,
-              key,
-              status: "unavailable",
-              stream: null,
-            });
-          }
+          setResult({
+            failure: null,
+            key,
+            status: "unavailable",
+            stream: null,
+          });
         };
         for (const track of stream.getAudioTracks()) {
-          track.addEventListener("ended", handleEnded);
+          track.addEventListener("ended", handleEnded, {
+            signal: listeners.signal,
+          });
         }
         setResult({ failure: null, key, status: "active", stream });
       } catch (error) {
@@ -165,6 +166,7 @@ export const useMicrophone = ({
 
     return () => {
       cancelled = true;
+      listeners.abort();
       stopStream(acquired);
     };
   }, [key, wanted]);

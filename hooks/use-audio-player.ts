@@ -182,14 +182,11 @@ const usePlaybackState = (
       volumechange: () =>
         patch({ muted: element.muted, volume: element.volume }),
     };
+    const listeners = new AbortController();
     for (const [event, handler] of Object.entries(handlers)) {
-      element.addEventListener(event, handler);
+      element.addEventListener(event, handler, { signal: listeners.signal });
     }
-    return () => {
-      for (const [event, handler] of Object.entries(handlers)) {
-        element.removeEventListener(event, handler);
-      }
-    };
+    return () => listeners.abort();
   }, [element]);
 
   return state;

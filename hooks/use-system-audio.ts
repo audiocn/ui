@@ -118,13 +118,17 @@ export const useSystemAudio = ({
       }
       const audio = new MediaStream(audioTracks);
       for (const track of audioTracks) {
-        track.addEventListener("ended", () => {
-          if (streamRef.current === audio) {
-            streamRef.current = null;
-            setStream(null);
-            setCaptureStatus("ended");
-          }
-        });
+        track.addEventListener(
+          "ended",
+          () => {
+            if (streamRef.current === audio) {
+              streamRef.current = null;
+              setStream(null);
+              setCaptureStatus("ended");
+            }
+          },
+          { once: true }
+        );
       }
       streamRef.current = audio;
       setStream(audio);

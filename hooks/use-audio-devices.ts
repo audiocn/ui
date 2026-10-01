@@ -133,34 +133,36 @@ export const useAudioDevices = ({
     if (!hasMediaDevices()) {
       return;
     }
-    let status: PermissionStatus | null = null;
     let disposed = false;
-    const onChange = () => {
-      refresh();
-    };
-    const onPermissionChange = () => {
-      if (status) {
-        setPermissionState(status.state);
-        refresh();
-      }
-    };
+    const listeners = new AbortController();
     const watch = async () => {
       await refresh();
-      const result = await queryMicrophonePermission();
-      if (!result || disposed) {
+      const status = await queryMicrophonePermission();
+      if (!status || disposed) {
         return;
       }
-      status = result;
-      setPermissionState(result.state);
-      result.addEventListener("change", onPermissionChange);
+      setPermissionState(status.state);
+      status.addEventListener(
+        "change",
+        () => {
+          setPermissionState(status.state);
+          refresh();
+        },
+        { signal: listeners.signal }
+      );
     };
-    navigator.mediaDevices.addEventListener("devicechange", onChange);
+    navigator.mediaDevices.addEventListener(
+      "devicechange",
+      () => {
+        refresh();
+      },
+      { signal: listeners.signal }
+    );
     watch();
 
     return () => {
       disposed = true;
-      navigator.mediaDevices.removeEventListener("devicechange", onChange);
-      status?.removeEventListener("change", onPermissionChange);
+      listeners.abort();
     };
   }, [refresh]);
 

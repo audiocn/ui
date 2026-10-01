@@ -207,13 +207,17 @@ export const useSound = (
     node.playbackRate.value = playbackRate;
     node.connect(output);
     const voice: Voice = { node, startedAt: context.currentTime };
-    node.addEventListener("ended", () => {
-      voicesRef.current = voicesRef.current.filter((item) => item !== voice);
-      if (voicesRef.current.length === 0) {
-        setIsPlaying(false);
-        progress.emit(0);
-      }
-    });
+    node.addEventListener(
+      "ended",
+      () => {
+        voicesRef.current = voicesRef.current.filter((item) => item !== voice);
+        if (voicesRef.current.length === 0) {
+          setIsPlaying(false);
+          progress.emit(0);
+        }
+      },
+      { once: true }
+    );
     node.start();
     voicesRef.current.push(voice);
     setIsPlaying(true);
