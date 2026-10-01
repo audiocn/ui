@@ -423,7 +423,7 @@ export const ParameterSliderInput = ({
         <NumberFieldPrimitive.Input
           aria-labelledby={labelId}
           className={cn(
-            "h-full w-16 bg-transparent px-2 text-end font-mono text-xs tabular-nums outline-none",
+            "h-full w-16 bg-transparent px-2 text-end font-mono text-xs tabular-nums outline-hidden",
             className
           )}
           data-slot="parameter-slider-input"
