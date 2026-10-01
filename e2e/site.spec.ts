@@ -245,6 +245,70 @@ test("soundboard removal is reversible without losing pad order", async ({
   await expect(board.getByRole("status")).toContainText("Restored");
 });
 
+/** A short, silent 16-bit mono PCM WAV that the browser can decode. */
+const silentWav = (sampleRate = 8000, samples = 800) => {
+  const dataBytes = samples * 2;
+  const wav = Buffer.alloc(44 + dataBytes);
+  wav.write("RIFF", 0);
+  wav.writeUInt32LE(36 + dataBytes, 4);
+  wav.write("WAVEfmt ", 8);
+  wav.writeUInt32LE(16, 16);
+  wav.writeUInt16LE(1, 20);
+  wav.writeUInt16LE(1, 22);
+  wav.writeUInt32LE(sampleRate, 24);
+  wav.writeUInt32LE(sampleRate * 2, 28);
+  wav.writeUInt16LE(2, 32);
+  wav.writeUInt16LE(16, 34);
+  wav.write("data", 36);
+  wav.writeUInt32LE(dataBytes, 40);
+  return wav;
+};
+
+test("soundboard frees a dropped file once its removal can't be undone", async ({
+  page,
+}) => {
+  await page.goto("/docs/blocks/soundboard");
+  const board = page.locator('[data-slot="soundboard"]');
+  const pads = board.locator("[data-sound-pad]");
+  await expect(pads.first()).toBeVisible();
+  await page.evaluate(() => {
+    const revoked: string[] = [];
+    Object.assign(window, { revoked });
+    const revoke = URL.revokeObjectURL.bind(URL);
+    URL.revokeObjectURL = (url) => {
+      revoked.push(url);
+      revoke(url);
+    };
+  });
+  const readRevoked = () =>
+    page.evaluate(() => (window as unknown as { revoked: string[] }).revoked);
+  const remove = async (label: string) => {
+    await pads.filter({ hasText: label }).click({ button: "right" });
+    await page.getByRole("menuitem", { exact: true, name: "Remove" }).click();
+    await expect(pads.filter({ hasText: label })).toHaveCount(0);
+  };
+
+  await board.getByLabel("Add audio files").setInputFiles(
+    ["kick", "snare"].map((name) => ({
+      buffer: silentWav(),
+      mimeType: "audio/wav",
+      name: `${name}.wav`,
+    }))
+  );
+  await expect(board.getByRole("status")).toContainText("Added 2 sounds");
+
+  await remove("kick");
+  expect(await readRevoked()).toEqual([]);
+  await remove("snare");
+  const revoked = await readRevoked();
+  expect(revoked).toHaveLength(1);
+  expect(revoked[0]).toMatch(/^blob:/u);
+
+  await board.getByRole("button", { name: "Undo removal" }).click();
+  await expect(pads.filter({ hasText: "snare" })).toHaveCount(1);
+  expect(await readRevoked()).toHaveLength(1);
+});
+
 test("soundboard rejects non-audio files with inline feedback", async ({
   page,
 }) => {

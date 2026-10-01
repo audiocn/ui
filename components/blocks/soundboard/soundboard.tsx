@@ -168,7 +168,10 @@ const AUDIO_FILE = /^audio\//u;
 const FILE_EXTENSION = /\.[^.]+$/u;
 const NO_SOUNDS: SoundboardSound[] = [];
 
-const fileToSound = (file: File, index: number): SoundboardSound => ({
+const fileToSound = (
+  file: File,
+  index: number
+): SoundboardSound & { src: string } => ({
   hotkey: index < 9 ? String(index + 1) : undefined,
   id: `${file.name}-${file.lastModified}`,
   label: file.name.replace(FILE_EXTENSION, ""),
@@ -199,6 +202,8 @@ export const Soundboard = ({
   } | null>(null);
   const hotkeysId = useId();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Object URLs this board created for dropped files.
+  const objectUrlsRef = useRef(new Set<string>());
 
   useEffect(() => {
     if (!(bus && context)) {
@@ -251,13 +256,31 @@ export const Soundboard = ({
       );
       return;
     }
+    for (const sound of added) {
+      objectUrlsRef.current.add(sound.src);
+    }
     update([...sounds, ...added]);
     setFeedback(
       `Added ${added.length} ${added.length === 1 ? "sound" : "sounds"}.`
     );
   };
 
+  // Frees a dropped file once no pad uses it and its removal can't be undone.
+  const releaseObjectUrl = ({ src }: SoundboardSound) => {
+    const inUse = sounds.some((item) => item.src === src);
+    if (
+      typeof src === "string" &&
+      !inUse &&
+      objectUrlsRef.current.delete(src)
+    ) {
+      URL.revokeObjectURL(src);
+    }
+  };
+
   const removeSound = (sound: SoundboardSound) => {
+    if (removedSound) {
+      releaseObjectUrl(removedSound.sound);
+    }
     setRemovedSound({
       index: sounds.findIndex((item) => item.id === sound.id),
       sound,
