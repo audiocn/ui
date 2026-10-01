@@ -1,5 +1,12 @@
-// Installs every audiocn registry item into a fresh shadcn app and type-checks
-// it. Run `pnpm registry:build` first.
+// Installs audiocn registry items into fresh shadcn apps and type-checks them.
+// Run `pnpm registry:build` first.
+//
+// Two fixtures:
+// - base: a Base UI app, every item.
+// - radix: a Radix app compiled against ES2022, every item that does not
+//   compose a Base-only shadcn API (the blocks and audio-device-select do).
+//   This is how a Radix project such as Videorc installs audiocn, and the
+//   ES2022 lib catches newer APIs (`toSorted`) the default config hides.
 import { execFileSync, spawn } from "node:child_process";
 import { once } from "node:events";
 import {
@@ -25,7 +32,25 @@ if (!existsSync(path.join(registryDir, "registry.json"))) {
 const { items } = JSON.parse(
   readFileSync(path.join(root, "registry.json"), "utf-8")
 );
-const names = items.map((item) => item.name);
+const allNames = items.map((item) => item.name);
+// Built on a Base-only shadcn API: the Select `items` prop, render-function
+// `SelectValue`, `render` composition.
+const baseOnly = new Set(["audio-device-select"]);
+const radixNames = items
+  .filter((item) => item.type !== "registry:block" && !baseOnly.has(item.name))
+  .map((item) => item.name);
+
+const fixtures = [
+  { base: "base", lib: null, name: "base", names: allNames },
+  {
+    base: "radix",
+    lib: ["ES2022", "DOM", "DOM.Iterable"],
+    name: "radix",
+    names: radixNames,
+  },
+];
+
+const only = process.env.AUDIOCN_FIXTURE;
 
 const server = createServer((request, response) => {
   const file = path.join(registryDir, path.basename(request.url ?? ""));
@@ -51,12 +76,21 @@ const run = async (command, args, cwd) => {
   }
 };
 
-const workspace = mkdtempSync(
-  path.join(process.env.AUDIOCN_FIXTURE_DIR ?? tmpdir(), "audiocn-install-")
-);
-const app = path.join(workspace, "fixture");
+const editJson = (file, edit) => {
+  const json = JSON.parse(readFileSync(file, "utf-8"));
+  edit(json);
+  writeFileSync(file, `${JSON.stringify(json, null, 2)}\n`);
+};
 
-try {
+const installFixture = async (fixture) => {
+  const workspace = mkdtempSync(
+    path.join(
+      process.env.AUDIOCN_FIXTURE_DIR ?? tmpdir(),
+      `audiocn-install-${fixture.name}-`
+    )
+  );
+  const app = path.join(workspace, "fixture");
+
   await run(
     "pnpm",
     [
@@ -68,7 +102,7 @@ try {
       "--template",
       "next",
       "--base",
-      "base",
+      fixture.base,
       "--preset",
       "nova",
       "--yes",
@@ -76,13 +110,17 @@ try {
     workspace
   );
 
-  const configPath = path.join(app, "components.json");
-  const config = JSON.parse(readFileSync(configPath, "utf-8"));
-  config.registries = {
-    ...config.registries,
-    "@audiocn": `http://localhost:${port}/{name}.json`,
-  };
-  writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`);
+  editJson(path.join(app, "components.json"), (config) => {
+    config.registries = {
+      ...config.registries,
+      "@audiocn": `http://localhost:${port}/{name}.json`,
+    };
+  });
+  if (fixture.lib) {
+    editJson(path.join(app, "tsconfig.json"), (tsconfig) => {
+      tsconfig.compilerOptions.lib = fixture.lib;
+    });
+  }
 
   await run(
     "pnpm",
@@ -90,18 +128,34 @@ try {
       "dlx",
       "shadcn@rc",
       "add",
-      ...names.map((name) => `@audiocn/${name}`),
+      ...fixture.names.map((name) => `@audiocn/${name}`),
       "--yes",
       "--overwrite",
     ],
     app
   );
   await run("pnpm", ["exec", "tsc", "--noEmit"], app);
-  console.log(`\nInstalled and type-checked ${names.length} items in ${app}`);
+  console.log(
+    `\n[${fixture.name}] installed and type-checked ${fixture.names.length} items in ${app}`
+  );
   execFileSync("ls", ["components/ui", "hooks", "lib/audio"], {
     cwd: app,
     stdio: "inherit",
   });
+};
+
+// One after the other: both fixtures use the same registry server and port.
+const installInTurn = async ([next, ...rest]) => {
+  if (!next) {
+    return;
+  }
+  await installFixture(next);
+  await installInTurn(rest);
+};
+
+const selected = fixtures.filter((fixture) => !only || only === fixture.name);
+try {
+  await installInTurn(selected);
 } finally {
   server.close();
 }
