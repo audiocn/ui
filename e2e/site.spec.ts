@@ -87,7 +87,9 @@ test.describe("every docs page", () => {
       const errors: string[] = [];
       page.on("pageerror", (error) => errors.push(error.message));
       page.on("console", (message) => {
-        if (message.type() === "error") {
+        // Vercel serves its analytics script only on its own deployments.
+        const vercelScript = message.location().url.includes("/_vercel/");
+        if (message.type() === "error" && !vercelScript) {
           errors.push(message.text());
         }
       });

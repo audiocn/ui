@@ -67,6 +67,19 @@
   text-wrap: balance;
 }
 
+.card[data-social-long-title="true"] .title {
+  font-size: 44px;
+  letter-spacing: -1.8px;
+}
+
+.card[data-social-kind="hook"] .title {
+  font-family: var(--font-mono);
+  font-size: 30px;
+  letter-spacing: -1px;
+  line-height: 1.15;
+  text-wrap: initial;
+}
+
 .caption {
   color: var(--muted-foreground);
   font-size: 18px;
@@ -100,6 +113,91 @@
 
 .preview[data-social-preview="meters"] {
   transform: scale(1.2);
+}
+
+.preview[data-social-preview="pan"],
+.preview[data-social-preview="volume"],
+.preview[data-social-preview="toggles"] {
+  transform: scale(1.7);
+}
+
+.preview[data-social-preview="parameters"] {
+  transform: scale(1.25);
+}
+
+.preview[data-social-preview="system-mixer"] {
+  flex-shrink: 0;
+  width: 850px;
+  zoom: 0.72;
+}
+
+.preview[data-social-preview="mic-setup"] {
+  flex-shrink: 0;
+  width: 540px;
+  zoom: 0.85;
+}
+
+.preview[data-social-preview="system-settings"] {
+  flex-shrink: 0;
+  width: 540px;
+}
+
+.preview[data-social-preview="music-player"] {
+  zoom: 0.78;
+}
+
+.collection {
+  align-items: center;
+  display: grid;
+  gap: 36px;
+  grid-template-columns: 1fr 1fr;
+  width: 100%;
+}
+
+.collectionKnobs {
+  transform: scale(1.15);
+}
+
+.collectionWaveform {
+  grid-column: span 2;
+}
+
+.quickPopover {
+  align-items: flex-start;
+  display: flex;
+  height: 330px;
+  justify-content: center;
+  width: 100%;
+}
+
+.themes {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: 1fr 1fr;
+  width: 100%;
+}
+
+.lightTheme,
+.darkTheme {
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--foreground);
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  padding: 24px;
+}
+
+.lightTheme {
+  --background: oklch(0.985 0.001 106.423);
+  --foreground: oklch(0.147 0.004 49.25);
+  --border: oklch(0.923 0.003 48.717);
+  --input: oklch(0.923 0.003 48.717);
+  --muted: oklch(0.97 0.001 106.424);
+  --muted-foreground: oklch(0.553 0.013 58.071);
+  --primary: oklch(0.216 0.006 56.043);
+  --primary-foreground: oklch(0.985 0.001 106.423);
 }
 
 .homePreview {

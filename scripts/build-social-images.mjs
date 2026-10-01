@@ -2,18 +2,18 @@
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import { once } from "node:events";
-import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, unlink, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 
 import { chromium } from "@playwright/test";
 
-import { socialCards } from "../lib/social-catalog.ts";
-
 const root = process.cwd();
 const outputDirectory = path.join(root, "public/og");
 const manifestPath = path.join(root, "lib/social-images.json");
 const port = Number(process.env.AUDIOCN_SOCIAL_PORT ?? 3107);
+const verify = process.argv.includes("--verify");
 if (!Number.isInteger(port) || port < 1024 || port > 65_535) {
   throw new Error("AUDIOCN_SOCIAL_PORT must be a port between 1024 and 65535.");
 }
@@ -74,6 +74,11 @@ const capture = async (card) => {
     const page = await context.newPage();
     const errors = [];
     page.on("pageerror", (error) => errors.push(error.message));
+    page.on("console", (message) => {
+      if (message.type() === "error") {
+        errors.push(message.text());
+      }
+    });
     // Pause before navigation: every mounted signal starts at the same frame.
     await page.clock.install({ time: new Date("2026-01-01T00:00:00Z") });
     await page.clock.pauseAt(new Date("2026-01-01T00:00:01Z"));
@@ -81,6 +86,16 @@ const capture = async (card) => {
       waitUntil: "load",
     });
     await page.locator('[data-social-ready="true"]').waitFor();
+    await page
+      .locator('[data-social-loaded="false"]')
+      .waitFor({ state: "detached" });
+    await page.locator("[data-loading]").waitFor({ state: "detached" });
+    if (card.preview === "quick-popover") {
+      await page
+        .getByRole("button", { exact: true, name: "Audio settings" })
+        .click({ force: true });
+      await page.locator("[data-loading]").waitFor({ state: "detached" });
+    }
     await page.evaluate(async () => {
       await document.fonts.ready;
       await Promise.all(Array.from(document.images, (image) => image.decode()));
@@ -114,12 +129,51 @@ const capture = async (card) => {
 
 try {
   await waitForServer();
-  browser = await chromium.launch({ channel: "chrome" });
+  const catalogResponse = await fetch(`${baseUrl}/api/social-cards`);
+  if (!catalogResponse.ok) {
+    throw new Error("Could not read the social card catalog.");
+  }
+  const socialCards = await catalogResponse.json();
+  if (!Array.isArray(socialCards) || socialCards.length === 0) {
+    throw new Error("The social card catalog is empty or invalid.");
+  }
+  browser = await chromium.launch({
+    // Software rasterization keeps canvas antialiasing identical across captures.
+    args: [
+      "--disable-accelerated-2d-canvas",
+      "--disable-gpu",
+      "--deterministic-mode",
+      "--run-all-compositor-stages-before-draw",
+      "--disable-threaded-animation",
+      "--disable-threaded-scrolling",
+    ],
+    channel: "chrome",
+  });
   const captures = [];
   for (const card of socialCards) {
-    captures.push(await capture(card));
+    const result = await capture(card);
+    if (verify) {
+      const repeated = await capture(card);
+      if (!result.bytes.equals(repeated.bytes)) {
+        const failureDirectory = await mkdtemp(
+          path.join(tmpdir(), "audiocn-og-")
+        );
+        await writeFile(
+          path.join(failureDirectory, `${card.id}-first.png`),
+          result.bytes
+        );
+        await writeFile(
+          path.join(failureDirectory, `${card.id}-repeat.png`),
+          repeated.bytes
+        );
+        throw new Error(
+          `${card.id} changed between two identical captures. Compare the PNGs in ${failureDirectory}.`
+        );
+      }
+    }
+    captures.push(result);
     console.log(
-      `social image: ${card.id} (${captures.length}/${socialCards.length})`
+      `social image: ${card.id} (${captures.length}/${socialCards.length})${verify ? " — verified identical" : ""}`
     );
   }
   const previous = JSON.parse(await readFile(manifestPath, "utf-8"));

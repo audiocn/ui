@@ -1,6 +1,90 @@
 import { expect, test } from "@playwright/test";
+import type { Page } from "@playwright/test";
 
 import { siteConfig } from "../lib/site";
+import socialImages from "../lib/social-images.json" with { type: "json" };
+import type { SocialImage } from "../lib/social-metadata";
+import { publicPages } from "./routes";
+
+const images: Record<string, SocialImage | undefined> = socialImages;
+
+const readInitialHead = (page: Page, html: string) =>
+  page.evaluate((markup) => {
+    // DOMParser does not execute scripts: this inspects the crawler's response.
+    const { head } = new DOMParser().parseFromString(markup, "text/html");
+    return {
+      canonical: head
+        .querySelector('link[rel="canonical"]')
+        ?.getAttribute("href"),
+      meta: Object.fromEntries(
+        Array.from(head.querySelectorAll("meta"), (element) => [
+          element.getAttribute("property") ?? element.getAttribute("name"),
+          element.getAttribute("content"),
+        ])
+      ),
+      title: head.querySelector("title")?.textContent,
+    };
+  }, html);
+
+for (const pathname of publicPages) {
+  test(`${pathname} exposes its complete metadata to a social crawler`, async ({
+    request,
+    page,
+  }) => {
+    const response = await request.get(pathname, {
+      headers: { "user-agent": "Twitterbot/1.0" },
+    });
+    expect(response.status()).toBe(200);
+    const head = await readInitialHead(page, await response.text());
+    const meta = (selector: string) => head.meta[selector];
+    const canonical =
+      pathname === "/"
+        ? siteConfig.url
+        : new URL(pathname, siteConfig.url).href;
+    expect(head.canonical).toBe(canonical);
+    expect(meta("og:url")).toBe(canonical);
+    const { title } = head;
+    expect(title).toContain("audiocn");
+    expect(meta("og:title")).toBe(title);
+    expect(meta("twitter:title")).toBe(title);
+    const description = meta("description");
+    expect(description?.length).toBeGreaterThan(20);
+    expect(meta("og:description")).toBe(description);
+    expect(meta("twitter:description")).toBe(description);
+    const image = images[pathname];
+    expect(image).toBeDefined();
+    if (!image) {
+      throw new Error(`Missing social image for ${pathname}`);
+    }
+    const imageUrl = new URL(image.url, siteConfig.url).href;
+    expect(meta("og:image")).toBe(imageUrl);
+    expect(meta("twitter:image")).toBe(imageUrl);
+    expect(meta("og:image:alt")).toBe(image.alt);
+    expect(meta("twitter:image:alt")).toBe(image.alt);
+    expect(meta("og:image:width")).toBe("1200");
+    expect(meta("og:image:height")).toBe("630");
+    expect(meta("twitter:card")).toBe("summary_large_image");
+    const asset = await request.get(image.url);
+    expect(asset.status()).toBe(200);
+    expect(asset.headers()["content-type"]).toContain("image/png");
+  });
+}
+
+test("Slack sees documentation metadata in the initial HTML head", async ({
+  request,
+  page,
+}) => {
+  const response = await request.get("/docs/blocks/system-audio-mixer", {
+    headers: { "user-agent": "Slackbot-LinkExpanding 1.0" },
+  });
+  const head = await readInitialHead(page, await response.text());
+  expect(head.meta["og:image"]).toBe(
+    new URL(
+      images["/docs/blocks/system-audio-mixer"]?.url ?? "",
+      siteConfig.url
+    ).href
+  );
+});
 
 const cases = [
   { pathname: "/", title: siteConfig.title },
@@ -123,6 +207,9 @@ test("the capture route is unavailable in production and absent from the sitemap
 }) => {
   const response = await request.get("/social-preview/home");
   expect(response.status()).toBe(404);
+  const catalog = await request.get("/api/social-cards");
+  expect(catalog.status()).toBe(404);
   const sitemap = await request.get("/sitemap.xml");
   expect(await sitemap.text()).not.toContain("social-preview");
+  expect(await sitemap.text()).not.toContain("social-cards");
 });

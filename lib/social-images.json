@@ -1,26 +1,222 @@
 {
   "/": {
     "alt": "audiocn: a five-channel mixer, rotary knobs and a waveform in the dark Stone theme.",
-    "url": "/og/home-6beb7ed1ed1c.png"
+    "url": "/og/home-7e7e99273b66.png"
   },
-  "/docs/components/mixer": {
-    "alt": "audiocn Mixer: microphone, system audio, music, sounds and master strips with faders and active meters.",
-    "url": "/og/mixer-a8f8931dfc9b.png"
+  "/contributors": {
+    "alt": "audiocn contributors: a mixer and its controls, built together in the open.",
+    "url": "/og/contributors-b02a360a4832.png"
   },
-  "/docs/components/level-meter": {
-    "alt": "audiocn Level Meter: solid and segmented stereo meters with green and yellow zones, scales and peak hold.",
-    "url": "/og/level-meter-cb8243a47d5c.png"
+  "/docs/blocks": {
+    "alt": "Blocks — audiocn: a mixer and sound pads composed into an audio console.",
+    "url": "/og/blocks-1521aac688ef.png"
   },
-  "/docs/components/knob": {
-    "alt": "audiocn Knob: gain, pan and frequency rotary controls with value labels and range arcs.",
-    "url": "/og/knob-80961d6a9343.png"
+  "/docs/blocks/mic-setup": {
+    "alt": "Microphone Setup — audiocn: microphone setup with a device selector, preview, gain and level check.",
+    "url": "/og/blocks-mic-setup-40c978777702.png"
   },
-  "/docs/components/waveform": {
-    "alt": "audiocn Waveform: an audio clip with a mirrored waveform, a playhead, a selected region and a marker.",
-    "url": "/og/waveform-75564b342b06.png"
+  "/docs/blocks/music-player": {
+    "alt": "Music Player — audiocn: a complete playlist player with waveform seeking and transport controls.",
+    "url": "/og/blocks-music-player-1a8491e0b513.png"
+  },
+  "/docs/blocks/quick-audio-popover": {
+    "alt": "Quick Audio Popover — audiocn: an open audio popover with microphone and system audio settings.",
+    "url": "/og/blocks-quick-audio-popover-2e099e60702b.png"
+  },
+  "/docs/blocks/soundboard": {
+    "alt": "Soundboard — audiocn: a complete soundboard with hotkeys, pads, volume and stop controls.",
+    "url": "/og/blocks-soundboard-73b96e08ffd0.png"
+  },
+  "/docs/blocks/system-audio-mixer": {
+    "alt": "System Audio Mixer — audiocn: a complete system audio mixer with microphone, music, sound pads and master controls.",
+    "url": "/og/blocks-system-audio-mixer-0933d0ac4df4.png"
+  },
+  "/docs/blocks/system-audio-settings": {
+    "alt": "System Audio Settings — audiocn: system audio settings with capture, volume and a meter.",
+    "url": "/og/blocks-system-audio-settings-3f9929c5fd72.png"
+  },
+  "/docs/components/audio-device-select": {
+    "alt": "Audio Device Select — audiocn: microphone selectors with named USB and default devices.",
+    "url": "/og/components-audio-device-select-be0948c50d85.png"
+  },
+  "/docs/components/audio-player": {
+    "alt": "Audio Player — audiocn: an audio player with transport, seeking, time and volume controls.",
+    "url": "/og/components-audio-player-db59c33944df.png"
+  },
+  "/docs/components/bar-visualizer": {
+    "alt": "Bar Visualizer — audiocn: a frequency-band bar visualizer with an active signal.",
+    "url": "/og/components-bar-visualizer-342fc6dc4845.png"
+  },
+  "/docs/components/channel-strip": {
+    "alt": "Channel Strip — audiocn: a channel strip with a meter, fader and channel controls.",
+    "url": "/og/components-channel-strip-48d1e659a808.png"
+  },
+  "/docs/components/channel-toggle": {
+    "alt": "Channel Toggle — audiocn: mute, solo and monitor controls with their pressed states.",
+    "url": "/og/components-channel-toggle-8a1dcd54fdf5.png"
+  },
+  "/docs/components/clip-indicator": {
+    "alt": "Clip Indicator — audiocn: a latched clip light beside a level meter.",
+    "url": "/og/components-clip-indicator-dc0be7a04d4d.png"
+  },
+  "/docs/components/db-readout": {
+    "alt": "dB Readout — audiocn: decibel readouts for quiet, normal and hot signal levels.",
+    "url": "/og/components-db-readout-0cbd2bdb7170.png"
+  },
+  "/docs/components/db-scale": {
+    "alt": "dB Scale — audiocn: a decibel scale alongside a console fader.",
+    "url": "/og/components-db-scale-81a2b61ccaec.png"
+  },
+  "/docs/components/electric-bar-visualizer": {
+    "alt": "Electric Bar Visualizer — audiocn: glowing frequency bars drawn as electric filaments.",
+    "url": "/og/components-electric-bar-visualizer-9991a5edeada.png"
   },
   "/docs/components/electric-waveform": {
     "alt": "audiocn Electric Waveform: a glowing audio trace with a bright core and branching arcs on a dark surface.",
-    "url": "/og/electric-waveform-df510fdc6caf.png"
+    "url": "/og/electric-waveform-07cb8e9196ae.png"
+  },
+  "/docs/components/fader": {
+    "alt": "Fader — audiocn: three console faders at different gain settings.",
+    "url": "/og/components-fader-b49d5a3f61a5.png"
+  },
+  "/docs/components": {
+    "alt": "Components — audiocn: level meters, rotary knobs, faders and a waveform.",
+    "url": "/og/components-7323c92c1c74.png"
+  },
+  "/docs/components/knob": {
+    "alt": "audiocn Knob: gain, pan and frequency rotary controls with value labels and range arcs.",
+    "url": "/og/knob-1f8a40ed39d8.png"
+  },
+  "/docs/components/level-meter": {
+    "alt": "audiocn Level Meter: solid and segmented stereo meters with green and yellow zones, scales and peak hold.",
+    "url": "/og/level-meter-ba1f00ac346f.png"
+  },
+  "/docs/components/live-waveform": {
+    "alt": "Live Waveform — audiocn: a live oscilloscope trace and scrolling signal history.",
+    "url": "/og/components-live-waveform-77d0c2186458.png"
+  },
+  "/docs/components/mixer": {
+    "alt": "audiocn Mixer: microphone, system audio, music, sounds and master strips with faders and active meters.",
+    "url": "/og/mixer-52a90ec7a200.png"
+  },
+  "/docs/components/pan-control": {
+    "alt": "Pan Control — audiocn: a pan slider with a centre detent and a left balance value.",
+    "url": "/og/components-pan-control-8fbf6b2900e5.png"
+  },
+  "/docs/components/parameter-slider": {
+    "alt": "Parameter Slider — audiocn: frequency, Q and gain parameter sliders.",
+    "url": "/og/components-parameter-slider-f7dab1b2a02c.png"
+  },
+  "/docs/components/smooth-waveform": {
+    "alt": "Smooth Waveform — audiocn: a flowing audio wave and an oscilloscope line.",
+    "url": "/og/components-smooth-waveform-c2ecd668a981.png"
+  },
+  "/docs/components/sound-pad": {
+    "alt": "Sound Pad — audiocn: sound pads with hotkeys and playback progress.",
+    "url": "/og/components-sound-pad-90122e53a419.png"
+  },
+  "/docs/components/spectrum": {
+    "alt": "Spectrum — audiocn: a frequency spectrum with axes, grid and peak hold.",
+    "url": "/og/components-spectrum-929e8653cd85.png"
+  },
+  "/docs/components/track-list": {
+    "alt": "Track List — audiocn: a track list with active and playing states.",
+    "url": "/og/components-track-list-87f5e854fcc9.png"
+  },
+  "/docs/components/volume-control": {
+    "alt": "Volume Control — audiocn: a volume slider with a mute control and numeric value.",
+    "url": "/og/components-volume-control-497d0c7b1927.png"
+  },
+  "/docs/components/waveform": {
+    "alt": "audiocn Waveform: an audio clip with a mirrored waveform, a playhead, a selected region and a marker.",
+    "url": "/og/waveform-73cc8a323df4.png"
+  },
+  "/docs/concepts/accessibility": {
+    "alt": "Accessibility — audiocn: gain, pan and frequency knobs with labelled values.",
+    "url": "/og/concepts-accessibility-0048efc9b07c.png"
+  },
+  "/docs/concepts/custom-engine": {
+    "alt": "Using your own audio engine — audiocn: a five-channel mixer with meters, faders and mute and solo controls.",
+    "url": "/og/concepts-custom-engine-5da1b2837bed.png"
+  },
+  "/docs/concepts/decibels": {
+    "alt": "Decibels and levels — audiocn: solid and segmented stereo level meters with scales and peak hold.",
+    "url": "/og/concepts-decibels-dff5e02adc58.png"
+  },
+  "/docs/concepts/feeding-data": {
+    "alt": "Feeding data — audiocn: a frequency spectrum with axes, grid and peak hold.",
+    "url": "/og/concepts-feeding-data-2a04386f67a7.png"
+  },
+  "/docs/concepts/theming": {
+    "alt": "Theming — audiocn: the same audio controls in light and dark themes.",
+    "url": "/og/concepts-theming-957b499990eb.png"
+  },
+  "/docs/hooks/use-audio-analyser": {
+    "alt": "useAudioAnalyser — audiocn: a frequency spectrum with axes, grid and peak hold.",
+    "url": "/og/hooks-use-audio-analyser-999e9fb24cc6.png"
+  },
+  "/docs/hooks/use-audio-context": {
+    "alt": "useAudioContext — audiocn: a five-channel mixer with meters, faders and mute and solo controls.",
+    "url": "/og/hooks-use-audio-context-97d9dae74b50.png"
+  },
+  "/docs/hooks/use-audio-devices": {
+    "alt": "useAudioDevices — audiocn: microphone selectors with named USB and default devices.",
+    "url": "/og/hooks-use-audio-devices-7da65b6993ad.png"
+  },
+  "/docs/hooks/use-audio-player": {
+    "alt": "useAudioPlayer — audiocn: an audio player with transport, seeking, time and volume controls.",
+    "url": "/og/hooks-use-audio-player-e00113d08f6c.png"
+  },
+  "/docs/hooks/use-clip-hold": {
+    "alt": "useClipHold — audiocn: a latched clip light beside a level meter.",
+    "url": "/og/hooks-use-clip-hold-2a68ad37cf58.png"
+  },
+  "/docs/hooks/use-demo-signal": {
+    "alt": "useDemoSignal — audiocn: a frequency-band bar visualizer with an active signal.",
+    "url": "/og/hooks-use-demo-signal-5a8f0142cbde.png"
+  },
+  "/docs/hooks/use-frame-source": {
+    "alt": "useFrameSource — audiocn: a live oscilloscope trace and scrolling signal history.",
+    "url": "/og/hooks-use-frame-source-ad85c2c0bd6e.png"
+  },
+  "/docs/hooks/use-level": {
+    "alt": "useLevel — audiocn: solid and segmented stereo level meters with scales and peak hold.",
+    "url": "/og/hooks-use-level-d7a106e6190d.png"
+  },
+  "/docs/hooks/use-microphone": {
+    "alt": "useMicrophone — audiocn: microphone setup with a device selector, preview, gain and level check.",
+    "url": "/og/hooks-use-microphone-b65934d41380.png"
+  },
+  "/docs/hooks/use-mixer": {
+    "alt": "useMixer — audiocn: a five-channel mixer with meters, faders and mute and solo controls.",
+    "url": "/og/hooks-use-mixer-29e8308c13d6.png"
+  },
+  "/docs/hooks/use-reduced-motion": {
+    "alt": "useReducedMotion — audiocn: a flowing audio wave and an oscilloscope line.",
+    "url": "/og/hooks-use-reduced-motion-c378aa592db5.png"
+  },
+  "/docs/hooks/use-sound": {
+    "alt": "useSound — audiocn: sound pads with hotkeys and playback progress.",
+    "url": "/og/hooks-use-sound-fde74e2fd46b.png"
+  },
+  "/docs/hooks/use-system-audio": {
+    "alt": "useSystemAudio — audiocn: system audio settings with capture, volume and a meter.",
+    "url": "/og/hooks-use-system-audio-b57cdfa225d5.png"
+  },
+  "/docs/hooks/use-waveform-data": {
+    "alt": "useWaveformData — audiocn: a mirrored waveform with a playhead, selected region and marker.",
+    "url": "/og/hooks-use-waveform-data-b59432085b3c.png"
+  },
+  "/docs/hooks/use-web-audio-mixer": {
+    "alt": "useWebAudioMixer — audiocn: a complete system audio mixer with microphone, music, sound pads and master controls.",
+    "url": "/og/hooks-use-web-audio-mixer-c7393c32fb8c.png"
+  },
+  "/docs": {
+    "alt": "Introduction — audiocn: level meters, rotary knobs, faders and a waveform.",
+    "url": "/og/introduction-bbd8e95a89c5.png"
+  },
+  "/docs/installation": {
+    "alt": "Installation — audiocn: level meters, rotary knobs, faders and a waveform.",
+    "url": "/og/installation-3e4b22a51b2e.png"
   }
 }

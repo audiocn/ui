@@ -25,6 +25,9 @@ const fontMono = Geist_Mono({
 });
 
 const homeMetadata = getPageMetadata({ pathname: "/", title: siteConfig.name });
+const isSocialCapture =
+  process.env.NODE_ENV === "development" &&
+  process.env.AUDIOCN_SOCIAL_CAPTURE === "1";
 
 export const metadata: Metadata = {
   ...homeMetadata,
@@ -57,7 +60,10 @@ const RootLayout = ({
   >
     <body className="flex min-h-svh flex-col">
       <ThemeProvider>
-        <RootProvider theme={{ enabled: false }}>
+        <RootProvider
+          search={{ enabled: !isSocialCapture }}
+          theme={{ enabled: false }}
+        >
           <TooltipProvider>
             <div className="flex min-h-0 flex-1 flex-col">{children}</div>
             <SiteFooter />

@@ -73,6 +73,7 @@ export default defineConfig({
         "components/blocks/**",
         "components/docs/**",
         "components/home/**",
+        "components/social/**",
         "app/**",
       ],
       rules: {

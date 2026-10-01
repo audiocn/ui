@@ -20,6 +20,8 @@ export const SocialCard = ({ card }: { card: SocialCardDefinition }) => {
     <article
       className={styles.card}
       data-social-card={card.id}
+      data-social-kind={card.pathname.includes("/hooks/") ? "hook" : "page"}
+      data-social-long-title={card.title.length > 24}
       data-social-ready="false"
       data-theme="stone"
       ref={cardRef}

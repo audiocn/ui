@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { SocialCard } from "@/components/social/social-card";
-import { socialCards } from "@/lib/social-catalog";
+import { getSocialCards } from "@/lib/social-catalog";
+import { source } from "@/lib/source";
 
 export const metadata: Metadata = {
   robots: { follow: false, index: false },
@@ -22,7 +23,7 @@ const SocialPreviewPage = async ({
     notFound();
   }
   const { id } = await params;
-  const card = socialCards.find((item) => item.id === id);
+  const card = getSocialCards(source.getPages()).find((item) => item.id === id);
   if (!card) {
     notFound();
   }

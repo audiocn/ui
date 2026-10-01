@@ -4,13 +4,26 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { socialCards } from "@/lib/social-catalog";
+import { componentPreviews, getSocialCards } from "@/lib/social-catalog";
 import socialImages from "@/lib/social-images.json";
 import type { SocialImage } from "@/lib/social-metadata";
 
+import { docsPages, publicPages } from "../e2e/routes";
+
 const images: Record<string, SocialImage | undefined> = socialImages;
+const socialCards = getSocialCards(
+  docsPages.map((url) => ({ data: { title: url }, url }))
+);
 
 describe("social image assets", () => {
+  it("covers every public page and gives each component its own preview", () => {
+    expect(Object.keys(images).toSorted()).toEqual(publicPages.toSorted());
+    for (const pathname of docsPages.filter((url) =>
+      url.startsWith("/docs/components/")
+    )) {
+      expect(componentPreviews[pathname.split("/").at(-1) ?? ""]).toBeDefined();
+    }
+  });
   it("has unique capture IDs and page URLs", () => {
     expect(new Set(socialCards.map((card) => card.id)).size).toBe(
       socialCards.length
@@ -27,7 +40,7 @@ describe("social image assets", () => {
       if (!image) {
         return;
       }
-      expect(image.alt).toBe(card.alt);
+      expect(image.alt.length).toBeGreaterThan(30);
       const bytes = readFileSync(
         path.join(process.cwd(), "public", image.url.slice(1))
       );
