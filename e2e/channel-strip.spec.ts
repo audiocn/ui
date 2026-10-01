@@ -1,5 +1,62 @@
 import { expect, test } from "@playwright/test";
 
+test("horizontal mixer tracks are visually centred in each strip", async ({
+  page,
+}) => {
+  await page.setViewportSize({ height: 900, width: 1440 });
+  await page.goto("/docs/components/mixer");
+  const mixer = page.locator('[data-slot="mixer"]').first();
+  await mixer.scrollIntoViewIfNeeded();
+  await expect(mixer.locator('[data-slot="channel-strip"]')).toHaveCount(4);
+  await expect(async () => {
+    const offsets = await mixer
+      .locator('[data-slot="channel-strip"]')
+      .evaluateAll((strips) =>
+        strips.map((strip) => {
+          const bounds = strip.getBoundingClientRect();
+          const tracks = [
+            ...strip.querySelectorAll(
+              '[data-slot="level-meter-track"], [data-slot="fader-track"]'
+            ),
+          ].map((track) => track.getBoundingClientRect());
+          const top = Math.min(...tracks.map((track) => track.top));
+          const bottom = Math.max(...tracks.map((track) => track.bottom));
+          return (top + bottom) / 2 - (bounds.top + bounds.bottom) / 2;
+        })
+      );
+    for (const offset of offsets) {
+      expect(Math.abs(offset)).toBeLessThan(0.5);
+    }
+  }).toPass();
+});
+
+test("composed faders keep their Reset button clear of the track", async ({
+  page,
+}) => {
+  await page.goto("/docs/components/mixer");
+  const stripFaderClass = await page
+    .locator('[data-slot="channel-strip-fader"]')
+    .first()
+    .getAttribute("class");
+  if (!stripFaderClass) {
+    throw new Error("Channel strip fader styles are missing");
+  }
+
+  await page.goto("/docs/components/fader");
+  const fader = page.locator('[data-slot="fader"]').first();
+  await fader.evaluate((element, className) => {
+    const wrapper = document.createElement("div");
+    wrapper.className = className;
+    element.before(wrapper);
+    wrapper.append(element);
+  }, stripFaderClass);
+
+  const reset = fader.locator('[data-slot="fader-reset"]');
+  await expect(reset).toBeEnabled();
+  await reset.click({ position: { x: 4, y: 22 }, timeout: 5000 });
+  await expect(reset).toBeDisabled();
+});
+
 for (const width of [375, 1440]) {
   test.describe(`channel strip at ${width}px`, () => {
     test.use({ viewport: { height: 900, width } });

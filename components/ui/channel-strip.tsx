@@ -377,7 +377,7 @@ export const ChannelStripFader = ({
       className={cn(
         "flex min-h-0 min-w-0 [grid-area:fader] [&_[data-slot=fader-control]]:p-0 [&_[data-slot=fader-scale]]:p-0",
         orientation === "horizontal"
-          ? "w-full items-center"
+          ? "w-full items-center [&_[data-slot=fader-control]:only-child]:my-[calc((var(--fader-track-size)-var(--fader-thumb-size))/2)]"
           : "h-full justify-center",
         className
       )}
