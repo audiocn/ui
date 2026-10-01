@@ -16,7 +16,7 @@ import type { Icon } from "@phosphor-icons/react";
 import { useDocsSearch } from "fumadocs-core/search/client";
 import { fetchClient } from "fumadocs-core/search/client/fetch";
 import {
-  SearchDialog as Dialog,
+  SearchDialog,
   SearchDialogClose,
   SearchDialogContent,
   SearchDialogHeader,
@@ -235,7 +235,7 @@ const renderMenuItem = (props: {
  * docs pages by section, links and theme switches, so there is somewhere
  * to go straight away.
  */
-export const SearchDialog = (props: SharedProps) => {
+export const DocsSearchDialog = (props: SharedProps) => {
   const docsGroups = useContext(SearchGroupsContext);
   const themeGroup = useThemeGroup();
   const { search, setSearch, query } = useDocsSearch({ client });
@@ -284,7 +284,7 @@ export const SearchDialog = (props: SharedProps) => {
   }, [groups, query.data, search, themeGroup]);
 
   return (
-    <Dialog
+    <SearchDialog
       isLoading={query.isLoading}
       onSearchChange={setSearch}
       search={search}
@@ -301,6 +301,6 @@ export const SearchDialog = (props: SharedProps) => {
           <SearchDialogList Item={renderMenuItem} items={items} />
         </MenuContext.Provider>
       </SearchDialogContent>
-    </Dialog>
+    </SearchDialog>
   );
 };

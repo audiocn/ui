@@ -18,8 +18,13 @@ const toTypeNode = (row: PropRow): TypeNode => ({
   type: row[1],
 });
 
-export const PropsTable = ({ rows }: PropsTableProps) => (
-  <TypeTable
-    type={Object.fromEntries(rows.map((row) => [row[0], toTypeNode(row)]))}
-  />
-);
+export const PropsTable = ({ rows }: PropsTableProps) => {
+  if (rows.length === 0) {
+    return <p className="text-muted-foreground text-sm">No props.</p>;
+  }
+  return (
+    <TypeTable
+      type={Object.fromEntries(rows.map((row) => [row[0], toTypeNode(row)]))}
+    />
+  );
+};

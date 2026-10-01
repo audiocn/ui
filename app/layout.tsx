@@ -5,11 +5,12 @@ import { DM_Sans, Geist_Mono, Outfit } from "next/font/google";
 
 import "./globals.css";
 import {
-  SearchDialog,
+  DocsSearchDialog,
   SearchGroupsProvider,
 } from "@/components/docs/search-dialog";
 import { SiteFooter } from "@/components/docs/site-footer";
 import { ThemeProvider } from "@/components/theme-provider";
+import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { searchGroups } from "@/lib/search-groups";
 import { siteConfig } from "@/lib/site";
@@ -68,12 +69,16 @@ const RootLayout = ({
       <ThemeProvider>
         <SearchGroupsProvider groups={searchGroups(source.getPageTree())}>
           <RootProvider
-            search={{ SearchDialog, enabled: !isSocialCapture }}
+            search={{
+              SearchDialog: DocsSearchDialog,
+              enabled: !isSocialCapture,
+            }}
             theme={{ enabled: false }}
           >
             <TooltipProvider>
               <div className="flex min-h-0 flex-1 flex-col">{children}</div>
               <SiteFooter />
+              <Toaster />
             </TooltipProvider>
           </RootProvider>
         </SearchGroupsProvider>

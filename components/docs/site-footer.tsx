@@ -27,7 +27,10 @@ export const SiteFooter = () => (
         </a>{" "}
         with <span aria-hidden="true">🪓🪓</span>
       </p>
-      <nav aria-label="Secondary" className="flex items-center gap-4 text-sm">
+      <nav
+        aria-label="Secondary"
+        className="flex flex-wrap items-center gap-4 text-sm"
+      >
         <Link className={FOOTER_LINK_CLASS} href="/contributors">
           Contributors
         </Link>

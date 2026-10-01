@@ -23,6 +23,7 @@ const SHADCN_FILES = [
   "components/ui/select.tsx",
   "components/ui/separator.tsx",
   "components/ui/skeleton.tsx",
+  "components/ui/sonner.tsx",
   "components/ui/switch.tsx",
   "components/ui/tabs.tsx",
   "components/ui/toggle.tsx",
@@ -63,6 +64,13 @@ export default defineConfig({
         "react/function-component-definition": "off",
         "shadcn/no-inline-styles": "off",
         "shadcn/no-restyle": "off",
+      },
+    },
+    {
+      // `toaster` and `cn-toast` are hook classes from upstream, not Tailwind.
+      files: ["components/ui/sonner.tsx"],
+      rules: {
+        "shadcn/no-unknown-classes": "off",
       },
     },
     {
