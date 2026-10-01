@@ -32,7 +32,8 @@ import { useTheme } from "next-themes";
 import { createContext, useContext, useMemo } from "react";
 import type { CSSProperties, ReactNode } from "react";
 
-import { THEMES, useSiteTheme } from "@/components/docs/theme-picker";
+import { useSiteTheme } from "@/components/docs/theme-picker";
+import { THEMES } from "@/lib/docs/site-themes";
 import type { SearchGroup } from "@/lib/search-groups";
 import { siteConfig } from "@/lib/site";
 

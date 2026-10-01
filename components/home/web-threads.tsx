@@ -270,6 +270,12 @@ const DEFAULTS: Required<Omit<WebThreadsProps, "className">> = {
   threadCount: 6,
 };
 
+/** Drops props passed as `undefined`, so they can't override a default. */
+const definedProps = <T extends object>(props: T) =>
+  Object.fromEntries(
+    Object.entries(props).filter(([, value]) => value !== undefined)
+  ) as Partial<T>;
+
 /** Glowing threads woven along a sine wave, drawn with WebGL. */
 export const WebThreads = ({ className, ...props }: WebThreadsProps) => {
   const {
@@ -296,7 +302,7 @@ export const WebThreads = ({ className, ...props }: WebThreadsProps) => {
     taper,
     thickness,
     threadCount,
-  } = { ...DEFAULTS, ...props };
+  } = { ...DEFAULTS, ...definedProps(props) };
   const containerRef = useRef<HTMLDivElement>(null);
   const uniformsRef = useRef<Uniforms | null>(null);
 

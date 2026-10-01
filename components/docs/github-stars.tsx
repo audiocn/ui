@@ -5,6 +5,25 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
+const DEFAULT_LOCALES = "en-US";
+const COMPACT: Intl.NumberFormatOptions = {
+  compactDisplay: "short",
+  notation: "compact",
+};
+const defaultFormats = {
+  compact: new Intl.NumberFormat(DEFAULT_LOCALES, COMPACT),
+  full: new Intl.NumberFormat(DEFAULT_LOCALES),
+};
+
+/** Reuses the default formatters; other locales get their own. */
+const formatsFor = (locales: Intl.LocalesArgument) =>
+  locales === DEFAULT_LOCALES
+    ? defaultFormats
+    : {
+        compact: new Intl.NumberFormat(locales, COMPACT),
+        full: new Intl.NumberFormat(locales),
+      };
+
 export interface GitHubStarsProps {
   /** GitHub repository in `owner/repo` format. */
   repo: string;
@@ -24,15 +43,11 @@ export interface GitHubStarsProps {
 export const GitHubStars = ({
   repo,
   stargazersCount,
-  locales = "en-US",
+  locales = DEFAULT_LOCALES,
 }: GitHubStarsProps) => {
-  const compactCount = new Intl.NumberFormat(locales, {
-    compactDisplay: "short",
-    notation: "compact",
-  })
-    .format(stargazersCount)
-    .toLowerCase();
-  const fullCount = new Intl.NumberFormat(locales).format(stargazersCount);
+  const formats = formatsFor(locales);
+  const compactCount = formats.compact.format(stargazersCount).toLowerCase();
+  const fullCount = formats.full.format(stargazersCount);
 
   return (
     <Tooltip>

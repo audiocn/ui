@@ -2,8 +2,9 @@
 
 import type { CSSProperties } from "react";
 
-import { THEMES, useSiteTheme } from "@/components/docs/theme-picker";
+import { useSiteTheme } from "@/components/docs/theme-picker";
 import { Button } from "@/components/ui/button";
+import { THEMES } from "@/lib/docs/site-themes";
 
 /** Retheme the whole showcase at once, in sync with the navbar picker. */
 export const ThemeSwatches = () => {

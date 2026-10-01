@@ -1061,7 +1061,7 @@ const useKnobValue = ({
   onValueChange,
   clicksBetween,
 }: KnobValueOptions) => {
-  const [uncontrolled, setUncontrolled] = useState(
+  const [uncontrolled, setUncontrolled] = useState(() =>
     clamp(defaultValue ?? resetValue, min, max)
   );
   const value = valueProp ?? uncontrolled;

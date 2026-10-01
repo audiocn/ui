@@ -152,7 +152,7 @@ export const ParameterSlider = ({
   const config = useAudioConfig();
   const disabled = disabledProp ?? config.disabled ?? false;
   const resetValue = resetValueProp ?? defaultValue ?? min;
-  const [uncontrolled, setUncontrolled] = useState(
+  const [uncontrolled, setUncontrolled] = useState(() =>
     clamp(defaultValue ?? resetValue, min, max)
   );
   const value = valueProp ?? uncontrolled;

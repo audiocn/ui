@@ -257,7 +257,7 @@ export const VolumeControl = ({
   const config = useAudioConfig();
   const size = sizeProp ?? config.size ?? "default";
   const disabled = disabledProp ?? config.disabled ?? false;
-  const [uncontrolledVolume, setUncontrolledVolume] = useState(
+  const [uncontrolledVolume, setUncontrolledVolume] = useState(() =>
     clamp(defaultValue, 0, 1)
   );
   const [uncontrolledMuted, setUncontrolledMuted] = useState(defaultMuted);

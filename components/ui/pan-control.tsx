@@ -105,7 +105,9 @@ export const PanControl = ({
   const config = useAudioConfig();
   const size = sizeProp ?? config.size ?? "default";
   const disabled = disabledProp ?? config.disabled ?? false;
-  const [uncontrolled, setUncontrolled] = useState(clamp(defaultValue, -1, 1));
+  const [uncontrolled, setUncontrolled] = useState(() =>
+    clamp(defaultValue, -1, 1)
+  );
   const value = valueProp ?? uncontrolled;
 
   const setValue = (next: number) => {
