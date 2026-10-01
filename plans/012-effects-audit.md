@@ -1,6 +1,6 @@
 # 012 — Effects audit
 
-Status: PLANNED (2026-10-01).
+Status: IMPLEMENTED (2026-10-02). See [Outcome](#outcome).
 
 Every `useEffect` and `useLayoutEffect` call in shipped and site code was reviewed: 87 call sites (78 `useEffect`, 9 `useLayoutEffect`) in 41 files. Tests and e2e specs were excluded. Five parallel reviews each read whole files against one rubric. Every bug marked ✓ below was then confirmed by reading the code, and those marked (T) were reproduced in a throwaway vitest.
 
@@ -206,3 +206,35 @@ Keep: no change. Change: keep the effect, apply the fix above. Remove: see "Effe
 | `components/blocks/system-audio-settings/system-audio-settings.tsx:91` | Change (bug 5) |
 | `components/blocks/system-audio-settings/system-audio-settings.tsx:102` | Keep |
 | `components/blocks/system-audio-settings/system-audio-settings.tsx:114` | Change (bug 6) |
+
+## Outcome
+
+All six batches and the shared gain hook shipped as separate commits on `main`, each verified with:
+
+- unit tests;
+- typecheck;
+- `ultracite check`;
+- `pnpm react-doctor` (no issues);
+- Shadscan (100/100);
+- a production build and the full e2e suite.
+
+Every new regression test was also run against the old code to confirm it fails there.
+
+- Effects: 87 call sites are down to 69 (64 `useEffect`, 5 `useLayoutEffect`), with 21 `useEffectEvent` calls replacing latest-refs and callback deps.
+- New registry hooks, each with a docs page and social image:
+  - `use-visibility`, used by eight meters and visualizers;
+  - `use-gain-node`, used by four blocks and `use-sound`.
+  - `pnpm test:install` installs and type-checks all 49 items in a fresh shadcn app.
+- The documented React floor is now 19.2.
+
+Where the work departed from the plan:
+
+- **Player pause on hide.** Resyncing status on setup would set state synchronously in an effect, which this repo's lint forbids. The listener cleanup records the pause instead. A cleanup that runs while "playing" means a hide or unmount, and the next cleanup pauses the element.
+- **LevelMeterValue.** A hold of 0 still drops to −∞, so a stopped stream reads as silence. Declarative meters show their levels as a static value instead of streaming them, so `peakDb` no longer decays to −∞.
+- **Waivers.** The system-audio-settings stream hand-off joined the mixer's documented waiver. The sound-pad grid waiver stays, because its handlers also run from JSX.
+- **Social images.** `og:build` re-encodes every image with new hashes even when nothing changed visually. Only the two new pages' images were committed.
+- **Isolation.** Concurrent edits appeared in the working tree mid-run. From slice 4 on, each slice was verified in a clean git worktree, and only the verified files were committed.
+- **Not done:**
+  - LiveWaveform's `data-active` (it means "listening", unlike its siblings). Changing it would be an API change.
+  - Canvas repaints on a `devicePixelRatio`-only change.
+  - Reference-counting `useAudioContext`'s gesture listeners. Low value.
