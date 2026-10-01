@@ -236,7 +236,7 @@ describe("useSound", () => {
       }),
       createGain: () => ({
         ...fakeNode(),
-        gain: { setTargetAtTime: vi.fn(), value: 1 },
+        gain: { setTargetAtTime: vi.fn(), setValueAtTime: vi.fn(), value: 1 },
       }),
       get currentTime() {
         return clock.now;

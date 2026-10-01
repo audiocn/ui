@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useAudioContext } from "@/hooks/use-audio-context";
+import { useGainNode } from "@/hooks/use-gain-node";
 import { subscribeFrame } from "@/lib/audio/frame-loop";
 import { createFrameEmitter } from "@/lib/audio/frame-source";
 import type { FrameSource } from "@/lib/audio/types";
@@ -154,28 +155,11 @@ export const useSound = (
   const [isPlaying, setIsPlaying] = useState(false);
   const voicesRef = useRef<Voice[]>([]);
   const progress = useMemo(() => createFrameEmitter<number>(), []);
-  const output = useMemo(() => context?.createGain() ?? null, [context]);
-
-  useEffect(() => {
-    if (!(context && output)) {
-      return;
-    }
-    const target =
-      destination === undefined ? context.destination : destination;
-    if (!target) {
-      return;
-    }
-    output.connect(target);
-    return () => {
-      output.disconnect(target);
-    };
-  }, [context, destination, output]);
-
-  useEffect(() => {
-    if (output && context) {
-      output.gain.setTargetAtTime(volume, context.currentTime, RAMP_SECONDS);
-    }
-  }, [context, output, volume]);
+  const output = useGainNode({
+    destination,
+    gain: volume,
+    timeConstant: RAMP_SECONDS,
+  });
 
   const stop = useCallback(() => {
     for (const voice of voicesRef.current) {

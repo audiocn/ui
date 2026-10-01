@@ -188,6 +188,19 @@
       ]
     },
     {
+      "name": "use-gain-node",
+      "type": "registry:hook",
+      "title": "useGainNode",
+      "description": "A gain node on the shared AudioContext, wired from an input to a destination, with click-free level changes.",
+      "registryDependencies": ["@audiocn/use-audio-context"],
+      "files": [
+        {
+          "path": "hooks/use-gain-node.ts",
+          "type": "registry:hook"
+        }
+      ]
+    },
+    {
       "name": "use-audio-analyser",
       "type": "registry:hook",
       "title": "useAudioAnalyser",
@@ -608,7 +621,11 @@
       "type": "registry:hook",
       "title": "useSound",
       "description": "Low-latency playback of short sounds decoded into memory, with voices, looping, progress and a routable output node.",
-      "registryDependencies": ["@audiocn/core", "@audiocn/use-audio-context"],
+      "registryDependencies": [
+        "@audiocn/core",
+        "@audiocn/use-audio-context",
+        "@audiocn/use-gain-node"
+      ],
       "files": [
         {
           "path": "hooks/use-sound.ts",
@@ -742,7 +759,8 @@
         "@audiocn/use-audio-devices",
         "@audiocn/use-audio-player",
         "@audiocn/use-sound",
-        "@audiocn/use-audio-context"
+        "@audiocn/use-audio-context",
+        "@audiocn/use-gain-node"
       ],
       "files": [
         {
@@ -780,7 +798,8 @@
         "@audiocn/use-audio-analyser",
         "@audiocn/use-audio-context",
         "@audiocn/use-audio-devices",
-        "@audiocn/use-microphone"
+        "@audiocn/use-microphone",
+        "@audiocn/use-gain-node"
       ],
       "files": [
         {
@@ -806,7 +825,8 @@
         "@audiocn/parameter-slider",
         "@audiocn/use-audio-analyser",
         "@audiocn/use-audio-context",
-        "@audiocn/use-system-audio"
+        "@audiocn/use-system-audio",
+        "@audiocn/use-gain-node"
       ],
       "files": [
         {
@@ -859,7 +879,8 @@
         "@audiocn/sound-pad",
         "@audiocn/volume-control",
         "@audiocn/use-audio-context",
-        "@audiocn/use-sound"
+        "@audiocn/use-sound",
+        "@audiocn/use-gain-node"
       ],
       "files": [
         {

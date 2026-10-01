@@ -12,7 +12,7 @@ import {
   SquaresFourIcon,
   WaveformIcon,
 } from "@phosphor-icons/react";
-import { useEffect, useEffectEvent, useMemo, useState } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
 
 import { MixerMasterStrip } from "@/components/blocks/system-audio-mixer/mixer-master-strip";
 import { MixerSourceStrip } from "@/components/blocks/system-audio-mixer/mixer-source-strip";
@@ -44,10 +44,10 @@ import {
 } from "@/components/ui/sound-pad";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useAudioContext } from "@/hooks/use-audio-context";
 import { useAudioDevices } from "@/hooks/use-audio-devices";
 import { useAudioPlayer } from "@/hooks/use-audio-player";
 import type { AudioPlayerController } from "@/hooks/use-audio-player";
+import { useGainNode } from "@/hooks/use-gain-node";
 import { useMicrophone } from "@/hooks/use-microphone";
 import type { UseMicrophoneResult } from "@/hooks/use-microphone";
 import { useMixer } from "@/hooks/use-mixer";
@@ -384,7 +384,6 @@ export const SystemAudioMixer = ({
   const [orientation, setOrientation] =
     useState<Orientation>(defaultOrientation);
   const mixer = useMixer({ channels: CHANNELS, persistKey });
-  const { context } = useAudioContext();
 
   const [deviceId, setDeviceId] = useState<string | null>(null);
   const microphone = useMicrophone({ deviceId });
@@ -399,7 +398,7 @@ export const SystemAudioMixer = ({
   const player = useAudioPlayer({ onEnded: nextTrack, src: track?.src });
 
   // Sound pads play into one bus so the mixer sees them as a single source.
-  const soundBus = useMemo(() => context?.createGain() ?? null, [context]);
+  const soundBus = useGainNode({ destination: null });
 
   const graph = useWebAudioMixer(mixer, {
     ducking: { targets: ["music"], trigger: "microphone" },

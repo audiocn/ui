@@ -5,7 +5,7 @@ import {
   MicrophoneIcon,
   WarningCircleIcon,
 } from "@phosphor-icons/react";
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
@@ -46,8 +46,8 @@ import {
 } from "@/components/ui/parameter-slider";
 import { Switch } from "@/components/ui/switch";
 import { useAudioAnalyser } from "@/hooks/use-audio-analyser";
-import { useAudioContext } from "@/hooks/use-audio-context";
 import { useAudioDevices } from "@/hooks/use-audio-devices";
+import { useGainNode } from "@/hooks/use-gain-node";
 import { useMicrophone } from "@/hooks/use-microphone";
 import { dbToGain } from "@/lib/audio/decibels";
 import type { FrameSource, MeterFrame } from "@/lib/audio/types";
@@ -101,28 +101,12 @@ const useMicInput = (
   gainDb: number,
   muted: boolean
 ) => {
-  const { context } = useAudioContext();
-  const gainNode = useMemo(() => context?.createGain() ?? null, [context]);
-
-  useEffect(() => {
-    if (!(context && gainNode && stream)) {
-      return;
-    }
-    const source = context.createMediaStreamSource(stream);
-    source.connect(gainNode);
-    return () => source.disconnect();
-  }, [context, gainNode, stream]);
-
-  useEffect(() => {
-    if (gainNode && context) {
-      gainNode.gain.setTargetAtTime(
-        muted ? 0 : dbToGain(gainDb),
-        context.currentTime,
-        0.01
-      );
-    }
-  }, [context, gainDb, gainNode, muted]);
-
+  // Not routed to the speakers: the analyser taps it, and nothing else.
+  const gainNode = useGainNode({
+    destination: null,
+    gain: muted ? 0 : dbToGain(gainDb),
+    input: stream,
+  });
   return useAudioAnalyser(stream ? gainNode : null, { historySize: 120 });
 };
 

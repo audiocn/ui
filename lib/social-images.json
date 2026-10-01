@@ -179,6 +179,10 @@
     "alt": "useFrameSource — audiocn: a live oscilloscope trace and scrolling signal history.",
     "url": "/og/hooks-use-frame-source-ad85c2c0bd6e.png"
   },
+  "/docs/hooks/use-gain-node": {
+    "alt": "useGainNode — audiocn: a channel strip with a meter, fader and channel controls.",
+    "url": "/og/hooks-use-gain-node-b79ad21f39ed.png"
+  },
   "/docs/hooks/use-level": {
     "alt": "useLevel — audiocn: solid and segmented stereo level meters with scales and peak hold.",
     "url": "/og/hooks-use-level-d7a106e6190d.png"

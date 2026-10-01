@@ -31,6 +31,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { useAudioAnalyser } from "@/hooks/use-audio-analyser";
 import { useAudioContext } from "@/hooks/use-audio-context";
+import { useGainNode } from "@/hooks/use-gain-node";
 import { useSystemAudio } from "@/hooks/use-system-audio";
 import type { SystemAudioStatus } from "@/hooks/use-system-audio";
 import { dbToGain } from "@/lib/audio/decibels";
@@ -70,49 +71,32 @@ export const SystemAudioSettings = ({
   const { context } = useAudioContext();
   const [gainState, setGainState] = useState(DEFAULT_GAIN_DB);
   const gainDb = gainDbProp ?? gainState;
-  const gainNode = useMemo(() => context?.createGain() ?? null, [context]);
   const output = useMemo(
     () => context?.createMediaStreamDestination() ?? null,
     [context]
   );
+  // The captured stream, through the level control, into a stream for the
+  // parent. Not routed to the speakers.
+  const gainNode = useGainNode({
+    destination: output,
+    gain: dbToGain(gainDb),
+    input: system.stream,
+  });
   const analyser = useAudioAnalyser(system.stream ? gainNode : null, {
     channels: "stereo",
   });
   const active = system.status === "active";
 
-  useEffect(() => {
-    if (!(gainNode && output)) {
-      return;
-    }
-    gainNode.connect(output);
-    return () => gainNode.disconnect(output);
-  }, [gainNode, output]);
-
-  // A new callback each parent render must not rebuild the live source.
+  // A new callback each parent render must not re-emit the same stream.
   const emitStream = useEffectEvent((stream: MediaStream | null) => {
     onStreamChange?.(stream);
   });
+  const processed =
+    context && gainNode && output && system.stream ? output.stream : null;
 
   useEffect(() => {
-    if (!(context && gainNode && output && system.stream)) {
-      emitStream(null);
-      return;
-    }
-    const source = context.createMediaStreamSource(system.stream);
-    source.connect(gainNode);
-    emitStream(output.stream);
-    return () => source.disconnect();
-  }, [context, gainNode, output, system.stream]);
-
-  useEffect(() => {
-    if (gainNode && context) {
-      gainNode.gain.setTargetAtTime(
-        dbToGain(gainDb),
-        context.currentTime,
-        0.01
-      );
-    }
-  }, [context, gainDb, gainNode]);
+    emitStream(processed);
+  }, [processed]);
 
   const { start: startCapture, stop: stopCapture } = system;
   const isCapturing = useEffectEvent(

@@ -8,6 +8,7 @@
     "use-reduced-motion",
     "use-visibility",
     "use-audio-context",
+    "use-gain-node",
     "use-audio-analyser",
     "use-audio-devices",
     "use-microphone",

@@ -6,14 +6,7 @@ import {
   StopIcon,
   WaveformIcon,
 } from "@phosphor-icons/react";
-import {
-  useEffect,
-  useId,
-  useImperativeHandle,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useId, useImperativeHandle, useMemo, useRef, useState } from "react";
 import type { DragEvent, Ref } from "react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -51,7 +44,7 @@ import {
   VolumeControlMute,
   VolumeControlSlider,
 } from "@/components/ui/volume-control";
-import { useAudioContext } from "@/hooks/use-audio-context";
+import { useGainNode } from "@/hooks/use-gain-node";
 import { useSound } from "@/hooks/use-sound";
 
 export interface SoundboardSound {
@@ -194,10 +187,12 @@ export const Soundboard = ({
 }: SoundboardProps) => {
   const [soundsState, setSoundsState] = useState(defaultSounds);
   const sounds = soundsProp ?? soundsState;
-  const { context } = useAudioContext();
-  const bus = useMemo(() => context?.createGain() ?? null, [context]);
   const [volume, setVolume] = useState(1);
   const [muted, setMuted] = useState(false);
+  const bus = useGainNode({
+    destination: output,
+    gain: muted ? 0 : volume ** 2,
+  });
   const [hotkeys, setHotkeys] = useState(true);
   const [dragging, setDragging] = useState(false);
   const [feedback, setFeedback] = useState("");
@@ -210,30 +205,6 @@ export const Soundboard = ({
   const padsRef = useRef(new Map<string, PadHandle>());
   // Object URLs this board created for dropped files.
   const objectUrlsRef = useRef(new Set<string>());
-
-  useEffect(() => {
-    if (!(bus && context)) {
-      return;
-    }
-    const target = output === undefined ? context.destination : output;
-    if (!target) {
-      return;
-    }
-    bus.connect(target);
-    return () => {
-      bus.disconnect(target);
-    };
-  }, [bus, context, output]);
-
-  useEffect(() => {
-    if (bus && context) {
-      bus.gain.setTargetAtTime(
-        muted ? 0 : volume ** 2,
-        context.currentTime,
-        0.01
-      );
-    }
-  }, [bus, context, muted, volume]);
 
   const update = (next: SoundboardSound[]) => {
     setSoundsState(next);

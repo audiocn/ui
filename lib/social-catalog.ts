@@ -157,6 +157,7 @@ const contextualPreviews: Record<string, SocialPreviewName | undefined> = {
   "/docs/hooks/use-clip-hold": "clip",
   "/docs/hooks/use-demo-signal": "bars",
   "/docs/hooks/use-frame-source": "live-waveform",
+  "/docs/hooks/use-gain-node": "channel",
   "/docs/hooks/use-level": "meters",
   "/docs/hooks/use-microphone": "mic-setup",
   "/docs/hooks/use-mixer": "mixer",

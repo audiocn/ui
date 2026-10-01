@@ -58,10 +58,17 @@ export default defineConfig({
         rules: ["react-doctor/no-fetch-in-effect"],
       },
       {
-        // The block owns the Web Audio graph, so the parent can't build the
-        // output stream itself; onOutputChange hands it up.
-        files: ["components/blocks/system-audio-mixer/system-audio-mixer.tsx"],
-        rules: ["react-doctor/no-pass-data-to-parent"],
+        // These blocks own the Web Audio graph that makes the stream, so the
+        // parent can't build it; onOutputChange and onStreamChange hand it up
+        // when it changes (through useEffectEvent, so not on every render).
+        files: [
+          "components/blocks/system-audio-mixer/system-audio-mixer.tsx",
+          "components/blocks/system-audio-settings/system-audio-settings.tsx",
+        ],
+        rules: [
+          "react-doctor/no-pass-data-to-parent",
+          "react-doctor/no-prop-callback-in-effect",
+        ],
       },
       {
         // demo-audio caches a fixed set of track URLs for the page's life.

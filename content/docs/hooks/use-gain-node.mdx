@@ -1,0 +1,51 @@
+---
+title: useGainNode
+description: A gain node on the shared AudioContext, wired from an input to a destination, with click-free level changes.
+---
+
+The blocks use this hook for every level control and bus: the microphone gain in Mic Setup, the soundboard's master bus, and the output of `useSound`.
+
+```npm
+npx shadcn@latest add @audiocn/use-gain-node
+```
+
+## Usage
+
+```tsx
+import { useGainNode } from "@/hooks/use-gain-node";
+import { useMicrophone } from "@/hooks/use-microphone";
+import { dbToGain } from "@/lib/audio/decibels";
+
+export const MicMonitor = ({ gainDb }: { gainDb: number }) => {
+  const microphone = useMicrophone({ enabled: true });
+  // The microphone, through a gain stage, to the speakers.
+  useGainNode({ gain: dbToGain(gainDb), input: microphone.stream });
+  return null;
+};
+```
+
+## Routing
+
+- `input` takes a `MediaStream`, which the hook wraps in a source node, or any `AudioNode`. Leave it out to feed the node yourself.
+- `destination` is where the node plays. Leave it out for the speakers, pass `null` to route it yourself, or pass a node such as a mixer input or a `MediaStreamAudioDestinationNode`.
+- The hook returns the node, so you can connect more to it, or pass it to `useAudioAnalyser` to meter the level after gain.
+
+## Levels
+
+`gain` is linear: use `dbToGain` from `@/lib/audio/decibels` for decibels. Changes ramp with a short time constant (`timeConstant`, default 10 ms), so they never click. A new node starts at its gain instead of ramping up from unity, so a muted node is never heard as it starts.
+
+Each connection lives in an effect and is undone on cleanup. That makes the node safe under StrictMode and `<Activity>`: hiding disconnects it, and showing reconnects it at the same level.
+
+<PropsTable
+  rows={[
+    ["input", "MediaStream | AudioNode | null", null, "What feeds the node."],
+    ["gain", "number", "1", "Linear gain."],
+    [
+      "destination",
+      "AudioNode | null",
+      "the speakers",
+      "Where the node plays; null routes nowhere.",
+    ],
+    ["timeConstant", "number", "0.01", "Ramp time constant, in seconds."],
+  ]}
+/>
