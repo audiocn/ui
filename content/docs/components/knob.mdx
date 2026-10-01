@@ -69,7 +69,7 @@ Hold Shift for finer control in all three modes. For vertical and horizontal dra
 
 ### Volume dial
 
-A hi-fi volume dial: `KnobScale` draws numbered ticks around the dial and `KnobCap` a brushed aluminium cap with an indicator dot. Give it room for the numbers with a larger `--knob-size`.
+A hi-fi volume dial: `KnobScale` draws numbered ticks around the dial and `KnobCap` a brushed aluminium cap with an indicator dot. Give it room for the numbers with a larger `--knob-size`. `clickSound` adds a soft mechanical click as it steps.
 
 <ComponentPreview name="knob-volume" />
 
@@ -141,6 +141,12 @@ The dial is a focusable slider with `aria-valuetext` from `format`, named by `Kn
     ],
     ["scale", '"linear" | "log"', '"linear"', null],
     ["allowWheel", "boolean", "false", null],
+    [
+      "clickSound",
+      "boolean",
+      "false",
+      "Plays a short synthesised click as the value steps, at most every 30 ms, through the shared AudioContext.",
+    ],
     ["format", "(value: number) => string", "String", null],
     [
       "parse",

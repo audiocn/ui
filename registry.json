@@ -441,9 +441,13 @@
       "name": "knob",
       "type": "registry:ui",
       "title": "Knob",
-      "description": "A rotary control drawn in SVG, with vertical, horizontal or circular dragging, fine adjustment, reset, a bipolar origin and a volume dial skin with a numbered scale and an aluminium cap.",
+      "description": "A rotary control drawn in SVG, with vertical, horizontal or circular dragging, fine adjustment, reset, a bipolar origin, an optional click sound and a volume dial skin with a numbered scale and an aluminium cap.",
       "dependencies": ["class-variance-authority"],
-      "registryDependencies": ["@audiocn/core", "@audiocn/use-audio-config"],
+      "registryDependencies": [
+        "@audiocn/core",
+        "@audiocn/use-audio-config",
+        "@audiocn/use-audio-context"
+      ],
       "files": [
         {
           "path": "components/ui/knob.tsx",

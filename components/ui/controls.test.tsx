@@ -22,6 +22,21 @@ import {
 } from "@/components/ui/parameter-slider";
 import { VolumeControl } from "@/components/ui/volume-control";
 
+/** The shared AudioContext the knob clicks through, null like on the server. */
+const audio = vi.hoisted(() => ({ context: null as unknown }));
+
+vi.mock(import("@/hooks/use-audio-context"), async (importOriginal) => ({
+  ...(await importOriginal()),
+  getSharedAudioContext: () => audio.context as AudioContext | null,
+}));
+
+/** A fake audio node that chains and cleans up like a real one. */
+const fakeNode = () => ({
+  addEventListener: vi.fn(),
+  connect: (next: unknown) => next,
+  disconnect: vi.fn(),
+});
+
 const faderInput = () => screen.getByRole("slider");
 
 describe("Fader", () => {
@@ -311,6 +326,39 @@ describe("Knob", () => {
     fireEvent.keyDown(screen.getByRole("slider"), { key: "Home" });
     expect(grain).toHaveAttribute("transform", "rotate(-135 50 50)");
     expect(face?.outerHTML).toBe(faceMarkup);
+  });
+
+  it("clicks as the value steps only with clickSound", () => {
+    const start = vi.fn();
+    const fakeContext = {
+      createBuffer: (_channels: number, length: number) => ({
+        getChannelData: () => new Float32Array(length),
+      }),
+      createBufferSource: () => ({
+        ...fakeNode(),
+        buffer: null,
+        playbackRate: { value: 1 },
+        start,
+      }),
+      createGain: () => ({ ...fakeNode(), gain: { value: 1 } }),
+      currentTime: 0,
+      destination: {},
+      sampleRate: 48_000,
+      state: "running",
+    };
+    audio.context = fakeContext;
+    try {
+      const { unmount } = render(<Knob aria-label="Quiet" defaultValue={50} />);
+      fireEvent.keyDown(screen.getByRole("slider"), { key: "ArrowUp" });
+      expect(start).not.toHaveBeenCalled();
+      unmount();
+
+      render(<Knob aria-label="Volume" clickSound defaultValue={50} />);
+      fireEvent.keyDown(screen.getByRole("slider"), { key: "ArrowUp" });
+      expect(start).toHaveBeenCalledTimes(1);
+    } finally {
+      audio.context = null;
+    }
   });
 
   it("reads typed values", () => {

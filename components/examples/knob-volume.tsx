@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/knob";
 
 const KnobVolume = () => (
-  <Knob className="[--knob-size:14rem]" defaultValue={33}>
+  <Knob className="[--knob-size:14rem]" clickSound defaultValue={33}>
     <KnobDial>
       <KnobScale labelEvery={10} majorEvery={5} ticks={100} />
       <KnobCap />

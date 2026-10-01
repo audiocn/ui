@@ -22,6 +22,7 @@ import type {
 
 import { useAudioConfig } from "@/hooks/use-audio-config";
 import type { AudioSize } from "@/hooks/use-audio-config";
+import { getSharedAudioContext } from "@/hooks/use-audio-context";
 import { clamp } from "@/lib/audio/decibels";
 import { linearTaper, logTaper } from "@/lib/audio/taper";
 import type { Taper } from "@/lib/audio/types";
@@ -405,7 +406,7 @@ export const KnobDial = ({
       aria-valuenow={value}
       aria-valuetext={format(value)}
       className={cn(
-        "focus-visible:ring-ring/40 relative size-(--knob-size) cursor-grab touch-none rounded-full outline-none focus-visible:ring-3 aria-disabled:cursor-default data-dragging:cursor-grabbing",
+        "relative size-(--knob-size) cursor-grab touch-none rounded-full outline-none aria-disabled:cursor-default data-dragging:cursor-grabbing",
         className
       )}
       data-dragging={dragging ? "" : undefined}
@@ -912,12 +913,92 @@ export interface KnobProps extends Omit<
   scale?: "linear" | "log";
   /** The wheel adjusts the value while focused. Default false. */
   allowWheel?: boolean;
+  /** Plays a soft mechanical click as the value steps. Default false. */
+  clickSound?: boolean;
   format?: (value: number) => string;
   /** Reads a typed value. Default: the first number, with "k" as thousands. */
   parse?: (text: string) => number | null;
   size?: AudioSize;
   disabled?: boolean;
 }
+
+/** Shortest gap between clicks, so a fast turn ticks instead of buzzing. */
+const CLICK_INTERVAL_MS = 30;
+const CLICK_SECONDS = 0.012;
+const CLICK_VOLUME = 0.35;
+/** Each click is pitched a little at random, like a real detent. */
+const CLICK_PITCH_SPREAD = 0.12;
+/** A noise snap over two damped tones: the body and the ring of a detent. */
+const CLICK_PARTS = [
+  { decay: 0.0006, gain: 0.5, hz: 0 },
+  { decay: 0.0018, gain: 0.45, hz: 2600 },
+  { decay: 0.004, gain: 0.25, hz: 950 },
+] as const;
+
+const clickBuffers = new WeakMap<BaseAudioContext, AudioBuffer>();
+let lastClickAt = Number.NEGATIVE_INFINITY;
+
+/** One synthesised click, made once per audio context. */
+const clickBuffer = (context: BaseAudioContext) => {
+  const cached = clickBuffers.get(context);
+  if (cached) {
+    return cached;
+  }
+  const { sampleRate } = context;
+  const buffer = context.createBuffer(
+    1,
+    Math.ceil(CLICK_SECONDS * sampleRate),
+    sampleRate
+  );
+  const samples = buffer.getChannelData(0);
+  for (let index = 0; index < samples.length; index += 1) {
+    const time = index / sampleRate;
+    let sample = 0;
+    for (const part of CLICK_PARTS) {
+      const wave =
+        part.hz === 0
+          ? Math.random() * 2 - 1
+          : Math.sin(2 * Math.PI * part.hz * time);
+      sample += part.gain * wave * Math.exp(-time / part.decay);
+    }
+    samples[index] = sample;
+  }
+  clickBuffers.set(context, buffer);
+  return buffer;
+};
+
+const resumeContext = async (context: AudioContext) => {
+  try {
+    await context.resume();
+  } catch {
+    // Without a user gesture the browser refuses; the next one tries again.
+  }
+};
+
+/** Plays a click through the shared audio context, at most every 30 ms. */
+const playClick = () => {
+  const now = performance.now();
+  const context = getSharedAudioContext();
+  if (!context || now - lastClickAt < CLICK_INTERVAL_MS) {
+    return;
+  }
+  lastClickAt = now;
+  if (context.state === "suspended") {
+    resumeContext(context);
+  }
+  const source = context.createBufferSource();
+  source.buffer = clickBuffer(context);
+  source.playbackRate.value =
+    1 + (Math.random() - 0.5) * CLICK_PITCH_SPREAD * 2;
+  const gain = context.createGain();
+  gain.gain.value = CLICK_VOLUME;
+  source.connect(gain).connect(context.destination);
+  source.addEventListener("ended", () => {
+    source.disconnect();
+    gain.disconnect();
+  });
+  source.start();
+};
 
 interface KnobValueOptions {
   value: number | undefined;
@@ -926,6 +1007,7 @@ interface KnobValueOptions {
   min: number;
   max: number;
   onValueChange: KnobProps["onValueChange"];
+  clickSound: boolean;
 }
 
 /** Controlled or uncontrolled value with change notifications. */
@@ -936,6 +1018,7 @@ const useKnobValue = ({
   min,
   max,
   onValueChange,
+  clickSound,
 }: KnobValueOptions) => {
   const [uncontrolled, setUncontrolled] = useState(
     clamp(defaultValue ?? resetValue, min, max)
@@ -954,8 +1037,11 @@ const useKnobValue = ({
         setUncontrolled(next);
       }
       onValueChange?.(next, details);
+      if (clickSound) {
+        playClick();
+      }
     },
-    [controlled, latestRef, onValueChange]
+    [clickSound, controlled, latestRef, onValueChange]
   );
 
   return { change, latestRef, value };
@@ -990,6 +1076,7 @@ export const Knob = ({
   sensitivity = 200,
   scale = "linear",
   allowWheel = false,
+  clickSound = false,
   format = String,
   parse = parseKnobValue,
   size: sizeProp,
@@ -1002,6 +1089,7 @@ export const Knob = ({
   const reset = resetValue ?? defaultValue ?? min;
   const labelId = useId();
   const { change, latestRef, value } = useKnobValue({
+    clickSound,
     defaultValue,
     max,
     min,
