@@ -36,7 +36,8 @@ input → gain → duck → pan ─┬─→ master → limiter → output strea
                            └─→ monitor send → speakers
 ```
 
-- Mute and solo are gain ramps, so they never click.
+- Mute and solo are gain ramps, so they never click. Channels are built silent and fade in, so a muted channel is never heard while it is created.
+- A duck holds for 200 ms after the trigger's last loud frame, then releases. It also releases when the trigger channel goes away mid-duck.
 - `monitor` decides whether a channel is heard in the speakers. It is off by default so a microphone does not feed back; turn it on for music and sounds.
 - A media element used as an input is taken over by the mixer while mounted, and routed back to the speakers afterwards.
 

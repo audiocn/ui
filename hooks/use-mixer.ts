@@ -160,6 +160,14 @@ const readPersisted = (key: string): MixerState | null => {
   }
 };
 
+const writePersisted = (key: string, state: MixerState) => {
+  try {
+    window.localStorage.setItem(key, JSON.stringify(state));
+  } catch {
+    // Storage can be full or blocked; the mixer keeps working without it.
+  }
+};
+
 export interface Mixer {
   state: MixerState;
   channels: MixerChannelState[];
@@ -218,10 +226,15 @@ export const useMixer = (options: UseMixerOptions = {}): Mixer => {
       stateRef.current = next;
       if (!controlled) {
         replace(next);
+        // Saved on change, not from an effect: an effect would also write the
+        // defaults on mount, over what the restore below is about to load.
+        if (persistKey) {
+          writePersisted(persistKey, next);
+        }
       }
       onChangeRef.current?.(next);
     },
-    [controlled]
+    [controlled, persistKey]
   );
 
   const dispatch = useCallback(
@@ -240,17 +253,6 @@ export const useMixer = (options: UseMixerOptions = {}): Mixer => {
       replace(persisted);
     }
   }, [controlled, persistKey]);
-
-  useEffect(() => {
-    if (!persistKey || controlled) {
-      return;
-    }
-    try {
-      window.localStorage.setItem(persistKey, JSON.stringify(store.current));
-    } catch {
-      // Storage can be full or blocked; the mixer keeps working without it.
-    }
-  }, [controlled, persistKey, store]);
 
   return useMemo<Mixer>(() => {
     const anySolo = state.channels.some((channel) => channel.solo);

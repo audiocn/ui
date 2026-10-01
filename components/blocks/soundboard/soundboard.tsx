@@ -6,8 +6,15 @@ import {
   StopIcon,
   WaveformIcon,
 } from "@phosphor-icons/react";
-import { useEffect, useId, useMemo, useRef, useState } from "react";
-import type { DragEvent } from "react";
+import {
+  useEffect,
+  useId,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import type { DragEvent, Ref } from "react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -78,15 +85,19 @@ const MODES: { value: SoundPadMode; label: string }[] = [
 
 const VOLUMES = [1, 0.75, 0.5, 0.25];
 
+interface PadHandle {
+  stop: () => void;
+}
+
 interface PadProps {
+  ref?: Ref<PadHandle>;
   sound: SoundboardSound;
   bus: AudioNode | null;
-  stopSignal: number;
   onChange: (sound: SoundboardSound) => void;
   onRemove: () => void;
 }
 
-const Pad = ({ sound, bus, stopSignal, onChange, onRemove }: PadProps) => {
+const Pad = ({ ref, sound, bus, onChange, onRemove }: PadProps) => {
   const mode = sound.mode ?? "one-shot";
   const player = useSound(sound.src, {
     destination: bus,
@@ -95,12 +106,7 @@ const Pad = ({ sound, bus, stopSignal, onChange, onRemove }: PadProps) => {
     volume: sound.volume ?? 1,
   });
   const { stop } = player;
-
-  useEffect(() => {
-    if (stopSignal > 0) {
-      stop();
-    }
-  }, [stop, stopSignal]);
+  useImperativeHandle(ref, () => ({ stop }), [stop]);
 
   return (
     <ContextMenu>
@@ -193,7 +199,6 @@ export const Soundboard = ({
   const [volume, setVolume] = useState(1);
   const [muted, setMuted] = useState(false);
   const [hotkeys, setHotkeys] = useState(true);
-  const [stopSignal, setStopSignal] = useState(0);
   const [dragging, setDragging] = useState(false);
   const [feedback, setFeedback] = useState("");
   const [removedSound, setRemovedSound] = useState<{
@@ -202,6 +207,7 @@ export const Soundboard = ({
   } | null>(null);
   const hotkeysId = useId();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const padsRef = useRef(new Map<string, PadHandle>());
   // Object URLs this board created for dropped files.
   const objectUrlsRef = useRef(new Set<string>());
 
@@ -349,7 +355,9 @@ export const Soundboard = ({
         </VolumeControl>
         <Button
           onClick={() => {
-            setStopSignal((signal) => signal + 1);
+            for (const pad of padsRef.current.values()) {
+              pad.stop();
+            }
             setFeedback("Stopped all sounds.");
           }}
           size="sm"
@@ -412,8 +420,16 @@ export const Soundboard = ({
                 )
               }
               onRemove={() => removeSound(sound)}
+              ref={(pad) => {
+                if (!pad) {
+                  return;
+                }
+                padsRef.current.set(sound.id, pad);
+                return () => {
+                  padsRef.current.delete(sound.id);
+                };
+              }}
               sound={sound}
-              stopSignal={stopSignal}
             />
           ))}
           <SoundPad

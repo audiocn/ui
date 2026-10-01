@@ -1,7 +1,7 @@
 "use client";
 
 import { DesktopIcon, InfoIcon, WarningIcon } from "@phosphor-icons/react";
-import { useEffect, useId, useMemo, useState } from "react";
+import { useEffect, useEffectEvent, useId, useMemo, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -88,16 +88,21 @@ export const SystemAudioSettings = ({
     return () => gainNode.disconnect(output);
   }, [gainNode, output]);
 
+  // A new callback each parent render must not rebuild the live source.
+  const emitStream = useEffectEvent((stream: MediaStream | null) => {
+    onStreamChange?.(stream);
+  });
+
   useEffect(() => {
     if (!(context && gainNode && output && system.stream)) {
-      onStreamChange?.(null);
+      emitStream(null);
       return;
     }
     const source = context.createMediaStreamSource(system.stream);
     source.connect(gainNode);
-    onStreamChange?.(output.stream);
+    emitStream(output.stream);
     return () => source.disconnect();
-  }, [context, gainNode, onStreamChange, output, system.stream]);
+  }, [context, gainNode, output, system.stream]);
 
   useEffect(() => {
     if (gainNode && context) {
@@ -110,10 +115,15 @@ export const SystemAudioSettings = ({
   }, [context, gainDb, gainNode]);
 
   const { start: startCapture, stop: stopCapture } = system;
+  const isCapturing = useEffectEvent(
+    () => system.status === "active" || system.status === "prompting"
+  );
 
   useEffect(() => {
     if (enabledProp === true) {
-      startCapture();
+      if (!isCapturing()) {
+        startCapture();
+      }
     } else if (enabledProp === false) {
       stopCapture();
     }
@@ -121,12 +131,17 @@ export const SystemAudioSettings = ({
 
   const setEnabled = (next: boolean) => {
     onEnabledChange?.(next);
-    if (enabledProp === undefined) {
-      if (next) {
-        system.start();
-      } else {
-        system.stop();
-      }
+    // Controlled, the effect above acts once the parent passes the new value.
+    // When the prop already says so (capture ended while `enabled` stayed
+    // true), nothing will change, so act here.
+    const propWillChange = enabledProp !== undefined && enabledProp !== next;
+    if (propWillChange) {
+      return;
+    }
+    if (next) {
+      system.start();
+    } else {
+      system.stop();
     }
   };
 

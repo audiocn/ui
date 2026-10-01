@@ -29,6 +29,8 @@ import type { FrameSource, MeterFrame, VisualFrame } from "@/lib/audio/types";
 const RAMP_SECONDS = 0.005;
 const MS_PER_SECOND = 1000;
 const TIME_CONSTANTS_PER_RAMP = 3;
+/** How long a duck holds after the trigger's last loud frame. */
+const DUCK_HOLD_SECONDS = 0.2;
 
 export interface DuckingOptions {
   /** The channel whose level triggers ducking, usually the microphone. */
@@ -142,6 +144,8 @@ const buildCore = (
   analyser: AnalyserTapOptions
 ): Core => {
   const masterGain = context.createGain();
+  // Built silent; apply() fades in to the mixer's level.
+  masterGain.gain.value = 0;
   const output = context.createMediaStreamDestination();
   const limiter = limiterEnabled ? createLimiter(context) : null;
   let last: AudioNode = masterGain;
@@ -151,6 +155,7 @@ const buildCore = (
   }
   last.connect(output);
   const monitorGain = context.createGain();
+  monitorGain.gain.value = 0;
   monitorGain.connect(context.destination);
   const tap = createAnalyserTap(context, last, {
     ...analyser,
@@ -187,6 +192,9 @@ const buildStrip = (
   const duck = context.createGain();
   const panner = context.createStereoPanner();
   const monitorSend = context.createGain();
+  // Built silent, so a muted or soloed-out channel never leaks at unity
+  // before apply() ramps it to its level.
+  gain.gain.value = 0;
   monitorSend.gain.value = 0;
   node.connect(gain);
   gain.connect(duck);
@@ -337,25 +345,23 @@ const createMixerGraph = () => {
         thresholdDb = -35,
         trigger,
       } = rule;
-      let ducked = false;
+      const attack = attackMs / MS_PER_SECOND / TIME_CONSTANTS_PER_RAMP;
+      const release = releaseMs / MS_PER_SECOND / TIME_CONSTANTS_PER_RAMP;
       return relaysFor(trigger).meter.subscribe((frame) => {
-        const active = loudestPeak(frame) >= thresholdDb;
-        if (active === ducked || !core) {
+        if (!core || loudestPeak(frame) < thresholdDb) {
           return;
         }
-        ducked = active;
-        const timeConstant =
-          (active ? attackMs : releaseMs) /
-          MS_PER_SECOND /
-          TIME_CONSTANTS_PER_RAMP;
+        // Each loud frame ducks and schedules its own release. The duck
+        // holds while the trigger is loud, lets go when it goes quiet or is
+        // removed, and reaches strips built mid-duck on the next frame.
+        const now = core.context.currentTime;
         for (const target of targets) {
-          strips
-            .get(target)
-            ?.duck.gain.setTargetAtTime(
-              active ? dbToGain(amountDb) : 1,
-              core.context.currentTime,
-              timeConstant
-            );
+          const param = strips.get(target)?.duck.gain;
+          if (param) {
+            param.cancelScheduledValues(now);
+            param.setTargetAtTime(dbToGain(amountDb), now, attack);
+            param.setTargetAtTime(1, now + DUCK_HOLD_SECONDS, release);
+          }
         }
       });
     });

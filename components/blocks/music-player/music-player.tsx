@@ -99,6 +99,8 @@ const NO_TRACKS: MusicTrack[] = [];
 const DUCK_THRESHOLD_DB = -35;
 const DUCK_ATTACK = 0.02;
 const DUCK_RELEASE = 0.15;
+/** How long a duck holds after the last loud frame before it lets go. */
+const DUCK_HOLD = 0.2;
 
 const nextRepeat: Record<Repeat, Repeat> = {
   all: "one",
@@ -120,6 +122,9 @@ export const MusicPlayer = ({
   const [shuffle, setShuffle] = useState(false);
   const [repeat, setRepeat] = useState<Repeat>("all");
   const [ducking, setDucking] = useState(true);
+  // Once the listener has played or picked a track, later tracks play on
+  // their own, including after repeat-all wraps back to the first.
+  const [autoAdvance, setAutoAdvance] = useState(false);
   const [duckAmountDb, setDuckAmountDb] = useState(-12);
   const track = tracks[index];
 
@@ -134,6 +139,7 @@ export const MusicPlayer = ({
         tracks.length;
     }
     setIndex(next);
+    setAutoAdvance(true);
     const nextTrack = tracks[next];
     if (nextTrack) {
       onTrackChange?.(nextTrack);
@@ -141,7 +147,7 @@ export const MusicPlayer = ({
   };
 
   const player = useAudioPlayer({
-    autoPlay: index > 0,
+    autoPlay: autoAdvance,
     loop: repeat === "one",
     onEnded: () => {
       if (repeat === "all" || index < tracks.length - 1) {
@@ -190,12 +196,17 @@ export const MusicPlayer = ({
       for (const level of frame.channels) {
         loudest = Math.max(loudest, level.peakDb);
       }
-      const active = ducking && loudest >= DUCK_THRESHOLD_DB;
-      duckGain.gain.setTargetAtTime(
-        active ? dbToGain(duckAmountDb) : 1,
-        context.currentTime,
-        active ? DUCK_ATTACK : DUCK_RELEASE
-      );
+      if (!(ducking && loudest >= DUCK_THRESHOLD_DB)) {
+        return;
+      }
+      // Each loud frame ducks and schedules its own release, so the music
+      // comes back when the voice goes quiet or its frames stop arriving
+      // (the mic is turned off, ducking is switched off).
+      const now = context.currentTime;
+      const { gain } = duckGain;
+      gain.cancelScheduledValues(now);
+      gain.setTargetAtTime(dbToGain(duckAmountDb), now, DUCK_ATTACK);
+      gain.setTargetAtTime(1, now + DUCK_HOLD, DUCK_RELEASE);
     },
     { enabled: routed && Boolean(duckGain) }
   );
@@ -306,6 +317,8 @@ export const MusicPlayer = ({
                   onTrackChange?.(item);
                   if (position === index) {
                     player.toggle();
+                  } else {
+                    setAutoAdvance(true);
                   }
                 }}
                 playing={position === index && player.playing}

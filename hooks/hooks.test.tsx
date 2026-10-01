@@ -144,6 +144,25 @@ describe("useMixer", () => {
     expect(saved.channels[0]?.gainDb).toBe(-3);
     window.localStorage.removeItem("test-mixer");
   });
+
+  it("restores saved state under StrictMode without overwriting it", () => {
+    const options = { channels: [{ id: "a" }], persistKey: "strict-mixer" };
+    const first = renderHook(() => useMixer(options));
+    act(() => {
+      first.result.current.setGain("a", -9);
+    });
+    first.unmount();
+
+    const { result } = renderHook(() => useMixer(options), {
+      reactStrictMode: true,
+    });
+    expect(result.current.channel("a")?.gainDb).toBe(-9);
+    const saved = JSON.parse(
+      window.localStorage.getItem("strict-mixer") ?? "{}"
+    ) as MixerState;
+    expect(saved.channels[0]?.gainDb).toBe(-9);
+    window.localStorage.removeItem("strict-mixer");
+  });
 });
 
 describe("frame sources over time", () => {

@@ -12,7 +12,7 @@ import {
   SquaresFourIcon,
   WaveformIcon,
 } from "@phosphor-icons/react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useEffectEvent, useMemo, useState } from "react";
 
 import { MixerMasterStrip } from "@/components/blocks/system-audio-mixer/mixer-master-strip";
 import { MixerSourceStrip } from "@/components/blocks/system-audio-mixer/mixer-source-strip";
@@ -400,7 +400,6 @@ export const SystemAudioMixer = ({
 
   // Sound pads play into one bus so the mixer sees them as a single source.
   const soundBus = useMemo(() => context?.createGain() ?? null, [context]);
-  useEffect(() => () => soundBus?.disconnect(), [soundBus]);
 
   const graph = useWebAudioMixer(mixer, {
     ducking: { targets: ["music"], trigger: "microphone" },
@@ -412,9 +411,14 @@ export const SystemAudioMixer = ({
     },
   });
 
+  // Fires when the stream changes, not on every render of the parent.
+  const emitOutput = useEffectEvent((stream: MediaStream | null) => {
+    onOutputChange?.(stream);
+  });
+
   useEffect(() => {
-    onOutputChange?.(graph.output);
-  }, [graph.output, onOutputChange]);
+    emitOutput(graph.output);
+  }, [graph.output]);
 
   const show = (id: MixerSourceId) => sources.includes(id);
   const meterFor = (id: MixerSourceId) =>
