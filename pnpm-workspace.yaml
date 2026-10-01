@@ -5,3 +5,10 @@ allowBuilds:
   sharp: true
   unrs-resolver: true
   msw: false
+
+# Install only releases at least 7 days old, so a compromised version has
+# time to be caught and unpublished first.
+minimumReleaseAge: 10080
+
+# Refuse an update whose provenance or signatures are weaker than before.
+trustPolicy: no-downgrade
