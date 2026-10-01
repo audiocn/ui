@@ -786,7 +786,6 @@ export const Waveform = ({
       <div
         className={cn(
           "group/waveform focus-visible:ring-ring/30 relative h-20 w-full touch-none rounded-lg outline-none select-none [--waveform-cursor:var(--foreground)] [--waveform-position:0] [--waveform-progress:var(--primary)] [--waveform:var(--muted-foreground)] focus-visible:ring-3 data-disabled:opacity-50",
-          active && "cursor-pointer",
           className
         )}
         data-disabled={disabled ? "" : undefined}
