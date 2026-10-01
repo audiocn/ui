@@ -354,10 +354,7 @@ export const KnobDial = ({
       aria-valuenow={value}
       aria-valuetext={format(value)}
       className={cn(
-        "focus-visible:ring-ring/40 relative size-(--knob-size) touch-none rounded-full outline-none focus-visible:ring-3",
-        dial.dragDirection === "horizontal"
-          ? "cursor-ew-resize"
-          : "cursor-ns-resize",
+        "focus-visible:ring-ring/40 relative size-(--knob-size) cursor-grab touch-none rounded-full outline-none focus-visible:ring-3 aria-disabled:cursor-default data-dragging:cursor-grabbing",
         className
       )}
       data-dragging={dragging ? "" : undefined}
