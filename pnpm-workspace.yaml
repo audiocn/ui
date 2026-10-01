@@ -175,3 +175,9 @@ minimumReleaseAgeExclude:
 
 # Refuse an update whose provenance or signatures are weaker than before.
 trustPolicy: no-downgrade
+
+# semver 6.3.1 is the 2023 ReDoS fix for the 6.x line. It shipped after 7.x
+# releases that had provenance, so a date-based trust check reads it as a
+# downgrade. Babel still depends on it.
+trustPolicyExclude:
+  - "semver@6.3.1"
