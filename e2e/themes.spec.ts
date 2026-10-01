@@ -11,7 +11,7 @@ const pages = [
 ];
 
 for (const width of [320, 1440]) {
-  for (const theme of ["Stone", "Ocean", "Rose", "Mono"]) {
+  for (const theme of ["Stone", "Ocean", "Rose", "Forest", "Violet", "Mono"]) {
     for (const mode of ["light", "dark"] as const) {
       test.describe(`${theme} ${mode} at ${width}px`, () => {
         test.use({ colorScheme: mode, viewport: { height: 1000, width } });

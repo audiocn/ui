@@ -140,6 +140,34 @@
   --ring: oklch(0.586 0.253 17.585);
 }
 
+[data-theme="forest"] {
+  --primary: oklch(0.527 0.154 150.069);
+  --primary-foreground: oklch(0.985 0 0);
+  --ring: oklch(0.792 0.209 151.711);
+  --meter-ok: oklch(0.723 0.219 149.579);
+}
+
+.dark[data-theme="forest"] {
+  --primary: oklch(0.792 0.209 151.711);
+  --primary-foreground: oklch(0.266 0.065 152.934);
+  --ring: oklch(0.627 0.194 149.214);
+  --meter-ok: oklch(0.792 0.209 151.711);
+}
+
+[data-theme="violet"] {
+  --primary: oklch(0.491 0.27 292.581);
+  --primary-foreground: oklch(0.985 0 0);
+  --ring: oklch(0.702 0.183 293.541);
+  --channel-monitor: oklch(0.606 0.25 292.717);
+}
+
+.dark[data-theme="violet"] {
+  --primary: oklch(0.702 0.183 293.541);
+  --primary-foreground: oklch(0.21 0.006 285.885);
+  --ring: oklch(0.541 0.281 293.009);
+  --channel-monitor: oklch(0.702 0.183 293.541);
+}
+
 [data-theme="mono"] {
   --primary: oklch(0.205 0 0);
   --primary-foreground: oklch(0.985 0 0);
