@@ -7,7 +7,7 @@ import {
   useCallback,
   useContext,
   useEffect,
-  useLayoutEffect,
+  useEffectEvent,
   useMemo,
   useRef,
   useState,
@@ -295,38 +295,42 @@ export const SoundPad = ({
 }: SoundPadProps) => {
   const grid = useContext(SoundPadGridContext);
   const [pressed, setPressed] = useState(false);
-  const latest = useRef({ mode, onStop, onTrigger, playing });
-  useLayoutEffect(() => {
-    latest.current = { mode, onStop, onTrigger, playing };
-  });
   const inactive = disabled || loading;
 
-  const press = useCallback(() => {
-    const { current } = latest;
+  const press = () => {
     setPressed(true);
-    if (
-      (current.mode === "toggle" || current.mode === "loop") &&
-      current.playing
-    ) {
-      current.onStop?.();
+    if ((mode === "toggle" || mode === "loop") && playing) {
+      onStop?.();
       return;
     }
-    current.onTrigger?.();
-  }, []);
+    onTrigger?.();
+  };
 
-  const release = useCallback(() => {
+  const release = () => {
     setPressed(false);
-    if (latest.current.mode === "hold") {
-      latest.current.onStop?.();
+    if (mode === "hold") {
+      onStop?.();
     }
-  }, []);
+  };
+
+  // The grid calls these from its own key listeners, so they read the
+  // latest props without re-registering on every render.
+  const pressFromHotkey = useEffectEvent(press);
+  const releaseFromHotkey = useEffectEvent(release);
 
   useEffect(() => {
     if (!(grid && hotkey) || inactive) {
       return;
     }
-    return grid.register(hotkey, { press, release });
-  }, [grid, hotkey, inactive, press, release]);
+    return grid.register(hotkey, {
+      press: () => {
+        pressFromHotkey();
+      },
+      release: () => {
+        releaseFromHotkey();
+      },
+    });
+  }, [grid, hotkey, inactive]);
 
   const holding = mode === "hold";
   const contextValue = useMemo(() => ({ hotkey, playing }), [hotkey, playing]);

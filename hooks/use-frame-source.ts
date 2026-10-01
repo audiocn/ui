@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useEffectEvent } from "react";
 
 import type { FrameSource } from "@/lib/audio/types";
 
@@ -18,18 +18,14 @@ export const useFrameSource = <T>(
   onFrame: (frame: T) => void,
   { enabled = true }: UseFrameSourceOptions = {}
 ): void => {
-  const callbackRef = useRef(onFrame);
-
-  useEffect(() => {
-    callbackRef.current = onFrame;
-  });
+  const handleFrame = useEffectEvent(onFrame);
 
   useEffect(() => {
     if (!(source && enabled)) {
       return;
     }
     return source.subscribe((frame) => {
-      callbackRef.current(frame);
+      handleFrame(frame);
     });
   }, [source, enabled]);
 };

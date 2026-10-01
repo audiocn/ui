@@ -96,6 +96,22 @@ describe("SmoothWaveform", () => {
     expect(root).not.toHaveAttribute("data-active");
   });
 
+  it("keeps its line when only the stroke changes", () => {
+    stubCanvas();
+    const actions = createRef<SmoothWaveformActions>();
+    const { getByRole, rerender } = render(
+      <SmoothWaveform actionsRef={actions} lineWidth={2} />
+    );
+    actions.current?.paint(frameOf([1, 1, 1, 1]));
+    advance(300);
+    const root = getByRole("img");
+    expect(root).toHaveAttribute("data-active");
+    rerender(
+      <SmoothWaveform actionsRef={actions} fadeEdges={false} lineWidth={4} />
+    );
+    expect(root).toHaveAttribute("data-active");
+  });
+
   it("stops painting once unmounted", () => {
     const recorder = stubCanvas();
     const { unmount } = render(<SmoothWaveform />);

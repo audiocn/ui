@@ -177,6 +177,22 @@ describe("ElectricWaveform", () => {
     expect(root).not.toHaveAttribute("data-active");
   });
 
+  it("keeps its trace when only the stroke changes", () => {
+    stubCanvas();
+    const actions = createRef<ElectricWaveformActions>();
+    const { getByRole, rerender } = render(
+      <ElectricWaveform actionsRef={actions} lineWidth={2} />
+    );
+    actions.current?.paint(frameOf([1, 1, 1, 1]));
+    advance(100);
+    const root = getByRole("img");
+    expect(root).toHaveAttribute("data-active");
+    rerender(
+      <ElectricWaveform actionsRef={actions} fadeEdges={false} lineWidth={4} />
+    );
+    expect(root).toHaveAttribute("data-active");
+  });
+
   it("draws a smooth line with no intensity", () => {
     const smooth = stubCanvas();
     const { unmount } = render(<ElectricWaveform intensity={0} />);

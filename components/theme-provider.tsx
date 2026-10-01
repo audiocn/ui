@@ -18,6 +18,11 @@ const isTypingTarget = (target: EventTarget | null): boolean => {
 
 const ThemeHotkey = () => {
   const { resolvedTheme, setTheme } = useTheme();
+  // Reads the current theme on each press, so the listener isn't replaced
+  // every time the theme changes.
+  const toggleTheme = React.useEffectEvent(() => {
+    setTheme(resolvedTheme === "dark" ? "light" : "dark");
+  });
 
   React.useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -37,7 +42,7 @@ const ThemeHotkey = () => {
         return;
       }
 
-      setTheme(resolvedTheme === "dark" ? "light" : "dark");
+      toggleTheme();
     };
 
     window.addEventListener("keydown", onKeyDown);
@@ -45,7 +50,7 @@ const ThemeHotkey = () => {
     return () => {
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, [resolvedTheme, setTheme]);
+  }, []);
 
   return null;
 };

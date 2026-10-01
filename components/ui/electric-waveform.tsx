@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useImperativeHandle, useRef } from "react";
+import {
+  useCallback,
+  useEffect,
+  useEffectEvent,
+  useImperativeHandle,
+  useRef,
+} from "react";
 import type { ComponentProps, Ref } from "react";
 
 import { useFrameSource } from "@/hooks/use-frame-source";
@@ -613,6 +619,13 @@ export const ElectricWaveform = ({
     };
   }, []);
 
+  // Stroke options are read each paint, so changing them doesn't rebuild the
+  // trace and reset its sparks, forks and loudness.
+  const readStroke = useEffectEvent(() => ({
+    fade: fadeEdges,
+    width: lineWidth,
+  }));
+
   useEffect(() => {
     const root = rootRef.current;
     const main = mainRef.current;
@@ -663,9 +676,10 @@ export const ElectricWaveform = ({
         return;
       }
       lastPaintMs = nowMs;
+      const stroke = readStroke();
       const geometry: ElectricTraceGeometry = {
         height: size.height,
-        lineWidth,
+        lineWidth: stroke.width,
         width: size.width,
       };
       const nextActive = trace.step(nowMs, frameRef.current, geometry);
@@ -684,7 +698,7 @@ export const ElectricWaveform = ({
       paintGlow(glowContext, input);
       clearElectricCanvas(mainContext, size, size.ratio);
       paintMain(mainContext, input);
-      if (fadeEdges) {
+      if (stroke.fade) {
         fadeEnds(glowContext, geometry);
         fadeEnds(mainContext, geometry);
       }
@@ -696,17 +710,7 @@ export const ElectricWaveform = ({
       observer.disconnect();
       delete root.dataset.active;
     };
-  }, [
-    arcs,
-    fadeEdges,
-    intensity,
-    lineWidth,
-    loading,
-    mode,
-    reducedMotion,
-    sensitivity,
-    sparks,
-  ]);
+  }, [arcs, intensity, loading, mode, reducedMotion, sensitivity, sparks]);
 
   const setRootRef = useCallback(
     (node: HTMLDivElement | null) => {

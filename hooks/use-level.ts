@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 
 import { useFrameSource } from "@/hooks/use-frame-source";
 import { SILENCE_DB } from "@/lib/audio/decibels";
@@ -57,10 +57,9 @@ export const useLevel = (
   }: UseLevelOptions = {}
 ): LevelState => {
   const latestRef = useRef<MeterFrame | null>(null);
-  const [state, setState] = useState<LevelState>({
+  const [level, setLevel] = useState<Omit<LevelState, "zone">>({
     peakDb: SILENCE_DB,
     rmsDb: undefined,
-    zone: "ok",
   });
 
   useFrameSource(
@@ -71,29 +70,36 @@ export const useLevel = (
     { enabled }
   );
 
+  // Reads `channel` when it samples, so an inline option doesn't restart the
+  // timer on every render.
+  const sample = useEffectEvent(() => {
+    const frame = latestRef.current;
+    if (!frame) {
+      return;
+    }
+    const picked = pickChannel(frame, channel);
+    const peakDb = picked?.peakDb ?? SILENCE_DB;
+    const rmsDb = picked?.rmsDb;
+    setLevel((previous) =>
+      previous.peakDb === peakDb && previous.rmsDb === rmsDb
+        ? previous
+        : { peakDb, rmsDb }
+    );
+  });
+
   useEffect(() => {
     if (!enabled) {
       return;
     }
     const timer = setInterval(() => {
-      const frame = latestRef.current;
-      if (!frame) {
-        return;
-      }
-      const level = pickChannel(frame, channel);
-      const peakDb = level?.peakDb ?? SILENCE_DB;
-      const rmsDb = level?.rmsDb;
-      setState((previous) => {
-        if (previous.peakDb === peakDb && previous.rmsDb === rmsDb) {
-          return previous;
-        }
-        return { peakDb, rmsDb, zone: zoneForDb(peakDb, zones) };
-      });
+      sample();
     }, intervalMs);
     return () => {
       clearInterval(timer);
     };
-  }, [channel, enabled, intervalMs, zones]);
+  }, [enabled, intervalMs]);
 
-  return state;
+  // Computed in render, so new zones apply even while the level holds still.
+  const zone = zoneForDb(level.peakDb, zones);
+  return useMemo(() => ({ ...level, zone }), [level, zone]);
 };

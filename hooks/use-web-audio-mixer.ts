@@ -2,9 +2,8 @@
 
 import {
   useEffect,
-  useLayoutEffect,
+  useEffectEvent,
   useMemo,
-  useRef,
   useSyncExternalStore,
 } from "react";
 
@@ -452,10 +451,9 @@ export const useWebAudioMixer = (
     })
     .join("|");
 
-  const inputsRef = useRef(inputs);
-  useLayoutEffect(() => {
-    inputsRef.current = inputs;
-  });
+  // Inputs are matched by identity through inputsKey; the nodes themselves
+  // are read when the graph reconciles.
+  const readInputs = useEffectEvent(() => inputs);
 
   useEffect(() => {
     if (!(context && enabled)) {
@@ -471,11 +469,12 @@ export const useWebAudioMixer = (
   }, [analyserKey, context, enabled, graph, limiter]);
 
   useEffect(() => {
+    const latest = readInputs();
     const wanted: Record<string, AnalyserInput | undefined> = {};
     for (const entry of inputsKey.split("|")) {
       const [id] = entry.split(":");
       if (id) {
-        wanted[id] = inputsRef.current[id];
+        wanted[id] = latest[id];
       }
     }
     graph.reconcile(wanted);

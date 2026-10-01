@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useAudioDevices } from "@/hooks/use-audio-devices";
 import { useClipHold } from "@/hooks/use-clip-hold";
 import { createDemoSignal } from "@/hooks/use-demo-signal";
+import { useFrameSource } from "@/hooks/use-frame-source";
 import { useLevel } from "@/hooks/use-level";
 import { useMicrophone } from "@/hooks/use-microphone";
 import { isChannelAudible, mixerReducer, useMixer } from "@/hooks/use-mixer";
@@ -217,6 +218,44 @@ describe("frame sources over time", () => {
     rerender();
     advance(1500);
     expect(result.current.clipping).toBe(false);
+  });
+
+  it("useFrameSource hands frames to the latest callback without resubscribing", () => {
+    const emitter = createFrameEmitter<number>();
+    const subscribe = vi.fn((listener: (frame: number) => void) =>
+      emitter.subscribe(listener)
+    );
+    const source = { subscribe };
+    const seen: string[] = [];
+    const { rerender } = renderHook(
+      ({ label }) =>
+        useFrameSource(source, (frame) => seen.push(`${label}:${frame}`)),
+      { initialProps: { label: "first" } }
+    );
+    rerender({ label: "second" });
+    act(() => {
+      emitter.emit(1);
+    });
+    expect(seen).toEqual(["second:1"]);
+    expect(subscribe).toHaveBeenCalledTimes(1);
+  });
+
+  it("useLevel keeps sampling while its caller re-renders with inline zones", () => {
+    const emitter = createFrameEmitter<MeterFrame>();
+    // A new zones array on every render, as an inline prop would be.
+    const { result, rerender } = renderHook(() =>
+      useLevel(emitter, {
+        intervalMs: 250,
+        zones: [{ fromDb: Number.NEGATIVE_INFINITY, zone: "ok" }],
+      })
+    );
+    emitter.emit({ channels: [{ peakDb: -6, rmsDb: -12 }] });
+    // Small steps, so each re-render commits between timer ticks.
+    for (let step = 0; step < 6; step += 1) {
+      advance(50);
+      rerender();
+    }
+    expect(result.current.peakDb).toBe(-6);
   });
 
   it("createDemoSignal emits frames only while subscribed", () => {

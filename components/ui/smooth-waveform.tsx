@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useImperativeHandle, useRef } from "react";
+import {
+  useCallback,
+  useEffect,
+  useEffectEvent,
+  useImperativeHandle,
+  useRef,
+} from "react";
 import type { ComponentProps, Ref } from "react";
 
 import { useFrameSource } from "@/hooks/use-frame-source";
@@ -150,6 +156,13 @@ export const SmoothWaveform = ({
     };
   }, []);
 
+  // Stroke options are read each paint, so changing them doesn't rebuild the
+  // line and snap it flat.
+  const readStroke = useEffectEvent(() => ({
+    fade: fadeEdges,
+    width: lineWidth,
+  }));
+
   useEffect(() => {
     const root = rootRef.current;
     const canvas = canvasRef.current;
@@ -198,8 +211,9 @@ export const SmoothWaveform = ({
       context.setTransform(size.ratio, 0, 0, size.ratio, 0, 0);
       context.clearRect(0, 0, size.width, size.height);
       context.strokeStyle = color;
-      drawLine(context, line, size, clamp(lineWidth, 0.5, size.height / 2));
-      if (fadeEdges) {
+      const stroke = readStroke();
+      drawLine(context, line, size, clamp(stroke.width, 0.5, size.height / 2));
+      if (stroke.fade) {
         fadeEnds(context, size);
       }
     };
@@ -210,7 +224,7 @@ export const SmoothWaveform = ({
       observer.disconnect();
       delete root.dataset.active;
     };
-  }, [fadeEdges, lineWidth, loading, mode, reducedMotion, sensitivity]);
+  }, [loading, mode, reducedMotion, sensitivity]);
 
   const setRootRef = useCallback(
     (node: HTMLDivElement | null) => {
