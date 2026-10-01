@@ -2,7 +2,7 @@
 
 import { MicrophoneIcon, MicrophoneSlashIcon } from "@phosphor-icons/react";
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useId, useState } from "react";
 
 import { AudioDeviceSelect } from "@/components/ui/audio-device-select";
 import { BarVisualizer } from "@/components/ui/bar-visualizer";
@@ -35,6 +35,7 @@ export const QuickAudioPopover = ({
   side = "bottom",
   align = "center",
 }: QuickAudioPopoverProps) => {
+  const systemAudioId = useId();
   const devices = useAudioDevices();
   const [deviceId, setDeviceId] = useState<string | null>(null);
   const [muted, setMuted] = useState(false);
@@ -112,11 +113,11 @@ export const QuickAudioPopover = ({
           </div>
           <Separator />
           <Field orientation="horizontal">
-            <FieldLabel htmlFor="quick-system-audio">System audio</FieldLabel>
+            <FieldLabel htmlFor={systemAudioId}>System audio</FieldLabel>
             <Switch
               checked={system.status === "active"}
               disabled={!system.isSupported}
-              id="quick-system-audio"
+              id={systemAudioId}
               onCheckedChange={(checked) =>
                 checked ? system.start() : system.stop()
               }

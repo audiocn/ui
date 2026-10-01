@@ -5,7 +5,7 @@ import {
   MicrophoneIcon,
   WarningCircleIcon,
 } from "@phosphor-icons/react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
@@ -116,6 +116,7 @@ export const MicSetup = ({
   autoStart = false,
   className,
 }: MicSetupProps) => {
+  const muteId = useId();
   const [started, setStarted] = useState(autoStart);
   const [deviceIdState, setDeviceIdState] = useState<string | null>(null);
   const [gainState, setGainState] = useState(0);
@@ -280,12 +281,8 @@ export const MicSetup = ({
             <ParameterSliderControl />
           </ParameterSlider>
           <Field orientation="horizontal">
-            <Switch
-              checked={muted}
-              id="mic-setup-mute"
-              onCheckedChange={setMuted}
-            />
-            <FieldLabel htmlFor="mic-setup-mute">Mute microphone</FieldLabel>
+            <Switch checked={muted} id={muteId} onCheckedChange={setMuted} />
+            <FieldLabel htmlFor={muteId}>Mute microphone</FieldLabel>
           </Field>
           <div className="flex flex-col gap-3">
             <Button

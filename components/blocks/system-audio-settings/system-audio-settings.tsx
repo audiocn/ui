@@ -1,7 +1,7 @@
 "use client";
 
 import { DesktopIcon, InfoIcon, WarningIcon } from "@phosphor-icons/react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -65,6 +65,7 @@ export const SystemAudioSettings = ({
   onStreamChange,
   className,
 }: SystemAudioSettingsProps) => {
+  const enabledId = useId();
   const system = useSystemAudio();
   const { context } = useAudioContext();
   const [gainState, setGainState] = useState(DEFAULT_GAIN_DB);
@@ -152,7 +153,7 @@ export const SystemAudioSettings = ({
           <Field orientation="horizontal">
             <FieldContent>
               <div className="flex flex-wrap items-center gap-2">
-                <FieldLabel htmlFor="system-audio-enabled">
+                <FieldLabel htmlFor={enabledId}>
                   Capture system audio
                 </FieldLabel>
                 <Badge variant={active ? "default" : "secondary"}>
@@ -167,7 +168,7 @@ export const SystemAudioSettings = ({
             <Switch
               checked={active || system.status === "prompting"}
               disabled={!system.isSupported}
-              id="system-audio-enabled"
+              id={enabledId}
               onCheckedChange={setEnabled}
             />
           </Field>

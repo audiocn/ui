@@ -12,7 +12,7 @@ import {
   SpeakerHighIcon,
   SpeakerXIcon,
 } from "@phosphor-icons/react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 
 import {
   AudioPlayer,
@@ -115,6 +115,7 @@ export const MusicPlayer = ({
   className,
 }: MusicPlayerProps) => {
   const tracks = tracksProp ?? defaultTracks;
+  const duckingId = useId();
   const [index, setIndex] = useState(0);
   const [shuffle, setShuffle] = useState(false);
   const [repeat, setRepeat] = useState<Repeat>("all");
@@ -327,12 +328,10 @@ export const MusicPlayer = ({
           {duckingSource === undefined ? null : (
             <div className="flex flex-col gap-3 rounded-xl border p-3">
               <div className="flex items-center justify-between">
-                <Label htmlFor="music-ducking">
-                  Lower music while you talk
-                </Label>
+                <Label htmlFor={duckingId}>Lower music while you talk</Label>
                 <Switch
                   checked={ducking}
-                  id="music-ducking"
+                  id={duckingId}
                   onCheckedChange={setDucking}
                   size="sm"
                 />
