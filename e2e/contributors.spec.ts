@@ -3,15 +3,18 @@ import { expect, test } from "@playwright/test";
 const REPOSITORY_URL = "https://github.com/TheOrcDev/audiocn";
 
 for (const url of ["/", "/docs/components/fader"]) {
-  test(`the footer on ${url} credits OrcDev and links to the contributors`, async ({
+  test(`the footer on ${url} credits the authors and links to the contributors`, async ({
     page,
   }) => {
     await page.goto(url);
     const footer = page.getByRole("contentinfo");
-    await expect(footer).toContainText("Made by OrcDev");
-    await expect(footer.getByRole("link", { name: "OrcDev" })).toHaveAttribute(
+    await expect(footer).toContainText("Built by fortysevenfx and orcdev");
+    await expect(
+      footer.getByRole("link", { name: "fortysevenfx" })
+    ).toHaveAttribute("href", "https://x.com/fortysevenfx");
+    await expect(footer.getByRole("link", { name: "orcdev" })).toHaveAttribute(
       "href",
-      "https://orcdev.com"
+      "https://x.com/orcdev"
     );
     await expect(
       footer.getByRole("navigation", { name: "Secondary" }).getByRole("link")
