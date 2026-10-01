@@ -168,6 +168,8 @@ export const useMicrophone = ({
       cancelled = true;
       listeners.abort();
       stopStream(acquired);
+      // The stream is dead now; don't hand it out on the next start.
+      setResult((current) => (current?.key === key ? null : current));
     };
   }, [key, wanted]);
 

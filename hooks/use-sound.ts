@@ -234,30 +234,27 @@ export const useSound = (
   ]);
 
   useEffect(() => {
-    if (!(isPlaying && context && buffer)) {
+    if (!(isPlaying && context)) {
       return;
     }
     return subscribeFrame(() => {
+      // A voice keeps the loop and rate it started with.
       const latest = voicesRef.current.at(-1);
-      if (!latest) {
+      const played = latest?.node.buffer;
+      if (!(latest && played)) {
         return;
       }
-      const elapsed = (context.currentTime - latest.startedAt) * playbackRate;
-      const value = loop
-        ? (elapsed % buffer.duration) / buffer.duration
-        : Math.min(1, elapsed / buffer.duration);
+      const elapsed =
+        (context.currentTime - latest.startedAt) *
+        latest.node.playbackRate.value;
+      const value = latest.node.loop
+        ? (elapsed % played.duration) / played.duration
+        : Math.min(1, elapsed / played.duration);
       progress.emit(value);
     });
-  }, [buffer, context, isPlaying, loop, playbackRate, progress]);
+  }, [context, isPlaying, progress]);
 
   useEffect(() => stop, [stop]);
-
-  useEffect(
-    () => () => {
-      output?.disconnect();
-    },
-    [output]
-  );
 
   return {
     duration: buffer?.duration ?? 0,

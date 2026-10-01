@@ -3,7 +3,7 @@
 import {
   useCallback,
   useEffect,
-  useLayoutEffect,
+  useEffectEvent,
   useMemo,
   useRef,
   useState,
@@ -124,10 +124,12 @@ const usePlaybackState = (
     status: "idle",
     ...initial,
   });
-  const callbacksRef = useRef(callbacks);
-  useLayoutEffect(() => {
-    callbacksRef.current = callbacks;
-  });
+  const emitEnded = useEffectEvent(() => callbacks.onEnded?.());
+  const emitError = useEffectEvent((mediaError: MediaError | null) =>
+    callbacks.onError?.(mediaError)
+  );
+  const emitPause = useEffectEvent(() => callbacks.onPause?.());
+  const emitPlay = useEffectEvent(() => callbacks.onPlay?.());
 
   useEffect(() => {
     if (!element) {
@@ -155,11 +157,11 @@ const usePlaybackState = (
       emptied: () => patch({ buffered: 0, currentTime: 0, duration: 0 }),
       ended: () => {
         patch({ status: "ended" });
-        callbacksRef.current.onEnded?.();
+        emitEnded();
       },
       error: () => {
         patch({ failure: element.error, status: "error" });
-        callbacksRef.current.onError?.(element.error);
+        emitError(element.error);
       },
       loadedmetadata: sync,
       loadstart: () => patch({ failure: null, status: "loading" }),
@@ -169,11 +171,11 @@ const usePlaybackState = (
             ? previous
             : { ...previous, status: "paused" }
         );
-        callbacksRef.current.onPause?.();
+        emitPause();
       },
       playing: () => {
         patch({ status: "playing" });
-        callbacksRef.current.onPlay?.();
+        emitPlay();
       },
       progress: () => patch({ buffered: bufferedEnd(element) }),
       ratechange: () => patch({ playbackRate: element.playbackRate }),
@@ -186,7 +188,16 @@ const usePlaybackState = (
     for (const [event, handler] of Object.entries(handlers)) {
       element.addEventListener(event, handler, { signal: listeners.signal });
     }
-    return () => listeners.abort();
+    return () => {
+      listeners.abort();
+      // The player pauses on hide and unmount, after this cleanup, so its
+      // pause event never reaches us. Record it here.
+      setState((previous) =>
+        previous.status === "playing"
+          ? { ...previous, status: "paused" }
+          : previous
+      );
+    };
   }, [element]);
 
   return state;
@@ -228,6 +239,14 @@ export const useAudioPlayer = ({
   );
   const [loopOverride, setLoopOverride] = useState<boolean | null>(null);
   const time = useMemo(() => createFrameEmitter<number>(), []);
+  // Prop values last written to the element, so a re-run (StrictMode, an
+  // Activity show) doesn't undo setVolume and friends.
+  const appliedRef = useRef<{
+    muted?: boolean;
+    playbackRate?: number;
+    volume?: number;
+  }>({});
+  const shouldAutoPlay = useEffectEvent(() => autoPlay);
 
   useEffect(() => {
     const audio = store.get();
@@ -238,32 +257,60 @@ export const useAudioPlayer = ({
 
   useEffect(() => {
     const audio = store.get();
-    if (!audio) {
-      return;
+    if (audio) {
+      audio.preload = preload;
     }
-    if (crossOrigin) {
-      audio.crossOrigin = crossOrigin;
-    }
-    audio.preload = preload;
-    if (!src) {
-      audio.removeAttribute("src");
-      return;
-    }
-    audio.src = src;
-    audio.load();
-    if (autoPlay) {
-      tryPlay(audio);
-    }
-  }, [autoPlay, crossOrigin, preload, src, store]);
+  }, [preload, store]);
 
   useEffect(() => {
     const audio = store.get();
-    if (audio) {
+    if (!audio) {
+      return;
+    }
+    const nextCrossOrigin = crossOrigin ?? null;
+    const crossOriginChanged = audio.crossOrigin !== nextCrossOrigin;
+    audio.crossOrigin = nextCrossOrigin;
+    if (!src) {
+      if (audio.hasAttribute("src")) {
+        // Removing the attribute alone keeps the old track playing.
+        audio.removeAttribute("src");
+        audio.load();
+      }
+      return;
+    }
+    if (crossOriginChanged || audio.getAttribute("src") !== src) {
+      audio.src = src;
+      audio.load();
+    }
+    // A re-run with the same source only resumes a track that never started.
+    if (shouldAutoPlay() && audio.paused && audio.currentTime === 0) {
+      tryPlay(audio);
+    }
+  }, [crossOrigin, src, store]);
+
+  useEffect(() => {
+    const audio = store.get();
+    if (audio && appliedRef.current.volume !== volume) {
+      appliedRef.current.volume = volume;
       audio.volume = clamp(volume, 0, 1);
+    }
+  }, [store, volume]);
+
+  useEffect(() => {
+    const audio = store.get();
+    if (audio && appliedRef.current.muted !== muted) {
+      appliedRef.current.muted = muted;
       audio.muted = muted;
+    }
+  }, [muted, store]);
+
+  useEffect(() => {
+    const audio = store.get();
+    if (audio && appliedRef.current.playbackRate !== playbackRate) {
+      appliedRef.current.playbackRate = playbackRate;
       audio.playbackRate = playbackRate;
     }
-  }, [muted, playbackRate, store, volume]);
+  }, [playbackRate, store]);
 
   const effectiveLoop = loopOverride ?? loop;
 

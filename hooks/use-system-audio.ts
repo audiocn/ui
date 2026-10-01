@@ -76,9 +76,15 @@ export const useSystemAudio = ({
   const [captureStatus, setCaptureStatus] = useState<SystemAudioStatus>("idle");
   const [failure, setFailure] = useState<Error | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  // The picker in flight, so stop() or a newer start() can drop its result.
+  const attemptRef = useRef<{ cancelled: boolean } | null>(null);
   const status: SystemAudioStatus = isSupported ? captureStatus : "unsupported";
 
   const stop = useCallback(() => {
+    if (attemptRef.current) {
+      attemptRef.current.cancelled = true;
+      attemptRef.current = null;
+    }
     stopStream(streamRef.current);
     streamRef.current = null;
     setStream(null);
@@ -90,7 +96,14 @@ export const useSystemAudio = ({
       setCaptureStatus("unsupported");
       return;
     }
+    if (attemptRef.current) {
+      attemptRef.current.cancelled = true;
+    }
+    const attempt = { cancelled: false };
+    attemptRef.current = attempt;
     stopStream(streamRef.current);
+    streamRef.current = null;
+    setStream(null);
     setCaptureStatus("prompting");
     setFailure(null);
 
@@ -108,6 +121,11 @@ export const useSystemAudio = ({
 
     try {
       const display = await navigator.mediaDevices.getDisplayMedia(options);
+      if (attempt.cancelled) {
+        stopStream(display);
+        return;
+      }
+      attemptRef.current = null;
       for (const track of display.getVideoTracks()) {
         track.stop();
       }
@@ -134,6 +152,10 @@ export const useSystemAudio = ({
       setStream(audio);
       setCaptureStatus("active");
     } catch (error) {
+      if (attempt.cancelled) {
+        return;
+      }
+      attemptRef.current = null;
       const denied =
         error instanceof DOMException && error.name === "NotAllowedError";
       setCaptureStatus(denied ? "denied" : "idle");
@@ -141,12 +163,8 @@ export const useSystemAudio = ({
     }
   }, [preferCurrentTab, systemAudio]);
 
-  useEffect(
-    () => () => {
-      stopStream(streamRef.current);
-    },
-    []
-  );
+  // Capture needs a user gesture, so a hide or unmount ends it for good.
+  useEffect(() => stop, [stop]);
 
   return { error: failure, isSupported, start, status, stop, stream };
 };
