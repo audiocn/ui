@@ -105,7 +105,7 @@ const Strip = ({
 const MixerDemo = () => {
   const mixer = useMixer({ channels: channels.map(({ id }) => ({ id })) });
   const speech = useDemoSignal({ kind: "speech" });
-  const noise = useDemoSignal({ kind: "noise" });
+  const noise = useDemoSignal({ channels: 2, kind: "noise" });
   const music = useDemoSignal({ channels: 2, kind: "music" });
   const sources = {
     mic: speech.meter,
