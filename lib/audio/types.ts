@@ -23,7 +23,7 @@ export interface VisualFrame {
   historyLength: number;
   /** Time of the newest history entry, in the requestAnimationFrame clock. */
   historyUpdatedAt?: number;
-  /** Time between history entries. Positive values enable smooth scrolling. */
+  /** Minimum time between entries, used for playback delay. 0 disables smoothing. */
   historyIntervalMs?: number;
   /** Last entry removed from a full history ring, for its scrolling edge. */
   historyPreviousLevel?: number;

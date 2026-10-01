@@ -46,10 +46,12 @@ describe("built-in history timing", () => {
       });
       try {
         advance(1024);
-        expect(frames[0]).toEqual({ count: 1, interval: 50, time: 16 });
-        expect(frames.at(-1)).toEqual({ count: 21, interval: 50, time: 1016 });
-        expect(new Set(frames.map((frame) => frame.time)).size).toBe(21);
-        expect(frames.length).toBeGreaterThan(21);
+        const samples = frames.filter((frame) => frame.count > 0);
+        expect(frames[0]?.count).toBe(0);
+        expect(samples[0]).toEqual({ count: 1, interval: 50, time: 64 });
+        expect(samples.at(-1)).toEqual({ count: 16, interval: 50, time: 1024 });
+        expect(new Set(samples.map((frame) => frame.time)).size).toBe(16);
+        expect(frames.length).toBeGreaterThan(16);
       } finally {
         unsubscribe();
         if ("dispose" in source) {
@@ -78,15 +80,15 @@ describe("built-in history timing", () => {
           tick?.(nowMs);
         }
         expect(listener.mock.lastCall?.[0]).toMatchObject({
-          historyLength: 5,
+          historyLength: 4,
           historyUpdatedAt: 100_019,
         });
         tick?.(100_035);
-        expect(listener.mock.lastCall?.[0].historyLength).toBe(5);
+        expect(listener.mock.lastCall?.[0].historyLength).toBe(4);
         tick?.(100_083);
         expect(listener.mock.lastCall?.[0]).toMatchObject({
-          historyLength: 6,
-          historyUpdatedAt: 100_069,
+          historyLength: 5,
+          historyUpdatedAt: 100_083,
         });
       } finally {
         unsubscribe();
@@ -97,21 +99,23 @@ describe("built-in history timing", () => {
     }
   );
 
-  it("resets demo history timing when the history size changes", () => {
+  it("keeps the sample clock when the demo history size changes", () => {
     const signal = createDemoSignal({ historySize: 2 });
     const listener = vi.fn<(frame: VisualFrame) => void>();
     const unsubscribe = signal.visual.subscribe(listener);
     try {
-      advance(160);
+      advance(208);
       expect(listener.mock.lastCall?.[0].historyPreviousLevel).toBeDefined();
       signal.configure({ historyIntervalMs: 100, historySize: 4 });
       advance(16);
+      expect(listener.mock.lastCall?.[0].historyLength).toBe(0);
+      advance(80);
       expect(listener.mock.lastCall?.[0]).toMatchObject({
         historyIntervalMs: 100,
         historyLength: 1,
         historyPreviousLevel: undefined,
         historyStart: 0,
-        historyUpdatedAt: 176,
+        historyUpdatedAt: 304,
       });
     } finally {
       unsubscribe();

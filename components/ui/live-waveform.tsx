@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useImperativeHandle, useRef } from "react";
+import {
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+} from "react";
 import type { ComponentProps, Ref } from "react";
 
 import { useFrameSource } from "@/hooks/use-frame-source";
@@ -9,6 +15,7 @@ import { useVisibility } from "@/hooks/use-visibility";
 import { resampleLevels } from "@/lib/audio/bands";
 import { clamp } from "@/lib/audio/decibels";
 import { createFrameTask } from "@/lib/audio/frame-loop";
+import { createHistoryPlayback } from "@/lib/audio/history-playback";
 import type { FrameSource, VisualFrame } from "@/lib/audio/types";
 import { cn } from "@/lib/utils";
 
@@ -327,22 +334,6 @@ const drawBars = (
   context.globalAlpha = 1;
 };
 
-const historyProgress = (frame: VisualFrame | null, nowMs: number): number => {
-  const updatedAt = frame?.historyUpdatedAt;
-  const interval = frame?.historyIntervalMs;
-  if (
-    updatedAt === undefined ||
-    !Number.isFinite(updatedAt) ||
-    interval === undefined ||
-    !Number.isFinite(interval) ||
-    interval <= 0 ||
-    !frame?.historyLength
-  ) {
-    return 1;
-  }
-  return clamp((nowMs - updatedAt) / interval, 0, 1);
-};
-
 const fade = (context: CanvasRenderingContext2D, size: Size, width: number) => {
   const edge = Math.min(width, size.width / 2);
   context.globalCompositeOperation = "destination-out";
@@ -394,6 +385,18 @@ export const LiveWaveform = ({
   });
   const frameRef = useRef<VisualFrame | null>(null);
   const dirtyRef = useRef(true);
+  const historyPlayback = useMemo(() => createHistoryPlayback(), []);
+  const previousSourceRef = useRef(source);
+
+  useEffect(() => {
+    if (previousSourceRef.current !== source) {
+      historyPlayback.clear();
+      frameRef.current = null;
+      dirtyRef.current = true;
+      previousSourceRef.current = source;
+      wakeRef.current();
+    }
+  }, [historyPlayback, source]);
 
   const paint = useCallback((frame: VisualFrame) => {
     frameRef.current = frame;
@@ -407,13 +410,14 @@ export const LiveWaveform = ({
     actionsRef,
     () => ({
       clear: () => {
+        historyPlayback.clear();
         frameRef.current = null;
         dirtyRef.current = true;
         wakeRef.current();
       },
       paint,
     }),
-    [paint]
+    [historyPlayback, paint]
   );
 
   useEffect(() => {
@@ -468,11 +472,21 @@ export const LiveWaveform = ({
           dirtyRef.current = true;
         }
       }
-      const frame = frameRef.current;
-      const scrollProgress =
-        options.active && options.mode === "scrolling" && !reducedMotion
-          ? historyProgress(frame, nowMs)
-          : 1;
+      let frame = frameRef.current;
+      let scrollProgress = 1;
+      if (
+        frame &&
+        options.active &&
+        options.mode === "scrolling" &&
+        !reducedMotion
+      ) {
+        ({ frame, progress: scrollProgress } = historyPlayback.read(
+          frame,
+          nowMs
+        ));
+      } else {
+        historyPlayback.clear();
+      }
       if (scrollProgress !== lastScrollProgress) {
         dirtyRef.current = true;
       }
@@ -530,6 +544,7 @@ export const LiveWaveform = ({
     barWidth,
     fadeEdges,
     fadeWidth,
+    historyPlayback,
     lineWidth,
     minBarHeight,
     mode,

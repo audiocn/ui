@@ -222,7 +222,6 @@ export const createDemoSignal = (
       history = new Float32Array(options.historySize);
       visualFrame.historyStart = 0;
       visualFrame.historyLength = 0;
-      visualFrame.historyUpdatedAt = undefined;
       visualFrame.historyPreviousLevel = undefined;
       visualFrame.history = history;
     }

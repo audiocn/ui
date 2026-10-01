@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LiveWaveform } from "@/components/ui/live-waveform";
 import type { LiveWaveformActions } from "@/components/ui/live-waveform";
 import { createDemoSignal } from "@/hooks/use-demo-signal";
-import { createFrameRelay } from "@/lib/audio/frame-source";
+import { createFrameEmitter, createFrameRelay } from "@/lib/audio/frame-source";
 import type { VisualFrame } from "@/lib/audio/types";
 import { advance, useFakeFrames } from "@/test/fake-frames";
 
@@ -96,7 +96,7 @@ describe("LiveWaveform scrolling", () => {
       <LiveWaveform actionsRef={actions} fadeEdges={false} mode="scrolling" />
     );
     actions.current?.paint(frameOf());
-    advance(16);
+    advance(64);
     const firstX = bars.find((bar) => bar.height === 40)?.x ?? Number.NaN;
     advance(16);
     const nextX = bars.find((bar) => bar.height === 40)?.x ?? Number.NaN;
@@ -112,11 +112,12 @@ describe("LiveWaveform scrolling", () => {
     const frame = frameOf();
     actions.current?.paint(frame);
     advance(48);
-    const firstX = bars.find((bar) => bar.height === 40)?.x ?? Number.NaN;
     frame.history[4] = 0.125;
     frame.historyLength = 5;
     frame.historyUpdatedAt = 50;
     actions.current?.paint(frame);
+    advance(48);
+    const firstX = bars.find((bar) => bar.height === 40)?.x ?? Number.NaN;
     advance(16);
     expect(
       firstX - (bars.find((bar) => bar.height === 40)?.x ?? Number.NaN)
@@ -130,9 +131,9 @@ describe("LiveWaveform scrolling", () => {
       <LiveWaveform actionsRef={actions} fadeEdges={false} mode="scrolling" />
     );
     actions.current?.paint(frameOf());
-    advance(16);
+    advance(64);
     expect(bars).toHaveLength(4);
-    expect(bars[0]?.x).toBeCloseTo(0.5 - (4 * 16) / 50);
+    expect(bars[0]?.x).toBeCloseTo(0.5 - (4 * 14) / 50);
   });
 
   it("keeps the outgoing bar visible after the source ring wraps", () => {
@@ -145,12 +146,13 @@ describe("LiveWaveform scrolling", () => {
     frame.history = Float32Array.of(0.25, 0.5, 0.75, 1);
     actions.current?.paint(frame);
     advance(48);
-    const firstX = bars.find((bar) => bar.height === 20)?.x ?? Number.NaN;
     frame.history[0] = 0.125;
     frame.historyStart = 1;
     frame.historyUpdatedAt = 50;
     frame.historyPreviousLevel = 0.25;
     actions.current?.paint(frame);
+    advance(48);
+    const firstX = bars.find((bar) => bar.height === 20)?.x ?? Number.NaN;
     advance(16);
     expect(
       firstX - (bars.find((bar) => bar.height === 20)?.x ?? Number.NaN)
@@ -169,7 +171,7 @@ describe("LiveWaveform scrolling", () => {
       />
     );
     actions.current?.paint(frameOf());
-    advance(16);
+    advance(64);
     const firstX = points[0]?.x ?? Number.NaN;
     advance(16);
     expect(firstX - (points[0]?.x ?? Number.NaN)).toBeCloseTo(
@@ -191,7 +193,7 @@ describe("LiveWaveform scrolling", () => {
         />
       );
       actions.current?.paint(frameOf());
-      advance(16);
+      advance(64);
       const first = bars
         .filter((bar) => bar.height === 60)
         .map((bar) => bar.x)
@@ -250,13 +252,77 @@ describe("LiveWaveform scrolling", () => {
       <LiveWaveform actionsRef={actions} fadeEdges={false} mode="scrolling" />
     );
     actions.current?.paint(frameOf());
-    advance(80);
+    advance(160);
     const paints = context.clearRect.mock.calls.length;
     advance(160);
     expect(context.clearRect).toHaveBeenCalledTimes(paints);
     actions.current?.clear();
     advance(16);
     expect(bars).toHaveLength(0);
+  });
+
+  it("keeps scrolling continuous when drawing options change", () => {
+    const { bars } = stubCanvas(240);
+    const signal = createDemoSignal({ kind: "tone" });
+    const { rerender } = render(
+      <LiveWaveform fadeEdges={false} mode="scrolling" source={signal.visual} />
+    );
+    advance(272);
+    const x = bars[0]?.x ?? Number.NaN;
+    rerender(
+      <LiveWaveform
+        fadeEdges={false}
+        mode="scrolling"
+        sensitivity={2}
+        source={signal.visual}
+      />
+    );
+    advance(16);
+    expect(x - (bars[0]?.x ?? Number.NaN)).toBeCloseTo(1);
+  });
+
+  it.each([0, 16])(
+    "replaces same-timestamp history after a %i ms source delay",
+    (delayMs) => {
+      const { bars } = stubCanvas();
+      const first = createFrameEmitter<VisualFrame>();
+      const second = createFrameEmitter<VisualFrame>();
+      const { rerender } = render(
+        <LiveWaveform fadeEdges={false} mode="scrolling" source={first} />
+      );
+      const frame = frameOf();
+      frame.history.fill(0.25);
+      first.emit(frame);
+      advance(256);
+      expect(bars[0]?.height).toBe(20);
+      rerender(
+        <LiveWaveform fadeEdges={false} mode="scrolling" source={second} />
+      );
+      advance(delayMs);
+      const replacement = frameOf();
+      replacement.history.fill(0.75);
+      second.emit(replacement);
+      advance(16);
+      expect(bars[0]?.height).toBe(60);
+    }
+  );
+
+  it("clears buffered history before painting within the same frame", () => {
+    const { bars } = stubCanvas();
+    const actions = createRef<LiveWaveformActions>();
+    render(
+      <LiveWaveform actionsRef={actions} fadeEdges={false} mode="scrolling" />
+    );
+    const frame = frameOf();
+    frame.history.fill(0.25);
+    actions.current?.paint(frame);
+    advance(256);
+    expect(bars[0]?.height).toBe(20);
+    actions.current?.clear();
+    frame.history.fill(0.75);
+    actions.current?.paint(frame);
+    advance(16);
+    expect(bars[0]?.height).toBe(60);
   });
 
   it("keeps untimed custom sources and static mode still between frames", () => {
@@ -302,12 +368,12 @@ describe("LiveWaveform scrolling", () => {
     render(<LiveWaveform fadeEdges={false} mode="scrolling" source={relay} />);
     advance(16);
     relay.setSource(createDemoSignal({ kind: "tone" }).visual);
-    advance(48);
+    advance(160);
     let previousX = bars[0]?.x ?? Number.NaN;
     for (let index = 0; index < 8; index += 1) {
       advance(16);
       const x = bars[0]?.x ?? Number.NaN;
-      expect(previousX - x).toBeCloseTo((4 * 16) / 50);
+      expect(previousX - x).toBeCloseTo((4 * 16) / 64);
       previousX = x;
     }
   });
@@ -318,10 +384,10 @@ describe("LiveWaveform scrolling", () => {
     const { unmount } = render(
       <LiveWaveform fadeEdges={false} mode="scrolling" source={signal.visual} />
     );
-    advance(128);
+    advance(192);
     const firstX = bars[0]?.x ?? Number.NaN;
     advance(16);
-    expect(firstX - (bars[0]?.x ?? Number.NaN)).toBeCloseTo((4 * 16) / 50);
+    expect(firstX - (bars[0]?.x ?? Number.NaN)).toBeCloseTo((4 * 16) / 64);
     unmount();
     const paints = context.clearRect.mock.calls.length;
     advance(64);
