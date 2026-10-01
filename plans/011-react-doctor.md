@@ -1,6 +1,6 @@
 # 011 — React Doctor cleanup
 
-Status: PLANNED (2026-10-01).
+Status: IMPLEMENTED (2026-10-01). See [Outcome](#outcome) for where the work departed from the plan.
 
 `npx react-doctor@latest --verbose -y --no-score` (`--no-score` keeps the private repo off the score API) found **59 findings in 285 files: 5 errors and 54 warnings**. After reading the code behind each one, 17 get fixed in source and 42 are false positives or deliberate patterns, which get waived in config with a reason. One real bug the scan missed (hardcoded DOM ids in blocks) is added.
 
@@ -121,3 +121,23 @@ A local, non-shipped config with `ignore.overrides` for the 42 waived findings. 
 1. **LazyMotion in vendored ncdai files** (`copy-button.tsx`, `icon-swap.tsx`). Switching to `LazyMotion` + `m` saves about 30 kB on every docs page with a code block, but it breaks the "stay as upstream writes them" rule in `oxlint.config.ts`. Recommendation: keep upstream parity and waive it.
 2. **Soundboard in controlled mode, on unmount.** Revoking would break a parent that remounts the board with the same `sounds`. Recommendation: revoke on unmount only in uncontrolled mode, and document that in controlled mode the parent owns the URLs.
 3. **Install React Doctor as a dev dependency** (`npx react-doctor install --yes`, which adds skill files and a `doctor` script). Recommendation: yes, so the repo stays clean before launch, run with `--no-score` while the repo is private.
+
+## Outcome
+
+`pnpm doctor` now reports **no issues**, from 59 at the start. Unit tests, typecheck, `ultracite check` and all 603 e2e tests pass. Each batch shipped as its own commit on `main`.
+
+Where the work departed from the plan:
+
+- **Batch 1.** The `{ signal }` rewrite tripped `no-set-state-after-await-in-effect`. That detector only recognises a plain boolean flag before a post-await setter. It rejects `controller.signal.aborted`, even in the form of its own docs example. So the hooks keep their `cancelled`/`disposed` flags for async writes, and the `AbortController` (named `listeners`) only releases listeners.
+- **Batch 2 / Decision 2.** The soundboard never revokes on unmount, in either mode. An `<Activity>`-hidden board runs effect cleanups but keeps its state, so it would come back with dead URLs. The detector can't follow a revoke made through state, so its finding is waived. That makes 43 waivers instead of 42. A Playwright test covers the revoke.
+- **Batch 3.** `components/blocks/blocks.test.tsx` renders each block twice. It checks that DOM ids stay unique and that a label toggles its own switch. Both checks fail on the old ids.
+- **Batch 5.** `web-threads` strips `undefined` props before merging `DEFAULTS`. Destructuring defaults would have been cleaner, but oxlint counts each one toward `complexity` (24, over the limit of 20).
+- **Batch 6.** With `minimumReleaseAge` on, every `pnpm add` failed. pnpm 10 re-checks locked versions, and 156 of them came from that day's dependency update. They are exempted by exact version in `minimumReleaseAgeExclude`. **Delete that list after 2026-10-08.** `trustPolicy` also rejected `semver@6.3.1`, a legitimate 2023 backport, so that exact version is exempt.
+- **Batch 7 / Decision 3.** `react-doctor install --yes` would also add skill files for 15 coding agents, a git pre-commit hook and a GitHub Actions workflow. Only the dev dependency and the `doctor` script were added. Run `npx react-doctor install` to opt into the rest.
+
+Notes:
+
+- The supply-chain check runs by default and sends the dependency list (npm package names) to Socket.dev. `--no-score` does not turn it off. To stop it, set `supplyChain: { enabled: false }` in `doctor.config.ts`.
+- Detector bugs worth reporting upstream:
+  - `only-export-components` treats components that return `useRender(...)` as non-components.
+  - `no-set-state-after-await-in-effect` ignores `controller.signal.aborted` guards.
