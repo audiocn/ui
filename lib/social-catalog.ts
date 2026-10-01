@@ -163,6 +163,7 @@ const contextualPreviews: Record<string, SocialPreviewName | undefined> = {
   "/docs/hooks/use-reduced-motion": "smooth-waveform",
   "/docs/hooks/use-sound": "pads",
   "/docs/hooks/use-system-audio": "system-settings",
+  "/docs/hooks/use-visibility": "bars",
   "/docs/hooks/use-waveform-data": "waveform",
   "/docs/hooks/use-web-audio-mixer": "system-mixer",
   "/docs/installation": "collection",

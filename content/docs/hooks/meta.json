@@ -6,6 +6,7 @@
     "use-level",
     "use-clip-hold",
     "use-reduced-motion",
+    "use-visibility",
     "use-audio-context",
     "use-audio-analyser",
     "use-audio-devices",

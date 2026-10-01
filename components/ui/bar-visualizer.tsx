@@ -6,6 +6,7 @@ import type { ComponentProps, CSSProperties, Ref, RefObject } from "react";
 import { useAudioConfig } from "@/hooks/use-audio-config";
 import { useFrameSource } from "@/hooks/use-frame-source";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
+import { useVisibility } from "@/hooks/use-visibility";
 import { createBarLevels } from "@/lib/audio/bar-levels";
 import type { BarIdle, BarLevelsOptions } from "@/lib/audio/bar-levels";
 import { subscribeFrame } from "@/lib/audio/frame-loop";
@@ -51,6 +52,7 @@ const ALIGN_CLASS = {
 interface BarPainterOptions extends BarLevelsOptions {
   bars: (HTMLSpanElement | null)[];
   input: RefObject<ArrayLike<number> | null>;
+  root: RefObject<HTMLElement | null>;
   visible: RefObject<boolean>;
 }
 
@@ -60,6 +62,7 @@ const createBarPainter = (options: BarPainterOptions) => {
   const barLevels = createBarLevels(options);
   const shown = new Float32Array(options.barCount).fill(-1);
   let lastPaintMs = 0;
+  let activeShown: boolean | null = null;
 
   return (nowMs: number) => {
     if (!options.visible.current) {
@@ -69,7 +72,11 @@ const createBarPainter = (options: BarPainterOptions) => {
       return;
     }
     lastPaintMs = nowMs;
-    barLevels.step(nowMs, options.input.current);
+    const active = barLevels.step(nowMs, options.input.current);
+    if (active !== activeShown) {
+      activeShown = active;
+      options.root.current?.toggleAttribute("data-active", active);
+    }
 
     for (const [index, value] of barLevels.levels.entries()) {
       if (Math.abs(value - (shown[index] ?? -1)) > 0.002) {
@@ -100,8 +107,8 @@ export const BarVisualizer = ({
   const reducedMotion = useReducedMotion();
   const barsRef = useRef<(HTMLSpanElement | null)[]>([]);
   const inputRef = useRef<ArrayLike<number> | null>(null);
-  const visibleRef = useRef(true);
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const visibleRef = useVisibility(rootRef);
 
   const paint = useCallback((next: ArrayLike<number>) => {
     inputRef.current = next;
@@ -111,47 +118,44 @@ export const BarVisualizer = ({
     inputRef.current = frame.bands;
   });
 
+  // Clear only when levels go from set to unset, so the bars fall instead of
+  // freezing, without wiping levels painted through the handle on re-runs.
+  const hadLevelsRef = useRef(false);
   useEffect(() => {
     if (levels) {
       inputRef.current = levels;
+      hadLevelsRef.current = true;
+    } else if (hadLevelsRef.current) {
+      inputRef.current = null;
+      hadLevelsRef.current = false;
     }
   }, [levels]);
 
   useImperativeHandle(actionsRef, () => ({ paint }), [paint]);
 
   useEffect(() => {
+    const unsubscribe = subscribeFrame(
+      createBarPainter({
+        barCount,
+        bars: barsRef.current,
+        idle,
+        input: inputRef,
+        loading,
+        minLevel,
+        mirrored,
+        reducedMotion,
+        root: rootRef,
+        visible: visibleRef,
+      })
+    );
     const root = rootRef.current;
-    if (!root || typeof IntersectionObserver === "undefined") {
-      return;
-    }
-    const observer = new IntersectionObserver((entries) => {
-      for (const entry of entries) {
-        visibleRef.current = entry.isIntersecting;
-      }
-    });
-    observer.observe(root);
     return () => {
-      observer.disconnect();
+      unsubscribe();
+      if (root) {
+        delete root.dataset.active;
+      }
     };
-  }, []);
-
-  useEffect(
-    () =>
-      subscribeFrame(
-        createBarPainter({
-          barCount,
-          bars: barsRef.current,
-          idle,
-          input: inputRef,
-          loading,
-          minLevel,
-          mirrored,
-          reducedMotion,
-          visible: visibleRef,
-        })
-      ),
-    [barCount, idle, loading, minLevel, mirrored, reducedMotion]
-  );
+  }, [barCount, idle, loading, minLevel, mirrored, reducedMotion, visibleRef]);
 
   const setRootRef = useCallback(
     (node: HTMLDivElement | null) => {

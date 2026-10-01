@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-import { getSharedAudioContext } from "@/hooks/use-audio-context";
+import { useAudioContext } from "@/hooks/use-audio-context";
 import { loadAudioBuffer } from "@/hooks/use-sound";
 
 export type WaveformDataStatus = "idle" | "loading" | "ready" | "error";
@@ -85,20 +85,23 @@ const IDLE: WaveformData = {
 
 const LOADING: WaveformData = { ...IDLE, status: "loading" };
 
+const UNSUPPORTED: WaveformData = {
+  ...IDLE,
+  error: new Error("This browser can't decode audio."),
+  status: "error",
+};
+
 /** Decodes a file (or takes an `AudioBuffer`) and reduces it to waveform peaks. */
 export const useWaveformData = (
   src: string | AudioBuffer | null,
   { samples = 512 }: UseWaveformDataOptions = {}
 ): WaveformData => {
+  const { context, status } = useAudioContext();
   const [result, setResult] = useState<LoadResult | null>(null);
   const key = typeof src === "string" ? `${samples}:${src}` : "";
 
   useEffect(() => {
-    if (typeof src !== "string") {
-      return;
-    }
-    const context = getSharedAudioContext();
-    if (!context) {
+    if (typeof src !== "string" || !context) {
       return;
     }
     let cancelled = false;
@@ -133,7 +136,7 @@ export const useWaveformData = (
     return () => {
       cancelled = true;
     };
-  }, [samples, src]);
+  }, [context, samples, src]);
 
   const direct = useMemo<WaveformData | null>(() => {
     if (!src || typeof src === "string") {
@@ -152,6 +155,11 @@ export const useWaveformData = (
   }
   if (direct) {
     return direct;
+  }
+  // Without Web Audio there is nothing to decode with; say so instead of
+  // loading forever.
+  if (status === "unsupported") {
+    return UNSUPPORTED;
   }
   return result?.key === key ? result.data : LOADING;
 };

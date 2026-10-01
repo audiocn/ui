@@ -8,6 +8,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
 } from "react";
 import type {
   ComponentProps,
@@ -17,6 +18,7 @@ import type {
 } from "react";
 
 import { useFrameSource } from "@/hooks/use-frame-source";
+import { useVisibility } from "@/hooks/use-visibility";
 import { resampleLevels } from "@/lib/audio/bands";
 import { clamp } from "@/lib/audio/decibels";
 import { subscribeFrame } from "@/lib/audio/frame-loop";
@@ -36,12 +38,17 @@ interface WaveformContextValue {
   loading: boolean;
   /** Current progress, 0..1, read by the canvas and cursor on every frame. */
   progressRef: { current: number };
-  hoverRef: { current: number | null };
+  /** The hovered time, or null. Read it with useSyncExternalStore. */
+  getHover: () => number | null;
   subscribeHover: (listener: () => void) => () => void;
+  /** Whether pointer seeking (and so the hover line) is on. */
+  interactive: boolean;
   timeToPosition: (time: number) => number;
 }
 
 const WaveformContext = createContext<WaveformContextValue | null>(null);
+
+const getNoHover = () => null;
 
 const useWaveform = (part: string) => {
   const context = useContext(WaveformContext);
@@ -100,6 +107,7 @@ export const WaveformCanvas = ({
   const { barGap, barRadius, barWidth, loading, peaks, progressRef, variant } =
     useWaveform("WaveformCanvas");
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const visibleRef = useVisibility(canvasRef);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -202,7 +210,12 @@ export const WaveformCanvas = ({
         }
       }
       const progress = progressRef.current;
-      if (progress === lastProgress || size.width === 0) {
+      // Off screen, leave lastProgress alone so it repaints when it returns.
+      if (
+        progress === lastProgress ||
+        size.width === 0 ||
+        !visibleRef.current
+      ) {
         return;
       }
       lastProgress = progress;
@@ -220,7 +233,16 @@ export const WaveformCanvas = ({
       unsubscribe();
       observer.disconnect();
     };
-  }, [barGap, barRadius, barWidth, loading, peaks, progressRef, variant]);
+  }, [
+    barGap,
+    barRadius,
+    barWidth,
+    loading,
+    peaks,
+    progressRef,
+    variant,
+    visibleRef,
+  ]);
 
   return (
     <>
@@ -267,19 +289,11 @@ export const WaveformHover = ({
   style,
   ...props
 }: WaveformHoverProps) => {
-  const { hoverRef, subscribeHover, timeToPosition } =
+  const { getHover, interactive, subscribeHover, timeToPosition } =
     useWaveform("WaveformHover");
-  const [hover, setHover] = useState<number | null>(null);
+  const hover = useSyncExternalStore(subscribeHover, getHover, getNoHover);
 
-  useEffect(
-    () =>
-      subscribeHover(() => {
-        setHover(hoverRef.current);
-      }),
-    [hoverRef, subscribeHover]
-  );
-
-  if (hover === null) {
+  if (!interactive || hover === null) {
     return null;
   }
 
@@ -560,10 +574,17 @@ const isInteractive = (
   duration: number
 ) => interactive && !disabled && !loading && duration > 0;
 
+/** The hovered time, as a tiny external store. */
 const createHoverChannel = () => {
   const listeners = new Set<() => void>();
+  let hovered: number | null = null;
   return {
-    notify: () => {
+    get: () => hovered,
+    set: (next: number | null) => {
+      if (next === hovered) {
+        return;
+      }
+      hovered = next;
       for (const listener of listeners) {
         listener();
       }
@@ -578,16 +599,14 @@ const createHoverChannel = () => {
 };
 
 interface PointerOptions {
-  hoverRef: { current: number | null };
-  notify: () => void;
+  setHover: (time: number | null) => void;
   seekTo: (time: number, commit: boolean) => void;
   timeAtPointer: (event: PointerEvent<HTMLDivElement>) => number;
 }
 
 /** Pointer seeking and hover tracking for the waveform root. */
 const useWaveformPointer = ({
-  hoverRef,
-  notify,
+  setHover,
   seekTo,
   timeAtPointer,
 }: PointerOptions) => {
@@ -604,13 +623,11 @@ const useWaveformPointer = ({
         seekTo(timeAtPointer(event), false);
       },
       onPointerLeave: () => {
-        hoverRef.current = null;
-        notify();
+        setHover(null);
       },
       onPointerMove: (event: PointerEvent<HTMLDivElement>) => {
         const at = timeAtPointer(event);
-        hoverRef.current = at;
-        notify();
+        setHover(at);
         if (dragging) {
           seekTo(at, false);
         }
@@ -651,7 +668,6 @@ export const Waveform = ({
   const shownTime = currentTime ?? internalTime;
   const rootRef = useRef<HTMLDivElement>(null);
   const progressRef = useRef(0);
-  const hoverRef = useRef<number | null>(null);
   const hover = useMemo(() => createHoverChannel(), []);
   const latestTimeRef = useRef(shownTime);
 
@@ -720,7 +736,8 @@ export const Waveform = ({
       barRadius,
       barWidth,
       duration,
-      hoverRef,
+      getHover: hover.get,
+      interactive: active,
       loading,
       peaks,
       progressRef,
@@ -729,6 +746,7 @@ export const Waveform = ({
       variant,
     }),
     [
+      active,
       barGap,
       barRadius,
       barWidth,
@@ -742,12 +760,14 @@ export const Waveform = ({
   );
 
   const pointer = useWaveformPointer({
-    hoverRef,
-    notify: hover.notify,
     seekTo,
+    setHover: hover.set,
     timeAtPointer,
   });
 
+  // Leaving still clears the hover, so turning interactivity off mid-hover
+  // (while a track loads) doesn't leave a stale line.
+  const inactiveProps = { onPointerLeave: pointer.handlers.onPointerLeave };
   const interactiveProps = active
     ? {
         "aria-valuemax": Math.round(duration),
@@ -759,7 +779,7 @@ export const Waveform = ({
         role: "slider",
         tabIndex: 0,
       }
-    : {};
+    : inactiveProps;
 
   return (
     <WaveformContext.Provider value={contextValue}>

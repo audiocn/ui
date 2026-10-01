@@ -6,6 +6,7 @@ import type { ComponentProps, Ref } from "react";
 import { useAudioConfig } from "@/hooks/use-audio-config";
 import { useFrameSource } from "@/hooks/use-frame-source";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
+import { useVisibility } from "@/hooks/use-visibility";
 import { createBarLevels } from "@/lib/audio/bar-levels";
 import type { BarIdle } from "@/lib/audio/bar-levels";
 import { clamp } from "@/lib/audio/decibels";
@@ -734,10 +735,10 @@ export const ElectricBarVisualizer = ({
   const orientation = orientationProp ?? config.orientation ?? "horizontal";
   const reducedMotion = useReducedMotion();
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const visibleRef = useVisibility(rootRef);
   const glowRef = useRef<HTMLCanvasElement | null>(null);
   const mainRef = useRef<HTMLCanvasElement | null>(null);
   const inputRef = useRef<ArrayLike<number> | null>(null);
-  const visibleRef = useRef(true);
 
   const paint = useCallback((next: ArrayLike<number>) => {
     inputRef.current = next;
@@ -747,29 +748,20 @@ export const ElectricBarVisualizer = ({
     inputRef.current = frame.bands;
   });
 
+  // Clear only when levels go from set to unset, so the bars fall instead of
+  // freezing, without wiping levels painted through the handle on re-runs.
+  const hadLevelsRef = useRef(false);
   useEffect(() => {
     if (levels) {
       inputRef.current = levels;
+      hadLevelsRef.current = true;
+    } else if (hadLevelsRef.current) {
+      inputRef.current = null;
+      hadLevelsRef.current = false;
     }
   }, [levels]);
 
   useImperativeHandle(actionsRef, () => ({ paint }), [paint]);
-
-  useEffect(() => {
-    const root = rootRef.current;
-    if (!root || typeof IntersectionObserver === "undefined") {
-      return;
-    }
-    const observer = new IntersectionObserver((entries) => {
-      for (const entry of entries) {
-        visibleRef.current = entry.isIntersecting;
-      }
-    });
-    observer.observe(root);
-    return () => {
-      observer.disconnect();
-    };
-  }, []);
 
   useEffect(() => {
     const root = rootRef.current;
@@ -871,6 +863,7 @@ export const ElectricBarVisualizer = ({
     orientation,
     reducedMotion,
     sparks,
+    visibleRef,
   ]);
 
   const setRootRef = useCallback(

@@ -151,6 +151,18 @@
       ]
     },
     {
+      "name": "use-visibility",
+      "type": "registry:hook",
+      "title": "useVisibility",
+      "description": "Whether an element is on screen, in a ref, so animation loops can skip frames nobody sees.",
+      "files": [
+        {
+          "path": "hooks/use-visibility.ts",
+          "type": "registry:hook"
+        }
+      ]
+    },
+    {
       "name": "use-demo-signal",
       "type": "registry:hook",
       "title": "useDemoSignal",
@@ -294,7 +306,8 @@
         "@audiocn/use-reduced-motion",
         "@audiocn/db-scale",
         "@audiocn/db-readout",
-        "@audiocn/clip-indicator"
+        "@audiocn/clip-indicator",
+        "@audiocn/use-visibility"
       ],
       "files": [
         {
@@ -312,7 +325,8 @@
         "@audiocn/core",
         "@audiocn/use-audio-config",
         "@audiocn/use-frame-source",
-        "@audiocn/use-reduced-motion"
+        "@audiocn/use-reduced-motion",
+        "@audiocn/use-visibility"
       ],
       "files": [
         {
@@ -344,7 +358,8 @@
         "@audiocn/electric",
         "@audiocn/use-audio-config",
         "@audiocn/use-frame-source",
-        "@audiocn/use-reduced-motion"
+        "@audiocn/use-reduced-motion",
+        "@audiocn/use-visibility"
       ],
       "files": [
         {
@@ -362,7 +377,8 @@
         "@audiocn/core",
         "@audiocn/electric",
         "@audiocn/use-frame-source",
-        "@audiocn/use-reduced-motion"
+        "@audiocn/use-reduced-motion",
+        "@audiocn/use-visibility"
       ],
       "files": [
         {
@@ -379,7 +395,8 @@
       "registryDependencies": [
         "@audiocn/core",
         "@audiocn/use-frame-source",
-        "@audiocn/use-reduced-motion"
+        "@audiocn/use-reduced-motion",
+        "@audiocn/use-visibility"
       ],
       "files": [
         {
@@ -396,7 +413,8 @@
       "registryDependencies": [
         "@audiocn/core",
         "@audiocn/use-frame-source",
-        "@audiocn/use-reduced-motion"
+        "@audiocn/use-reduced-motion",
+        "@audiocn/use-visibility"
       ],
       "files": [
         {
@@ -619,7 +637,11 @@
       "type": "registry:ui",
       "title": "Waveform",
       "description": "A static waveform of a clip with a smooth playhead, seeking by pointer and keyboard, hover time, draggable regions and markers.",
-      "registryDependencies": ["@audiocn/core", "@audiocn/use-frame-source"],
+      "registryDependencies": [
+        "@audiocn/core",
+        "@audiocn/use-frame-source",
+        "@audiocn/use-visibility"
+      ],
       "files": [
         {
           "path": "components/ui/waveform.tsx",
@@ -685,7 +707,8 @@
       "registryDependencies": [
         "@audiocn/core",
         "@audiocn/use-frame-source",
-        "@audiocn/use-reduced-motion"
+        "@audiocn/use-reduced-motion",
+        "@audiocn/use-visibility"
       ],
       "files": [
         {

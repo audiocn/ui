@@ -203,6 +203,10 @@
     "alt": "useSystemAudio — audiocn: system audio settings with capture, volume and a meter.",
     "url": "/og/hooks-use-system-audio-b57cdfa225d5.png"
   },
+  "/docs/hooks/use-visibility": {
+    "alt": "useVisibility — audiocn: a frequency-band bar visualizer with an active signal.",
+    "url": "/og/hooks-use-visibility-d28a06b3687a.png"
+  },
   "/docs/hooks/use-waveform-data": {
     "alt": "useWaveformData — audiocn: a mirrored waveform with a playhead, selected region and marker.",
     "url": "/og/hooks-use-waveform-data-b59432085b3c.png"

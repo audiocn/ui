@@ -11,6 +11,7 @@ import type { ComponentProps, Ref } from "react";
 
 import { useFrameSource } from "@/hooks/use-frame-source";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
+import { useVisibility } from "@/hooks/use-visibility";
 import { clamp } from "@/lib/audio/decibels";
 import { subscribeFrame } from "@/lib/audio/frame-loop";
 import type { FrameSource, VisualFrame } from "@/lib/audio/types";
@@ -581,10 +582,10 @@ export const ElectricWaveform = ({
 }: ElectricWaveformProps) => {
   const reducedMotion = useReducedMotion();
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const visibleRef = useVisibility(rootRef);
   const glowRef = useRef<HTMLCanvasElement | null>(null);
   const mainRef = useRef<HTMLCanvasElement | null>(null);
   const frameRef = useRef<VisualFrame | null>(null);
-  const visibleRef = useRef(true);
 
   const paint = useCallback((frame: VisualFrame) => {
     frameRef.current = frame;
@@ -602,22 +603,6 @@ export const ElectricWaveform = ({
     }),
     [paint]
   );
-
-  useEffect(() => {
-    const root = rootRef.current;
-    if (!root || typeof IntersectionObserver === "undefined") {
-      return;
-    }
-    const observer = new IntersectionObserver((entries) => {
-      for (const entry of entries) {
-        visibleRef.current = entry.isIntersecting;
-      }
-    });
-    observer.observe(root);
-    return () => {
-      observer.disconnect();
-    };
-  }, []);
 
   // Stroke options are read each paint, so changing them doesn't rebuild the
   // trace and reset its sparks, forks and loudness.
@@ -710,7 +695,16 @@ export const ElectricWaveform = ({
       observer.disconnect();
       delete root.dataset.active;
     };
-  }, [arcs, intensity, loading, mode, reducedMotion, sensitivity, sparks]);
+  }, [
+    arcs,
+    intensity,
+    loading,
+    mode,
+    reducedMotion,
+    sensitivity,
+    sparks,
+    visibleRef,
+  ]);
 
   const setRootRef = useCallback(
     (node: HTMLDivElement | null) => {

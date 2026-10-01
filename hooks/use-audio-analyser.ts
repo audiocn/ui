@@ -33,7 +33,7 @@ export interface AnalyserTapOptions {
 }
 
 export interface AudioAnalyserOptions extends AnalyserTapOptions {
-  /** Pause analysis without tearing it down. Default true. */
+  /** `false` disconnects and releases the analysis. Default true. */
   enabled?: boolean;
 }
 

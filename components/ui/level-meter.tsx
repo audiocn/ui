@@ -25,6 +25,7 @@ import { useAudioConfig } from "@/hooks/use-audio-config";
 import type { AudioSize } from "@/hooks/use-audio-config";
 import { useFrameSource } from "@/hooks/use-frame-source";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
+import { useVisibility } from "@/hooks/use-visibility";
 import { createBallistics, resolveBallistics } from "@/lib/audio/ballistics";
 import type { Ballistics, BallisticsInput } from "@/lib/audio/ballistics";
 import {
@@ -623,26 +624,6 @@ const useMeterSettings = (props: Partial<MeterSettings>): MeterSettings => {
     size: props.size ?? config.size ?? "default",
     zones: props.zones ?? config.zones ?? DEFAULT_ZONES,
   };
-};
-
-const useVisibility = (target: RefObject<HTMLElement | null>) => {
-  const visibleRef = useRef(true);
-  useEffect(() => {
-    const element = target.current;
-    if (!element || typeof IntersectionObserver === "undefined") {
-      return;
-    }
-    const observer = new IntersectionObserver((entries) => {
-      for (const entry of entries) {
-        visibleRef.current = entry.isIntersecting;
-      }
-    });
-    observer.observe(element);
-    return () => {
-      observer.disconnect();
-    };
-  }, [target]);
-  return visibleRef;
 };
 
 export const LevelMeter = ({

@@ -5,6 +5,7 @@ import type { ComponentProps, CSSProperties, RefObject } from "react";
 
 import { useFrameSource } from "@/hooks/use-frame-source";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
+import { useVisibility } from "@/hooks/use-visibility";
 import { clamp } from "@/lib/audio/decibels";
 import { subscribeFrame } from "@/lib/audio/frame-loop";
 import { linearTaper, logTaper } from "@/lib/audio/taper";
@@ -13,6 +14,8 @@ import { cn } from "@/lib/utils";
 
 const COLOR_REFRESH_FRAMES = 30;
 const PEAK_RELEASE_PER_FRAME = 0.985;
+/** The frame length PEAK_RELEASE_PER_FRAME is tuned for. */
+const FRAME_MS = 1000 / 60;
 const REDUCED_MOTION_INTERVAL_MS = 250;
 const LEVEL_TICK_DB = 12;
 const DEFAULT_FREQUENCY_TICKS = [100, 1000, 10_000];
@@ -27,7 +30,8 @@ interface SpectrumContextValue {
   peakHold: boolean;
   grid: boolean;
   frameRef: RefObject<VisualFrame | null>;
-  dirtyRef: RefObject<boolean>;
+  /** Bumped on every frame, so each canvas knows whether it has painted it. */
+  versionRef: RefObject<number>;
 }
 
 const SpectrumContext = createContext<SpectrumContextValue | null>(null);
@@ -139,19 +143,23 @@ const drawCurve = (
   context.stroke();
 };
 
+/** Draws held peaks and reports whether any are still falling. */
 const drawPeaks = (
   context: CanvasRenderingContext2D,
   size: Size,
   bands: Float32Array,
-  peaks: Float32Array
+  peaks: Float32Array,
+  release: number
 ) => {
   const slot = size.width / bands.length;
+  let falling = false;
   for (const [index, band] of bands.entries()) {
-    const held = Math.max(
-      clamp(band, 0, 1),
-      (peaks[index] ?? 0) * PEAK_RELEASE_PER_FRAME
-    );
+    const level = clamp(band, 0, 1);
+    const held = Math.max(level, (peaks[index] ?? 0) * release);
     peaks[index] = held;
+    if (held > level + 0.001) {
+      falling = true;
+    }
     context.fillRect(
       index * slot,
       size.height - held * size.height - 1,
@@ -159,6 +167,7 @@ const drawPeaks = (
       2
     );
   }
+  return falling;
 };
 
 export const SpectrumCanvas = ({
@@ -168,6 +177,7 @@ export const SpectrumCanvas = ({
   const settings = useSpectrum("SpectrumCanvas");
   const reducedMotion = useReducedMotion();
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const visibleRef = useVisibility(canvasRef);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -175,12 +185,15 @@ export const SpectrumCanvas = ({
     if (!(canvas && context)) {
       return;
     }
-    const { dirtyRef, frameRef, grid, peakHold, variant } = settings;
+    const { frameRef, grid, peakHold, variant, versionRef } = settings;
     const size: Size = { height: 0, ratio: 1, width: 0 };
     let colors = readColors(canvas);
     let framesSinceColor = 0;
     let peaks = new Float32Array(0);
     let lastPaintMs = 0;
+    // Each canvas keeps its own state, so two in one Spectrum both paint.
+    let dirty = true;
+    let paintedVersion = -1;
 
     const resize = () => {
       const rect = canvas.getBoundingClientRect();
@@ -189,7 +202,7 @@ export const SpectrumCanvas = ({
       size.height = rect.height;
       canvas.width = Math.max(1, Math.round(rect.width * size.ratio));
       canvas.height = Math.max(1, Math.round(rect.height * size.ratio));
-      dirtyRef.current = true;
+      dirty = true;
     };
     resize();
     const observer = new ResizeObserver(resize);
@@ -199,10 +212,18 @@ export const SpectrumCanvas = ({
       framesSinceColor += 1;
       if (framesSinceColor >= COLOR_REFRESH_FRAMES) {
         framesSinceColor = 0;
-        colors = readColors(canvas);
-        dirtyRef.current = true;
+        const next = readColors(canvas);
+        if (
+          next.grid !== colors.grid ||
+          next.line !== colors.line ||
+          next.peak !== colors.peak
+        ) {
+          colors = next;
+          dirty = true;
+        }
       }
-      if (!dirtyRef.current || size.width === 0) {
+      const stale = dirty || versionRef.current !== paintedVersion;
+      if (!stale || size.width === 0 || !visibleRef.current) {
         return false;
       }
       return (
@@ -214,8 +235,10 @@ export const SpectrumCanvas = ({
       if (!shouldPaint(nowMs)) {
         return;
       }
+      const elapsedMs = lastPaintMs === 0 ? 0 : nowMs - lastPaintMs;
       lastPaintMs = nowMs;
-      dirtyRef.current = false;
+      dirty = false;
+      paintedVersion = versionRef.current;
       context.setTransform(size.ratio, 0, 0, size.ratio, 0, 0);
       context.clearRect(0, 0, size.width, size.height);
       if (grid) {
@@ -237,8 +260,15 @@ export const SpectrumCanvas = ({
           peaks = new Float32Array(bands.length);
         }
         context.fillStyle = colors.peak;
-        drawPeaks(context, size, bands, peaks);
-        dirtyRef.current = true;
+        // Decay by elapsed time, not per paint, so peaks fall at the same
+        // speed at 60 Hz, at 120 Hz and with reduced motion.
+        dirty = drawPeaks(
+          context,
+          size,
+          bands,
+          peaks,
+          PEAK_RELEASE_PER_FRAME ** (elapsedMs / FRAME_MS)
+        );
       }
     };
 
@@ -247,7 +277,7 @@ export const SpectrumCanvas = ({
       unsubscribe();
       observer.disconnect();
     };
-  }, [reducedMotion, settings]);
+  }, [reducedMotion, settings, visibleRef]);
 
   return (
     <canvas
@@ -385,11 +415,11 @@ export const Spectrum = ({
   ...props
 }: SpectrumProps) => {
   const frameRef = useRef<VisualFrame | null>(null);
-  const dirtyRef = useRef(true);
+  const versionRef = useRef(0);
 
   useFrameSource(source, (frame) => {
     frameRef.current = frame;
-    dirtyRef.current = true;
+    versionRef.current += 1;
   });
 
   const frequencyTaper = useMemo(
@@ -400,7 +430,6 @@ export const Spectrum = ({
 
   const contextValue = useMemo<SpectrumContextValue>(
     () => ({
-      dirtyRef,
       frameRef,
       frequencyTaper,
       grid,
@@ -410,6 +439,7 @@ export const Spectrum = ({
       minHz,
       peakHold,
       variant,
+      versionRef,
     }),
     [frequencyTaper, grid, maxDb, maxHz, minDb, minHz, peakHold, variant]
   );

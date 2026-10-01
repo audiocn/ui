@@ -1,0 +1,37 @@
+---
+title: useVisibility
+description: Whether an element is on screen, in a ref, so animation loops can skip frames nobody sees.
+---
+
+Every audiocn meter and visualizer that paints on animation frames uses this hook to stop painting while it is scrolled out of view.
+
+```npm
+npx shadcn@latest add @audiocn/use-visibility
+```
+
+## Usage
+
+```tsx
+import { useEffect, useRef } from "react";
+
+import { useVisibility } from "@/hooks/use-visibility";
+
+export const Spinner = () => {
+  const ref = useRef<HTMLDivElement>(null);
+  const visibleRef = useVisibility(ref);
+
+  useEffect(() => {
+    let frame = requestAnimationFrame(function tick(now) {
+      if (visibleRef.current) {
+        ref.current?.style.setProperty("--angle", `${(now / 10) % 360}deg`);
+      }
+      frame = requestAnimationFrame(tick);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [visibleRef]);
+
+  return <div className="size-4 rotate-(--angle) bg-primary" ref={ref} />;
+};
+```
+
+The hook returns a ref, not state: reading `visibleRef.current` inside a loop costs nothing and never re-renders. It reads `true` until the first observation, and stays `true` where `IntersectionObserver` is unavailable.

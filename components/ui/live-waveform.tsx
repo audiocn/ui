@@ -5,6 +5,7 @@ import type { ComponentProps, Ref } from "react";
 
 import { useFrameSource } from "@/hooks/use-frame-source";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
+import { useVisibility } from "@/hooks/use-visibility";
 import { resampleLevels } from "@/lib/audio/bands";
 import { clamp } from "@/lib/audio/decibels";
 import { subscribeFrame } from "@/lib/audio/frame-loop";
@@ -284,6 +285,7 @@ export const LiveWaveform = ({
 }: LiveWaveformProps) => {
   const reducedMotion = useReducedMotion();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const visibleRef = useVisibility(canvasRef);
   const frameRef = useRef<VisualFrame | null>(null);
   const dirtyRef = useRef(true);
 
@@ -355,7 +357,8 @@ export const LiveWaveform = ({
           dirtyRef.current = true;
         }
       }
-      if (!dirtyRef.current || size.width === 0) {
+      // Off screen it stays dirty, so it repaints when it comes back.
+      if (!dirtyRef.current || size.width === 0 || !visibleRef.current) {
         return;
       }
       if (reducedMotion && nowMs - lastPaintMs < REDUCED_MOTION_INTERVAL_MS) {
@@ -402,6 +405,7 @@ export const LiveWaveform = ({
     reducedMotion,
     sensitivity,
     variant,
+    visibleRef,
   ]);
 
   return (

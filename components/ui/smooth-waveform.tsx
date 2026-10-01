@@ -11,6 +11,7 @@ import type { ComponentProps, Ref } from "react";
 
 import { useFrameSource } from "@/hooks/use-frame-source";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
+import { useVisibility } from "@/hooks/use-visibility";
 import { clamp } from "@/lib/audio/decibels";
 import { subscribeFrame } from "@/lib/audio/frame-loop";
 import type { FrameSource, VisualFrame } from "@/lib/audio/types";
@@ -119,9 +120,9 @@ export const SmoothWaveform = ({
 }: SmoothWaveformProps) => {
   const reducedMotion = useReducedMotion();
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const visibleRef = useVisibility(rootRef);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const frameRef = useRef<VisualFrame | null>(null);
-  const visibleRef = useRef(true);
 
   const paint = useCallback((frame: VisualFrame) => {
     frameRef.current = frame;
@@ -139,22 +140,6 @@ export const SmoothWaveform = ({
     }),
     [paint]
   );
-
-  useEffect(() => {
-    const root = rootRef.current;
-    if (!root || typeof IntersectionObserver === "undefined") {
-      return;
-    }
-    const observer = new IntersectionObserver((entries) => {
-      for (const entry of entries) {
-        visibleRef.current = entry.isIntersecting;
-      }
-    });
-    observer.observe(root);
-    return () => {
-      observer.disconnect();
-    };
-  }, []);
 
   // Stroke options are read each paint, so changing them doesn't rebuild the
   // line and snap it flat.
@@ -224,7 +209,7 @@ export const SmoothWaveform = ({
       observer.disconnect();
       delete root.dataset.active;
     };
-  }, [loading, mode, reducedMotion, sensitivity]);
+  }, [loading, mode, reducedMotion, sensitivity, visibleRef]);
 
   const setRootRef = useCallback(
     (node: HTMLDivElement | null) => {
