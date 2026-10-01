@@ -220,3 +220,7 @@ The screenshots in this README are the social cards captured at 2x into `.github
 ## Licence
 
 [MIT](./license.md)
+
+---
+
+<p align="center">Built by <a href="https://x.com/fortysevenfx">fortysevenfx</a> and <a href="https://x.com/orcdev">orcdev</a> with 🪓🪓</p>
