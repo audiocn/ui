@@ -7,8 +7,10 @@ import { MuteToggle } from "@/components/ui/channel-toggle";
 import { Fader } from "@/components/ui/fader";
 import {
   Knob,
+  KnobCap,
   KnobDial,
   KnobLabel,
+  KnobScale,
   KnobValue,
   parseKnobValue,
 } from "@/components/ui/knob";
@@ -227,6 +229,75 @@ describe("Knob", () => {
     expect(onValueCommitted).not.toHaveBeenCalled();
     fireEvent.keyDown(screen.getByRole("slider"), { key: "Enter" });
     expect(screen.getByRole("textbox", { name: "Value" })).toHaveValue("50");
+  });
+
+  it("draws a numbered scale, lit from the origin to the value", () => {
+    const { container } = render(
+      <Knob aria-label="Volume" defaultValue={33}>
+        <KnobDial>
+          <KnobScale labelEvery={10} majorEvery={5} ticks={100} />
+        </KnobDial>
+      </Knob>
+    );
+    const ticks = container.querySelectorAll("[data-slot='knob-tick']");
+    const labels = container.querySelectorAll("[data-slot='knob-scale-label']");
+    expect(ticks).toHaveLength(101);
+    expect(container.querySelectorAll("[data-major]")).toHaveLength(21);
+    expect([...labels].map((label) => label.textContent)).toEqual([
+      "0",
+      "10",
+      "20",
+      "30",
+      "40",
+      "50",
+      "60",
+      "70",
+      "80",
+      "90",
+      "100",
+    ]);
+    expect(container.querySelectorAll("[data-active]")).toHaveLength(34);
+    fireEvent.keyDown(screen.getByRole("slider"), { key: "End" });
+    expect(container.querySelectorAll("[data-active]")).toHaveLength(101);
+  });
+
+  it("lights a bipolar scale from its centre", () => {
+    const { container } = render(
+      <Knob aria-label="Gain" defaultValue={-12} max={24} min={-24} origin={0}>
+        <KnobDial>
+          <KnobScale labelEvery={0} ticks={48} />
+        </KnobDial>
+      </Knob>
+    );
+    const lit = [
+      ...container.querySelectorAll<SVGLineElement>("[data-slot='knob-tick']"),
+    ]
+      .map((tick, index) =>
+        Object.hasOwn(tick.dataset, "active") ? index : null
+      )
+      .filter((index) => index !== null);
+    // -12 dB to 0 dB is ticks 12 to 24 of 48.
+    expect(lit).toEqual(Array.from({ length: 13 }, (_, index) => index + 12));
+    expect(
+      container.querySelectorAll("[data-slot='knob-scale-label']")
+    ).toHaveLength(0);
+  });
+
+  it("turns the cap's dot with the value", () => {
+    const { container } = render(
+      <Knob aria-label="Volume" defaultValue={50}>
+        <KnobDial>
+          <KnobCap />
+        </KnobDial>
+      </Knob>
+    );
+    const dot = () => container.querySelector("[data-slot='knob-cap-dot']");
+    // At the middle of the arc the dot is straight up.
+    expect(Number(dot()?.getAttribute("cx"))).toBeCloseTo(50);
+    expect(Number(dot()?.getAttribute("cy"))).toBeLessThan(50);
+    fireEvent.keyDown(screen.getByRole("slider"), { key: "End" });
+    expect(Number(dot()?.getAttribute("cx"))).toBeGreaterThan(50);
+    expect(Number(dot()?.getAttribute("cy"))).toBeGreaterThan(50);
   });
 
   it("reads typed values", () => {

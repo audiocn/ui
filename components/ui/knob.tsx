@@ -136,11 +136,16 @@ export const parseKnobValue = (text: string): number | null => {
 
 const angleFor = (position: number, arc: number) => -arc / 2 + position * arc;
 
+/** Coordinates are rounded so server and browser trigonometry agree on hydration. */
+const COORDINATE_PRECISION = 1e4;
+const roundCoordinate = (value: number) =>
+  Math.round(value * COORDINATE_PRECISION) / COORDINATE_PRECISION;
+
 const pointAt = (angle: number, radius: number) => {
   const radians = angle * DEGREES_TO_RADIANS;
   return {
-    x: CENTER + radius * Math.sin(radians),
-    y: CENTER - radius * Math.cos(radians),
+    x: roundCoordinate(CENTER + radius * Math.sin(radians)),
+    y: roundCoordinate(CENTER - radius * Math.cos(radians)),
   };
 };
 
@@ -496,6 +501,215 @@ export const KnobPointer = ({
         {...props}
       />
     </>
+  );
+};
+
+/** Radii of the volume dial, in view box units. */
+const SCALE = {
+  label: 47.5,
+  labelSize: 4.5,
+  majorInner: 34.5,
+  majorOuter: 43.5,
+  minorInner: 35.5,
+  minorOuter: 40.5,
+} as const;
+const CAP = {
+  bezel: 25.5,
+  dot: 1.6,
+  dotDistance: 17,
+  face: 22.5,
+  halo: 34,
+  rim: 23.3,
+} as const;
+/** Ticks this close to the lit range's ends still count as lit. */
+const TICK_EPSILON = 1e-9;
+
+export interface KnobScaleProps extends Omit<ComponentProps<"g">, "format"> {
+  /** Divisions across the arc; draws `ticks + 1` marks. Default 50. */
+  ticks?: number;
+  /** Every nth tick is long. Default 5. */
+  majorEvery?: number;
+  /** Every nth tick is numbered; 0 hides the numbers. Default 10. */
+  labelEvery?: number;
+  /** Text for each number. Default: the knob's `format`. */
+  format?: (value: number) => string;
+}
+
+/** Tick marks and numbers around the dial, lit from `origin` to the value. */
+export const KnobScale = ({
+  ticks = 50,
+  majorEvery = 5,
+  labelEvery = 10,
+  format: formatProp,
+  className,
+  ...props
+}: KnobScaleProps) => {
+  const { arc, format, originPosition, position } = useKnob("KnobScale");
+  const { taper } = useKnobDial();
+  const formatLabel = formatProp ?? format;
+  const litFrom = Math.min(originPosition, position) - TICK_EPSILON;
+  const litTo = Math.max(originPosition, position) + TICK_EPSILON;
+  const count = Math.max(1, Math.round(ticks));
+
+  const marks = Array.from({ length: count + 1 }, (_, index) => {
+    const tickPosition = index / count;
+    const angle = angleFor(tickPosition, arc);
+    const major = index % majorEvery === 0;
+    const inner = pointAt(angle, major ? SCALE.majorInner : SCALE.minorInner);
+    const outer = pointAt(angle, major ? SCALE.majorOuter : SCALE.minorOuter);
+    const lit = tickPosition >= litFrom && tickPosition <= litTo;
+    return (
+      <line
+        className="stroke-muted-foreground/45 data-active:stroke-foreground data-major:stroke-muted-foreground data-major:data-active:stroke-foreground"
+        data-active={lit ? "" : undefined}
+        data-major={major ? "" : undefined}
+        data-slot="knob-tick"
+        key={index}
+        strokeWidth={major ? 1.1 : 0.55}
+        x1={inner.x}
+        x2={outer.x}
+        y1={inner.y}
+        y2={outer.y}
+      />
+    );
+  });
+
+  const labels =
+    labelEvery > 0
+      ? Array.from(
+          { length: Math.floor(count / labelEvery) + 1 },
+          (_, index) => {
+            const tickPosition = (index * labelEvery) / count;
+            const angle = angleFor(tickPosition, arc);
+            const { x, y } = pointAt(angle, SCALE.label);
+            return (
+              <text
+                className="fill-muted-foreground"
+                data-slot="knob-scale-label"
+                dominantBaseline="central"
+                fontSize={SCALE.labelSize}
+                key={tickPosition}
+                textAnchor="middle"
+                transform={`rotate(${angle} ${x} ${y})`}
+                x={x}
+                y={y}
+              >
+                {formatLabel(roundValue(taper.toValue(tickPosition)))}
+              </text>
+            );
+          }
+        )
+      : null;
+
+  return (
+    <g className={className} data-slot="knob-scale" {...props}>
+      {marks}
+      {labels}
+    </g>
+  );
+};
+
+/** An id that is safe inside `url(#…)`. */
+const useSvgId = () => `knob${useId().replaceAll(/[^\w-]/gu, "")}`;
+
+/**
+ * A brushed aluminium cap in a dark bezel, with a dot that turns with the
+ * value. The metal is `--knob-cap-metal` shaded by `--knob-cap-shade`.
+ */
+export const KnobCap = ({ className, ...props }: ComponentProps<"g">) => {
+  const { arc, position } = useKnob("KnobCap");
+  const id = useSvgId();
+  const dot = pointAt(angleFor(position, arc), CAP.dotDistance);
+  return (
+    <g
+      className={cn(
+        "[--knob-cap-metal:var(--color-white)] [--knob-cap-shade:var(--color-black)]",
+        className
+      )}
+      data-slot="knob-cap"
+      {...props}
+    >
+      <defs>
+        <radialGradient id={`${id}-halo`}>
+          <stop
+            className="[stop-color:var(--knob-cap-shade)]"
+            offset="0.6"
+            stopOpacity={0.55}
+          />
+          <stop
+            className="[stop-color:var(--knob-cap-shade)]"
+            offset="1"
+            stopOpacity={0}
+          />
+        </radialGradient>
+        {/* Light from above: the bezel brightens at the top, the rim at the bottom. */}
+        <linearGradient id={`${id}-bezel`} x1="0" x2="0" y1="0" y2="1">
+          <stop
+            className="[stop-color:var(--knob-cap-metal)]"
+            offset="0"
+            stopOpacity={0.16}
+          />
+          <stop
+            className="[stop-color:var(--knob-cap-metal)]"
+            offset="1"
+            stopOpacity={0}
+          />
+        </linearGradient>
+        <linearGradient id={`${id}-rim`} x1="0" x2="0" y1="0" y2="1">
+          <stop
+            className="[stop-color:var(--knob-cap-shade)]"
+            offset="0"
+            stopOpacity={0.62}
+          />
+          <stop
+            className="[stop-color:var(--knob-cap-shade)]"
+            offset="1"
+            stopOpacity={0.08}
+          />
+        </linearGradient>
+      </defs>
+      <circle cx={CENTER} cy={CENTER} fill={`url(#${id}-halo)`} r={CAP.halo} />
+      <circle
+        className="fill-(--knob-cap-shade)/85 stroke-(--knob-cap-metal)/15"
+        cx={CENTER}
+        cy={CENTER}
+        r={CAP.bezel}
+        strokeWidth={0.4}
+      />
+      <circle
+        cx={CENTER}
+        cy={CENTER}
+        fill={`url(#${id}-bezel)`}
+        r={CAP.bezel}
+      />
+      <circle
+        className="fill-(--knob-cap-metal)"
+        cx={CENTER}
+        cy={CENTER}
+        r={CAP.rim}
+      />
+      <circle cx={CENTER} cy={CENTER} fill={`url(#${id}-rim)`} r={CAP.rim} />
+      {/* SVG has no conic gradient, so the face is HTML with a CSS one. */}
+      <foreignObject
+        height={CAP.face * 2}
+        width={CAP.face * 2}
+        x={CENTER - CAP.face}
+        y={CENTER - CAP.face}
+      >
+        <div
+          className="size-full rounded-full bg-(--knob-cap-metal) bg-[repeating-radial-gradient(circle,var(--knob-cap-brush)_0_0.3px,transparent_0.3px_0.6px),conic-gradient(from_15deg,var(--knob-cap-sheen),transparent_9%,var(--knob-cap-sheen)_21%,transparent_32%,var(--knob-cap-sheen-deep)_46%,transparent_58%,var(--knob-cap-sheen)_70%,transparent_83%,var(--knob-cap-sheen))] [--knob-cap-brush:color-mix(in_oklab,var(--knob-cap-shade)_7%,transparent)] [--knob-cap-sheen-deep:color-mix(in_oklab,var(--knob-cap-shade)_50%,transparent)] [--knob-cap-sheen:color-mix(in_oklab,var(--knob-cap-shade)_34%,transparent)]"
+          data-slot="knob-cap-face"
+        />
+      </foreignObject>
+      <circle
+        className="fill-(--knob-cap-shade)/85 stroke-(--knob-cap-shade)/45"
+        cx={dot.x}
+        cy={dot.y}
+        data-slot="knob-cap-dot"
+        r={CAP.dot}
+        strokeWidth={0.35}
+      />
+    </g>
   );
 };
 

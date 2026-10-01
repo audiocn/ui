@@ -111,6 +111,7 @@ export const examples: Record<string, ComponentType | undefined> = {
   ),
   "knob-demo": dynamic(() => import("@/components/examples/knob-demo")),
   "knob-sizes": dynamic(() => import("@/components/examples/knob-sizes")),
+  "knob-volume": dynamic(() => import("@/components/examples/knob-volume")),
   "level-meter-ballistics": dynamic(
     () => import("@/components/examples/level-meter-ballistics")
   ),

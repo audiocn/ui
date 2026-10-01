@@ -47,13 +47,21 @@ The value keeps one width across the whole range, so the layout never moves whil
 </Knob>
 ```
 
-`KnobTrack`, `KnobRange` and `KnobPointer` are SVG elements inside a 100 × 100 view box, so you can add your own shapes next to them.
+`KnobTrack`, `KnobRange` and `KnobPointer` are SVG elements inside a 100 × 100 view box, so you can add your own shapes next to them. `KnobScale` and `KnobCap` are another set of parts for the same dial, shown in the [volume dial](#volume-dial).
 
 ## Examples
 
 ### Sizes and disabled
 
 <ComponentPreview name="knob-sizes" />
+
+### Volume dial
+
+A hi-fi volume dial: `KnobScale` draws numbered ticks around the dial and `KnobCap` a brushed aluminium cap with an indicator dot. Give it room for the numbers with a larger `--knob-size`.
+
+<ComponentPreview name="knob-volume" />
+
+Ticks between `origin` and the value light up, so a bipolar knob lights from its centre. The ticks are spread evenly along the arc, so they follow `scale="log"` too.
 
 ## Theming
 
@@ -63,8 +71,12 @@ The value keeps one width across the whole range, so the layout never moves whil
 | `--knob-angle`        | The pointer angle, live, for custom skins |
 | `data-dragging`       | On the dial while dragging                |
 | `data-at-origin`      | The value sits at `origin`                |
+| `--knob-cap-metal`    | `KnobCap`'s metal, white by default       |
+| `--knob-cap-shade`    | `KnobCap`'s shading, black by default     |
+| `data-active`         | On `KnobScale` ticks inside the lit range |
+| `data-major`          | On `KnobScale`'s long ticks               |
 
-Style the SVG parts with `stroke-*` and `fill-*` classes.
+Style the SVG parts with `stroke-*` and `fill-*` classes. Restyle the lit ticks from the scale, for example `<KnobScale className="**:data-active:stroke-primary" />`.
 
 ## Accessibility
 
@@ -139,5 +151,26 @@ The dial is a focusable slider with `aria-valuetext` from `format`, named by `Kn
       "true",
       "Double-click, or Enter on the dial, to type a value.",
     ],
+  ]}
+/>
+
+### KnobScale
+
+<PropsTable
+  rows={[
+    [
+      "ticks",
+      "number",
+      "50",
+      "Divisions across the arc; draws ticks + 1 marks.",
+    ],
+    ["majorEvery", "number", "5", "Every nth tick is long."],
+    [
+      "labelEvery",
+      "number",
+      "10",
+      "Every nth tick is numbered. 0 hides the numbers.",
+    ],
+    ["format", "(value: number) => string", "the knob's format", null],
   ]}
 />
