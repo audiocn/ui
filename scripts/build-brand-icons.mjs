@@ -10,16 +10,10 @@ const svgDensity = 144;
 const logo = await readFile(
   new URL("../public/brand/logo.svg", import.meta.url)
 );
-const icon = logo
-  .toString()
-  .replace('stroke="#000"', 'stroke="#fff"')
-  .replace('stroke-width="8.6"', 'stroke-width="11"')
-  .replace('stroke-width="8"', 'stroke-width="10.5"')
-  .replace(
-    /(?<root><svg\b[^>]*>)/u,
-    '$<root>\n  <circle cx="64" cy="64" r="64" fill="#000" stroke="none" />\n  <g transform="translate(-1.5 5)">'
-  )
-  .replace("</svg>", "  </g>\n</svg>");
+const icon = await readFile(
+  new URL("../public/brand/favicon.svg", import.meta.url),
+  "utf-8"
+);
 await writeFile(new URL("../app/icon.svg", import.meta.url), icon);
 const sizes = [16, 32, 48];
 const frames = await Promise.all(
