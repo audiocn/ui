@@ -1,7 +1,7 @@
 import Image from "next/image";
 
 import { cn } from "@/lib/utils";
-import logo from "@/public/brand/logo.png";
+import logo from "@/public/brand/logo.svg";
 
 const DEFAULT_SIZE_PX = 32;
 
@@ -24,6 +24,7 @@ export const BrandLogo = ({
     height={size}
     loading="eager"
     src={logo}
+    unoptimized
     width={size}
   />
 );

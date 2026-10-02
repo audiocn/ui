@@ -12,6 +12,7 @@ for (const width of [320, 1440]) {
             .filter({ visible: true });
           await expect(logo).toBeVisible();
           await expect(logo).toHaveAttribute("alt", "");
+          await expect(logo).toHaveAttribute("src", /\.svg$/u);
           await expect(
             page
               .getByRole("link", { exact: true, name: "audiocn" })
@@ -63,6 +64,12 @@ test("browser and Apple icons serve the approved logo assets", async ({
     "href",
     /\/apple-icon\.png/u
   );
+  await expect(
+    page.locator('link[rel="icon"][type="image/svg+xml"]')
+  ).toHaveAttribute("href", /\/icon\.svg/u);
+  const vectorIcon = await request.get("/icon.svg");
+  expect(vectorIcon.status()).toBe(200);
+  expect(vectorIcon.headers()["content-type"]).toContain("image/svg+xml");
   const icon = await request.get("/icon.png");
   expect(icon.status()).toBe(200);
   const iconBytes = await icon.body();

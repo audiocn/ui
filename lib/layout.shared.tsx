@@ -35,7 +35,10 @@ export const baseOptions = ({
   nav: {
     title: (
       <span className="font-heading inline-flex items-center gap-1 font-semibold tracking-tight">
-        <BrandLogo />
+        <BrandLogo
+          className={docs ? "size-6" : undefined}
+          size={docs ? 24 : 32}
+        />
         {siteConfig.name}
       </span>
     ),
