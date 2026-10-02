@@ -93,6 +93,34 @@ describe("DbReadout", () => {
     expect(readout).toHaveTextContent("−12.3 dB");
     expect(readout).toHaveAttribute("data-zone", "warn");
   });
+
+  it("shows the value again when its source goes away", () => {
+    const emitter = createFrameEmitter<MeterFrame>();
+    const { container, rerender } = render(<DbReadout source={emitter} />);
+    emitter.emit({ channels: [{ peakDb: -12.34 }] });
+    advance(260);
+    // The value renders the same text as the live readout's first paint, so
+    // React alone would leave the last live level on screen.
+    rerender(<DbReadout value={Number.NEGATIVE_INFINITY} />);
+    const readout = container.querySelector('[data-slot="db-readout"]');
+    expect(readout).toHaveTextContent("−∞ dB");
+    expect(readout).toHaveAttribute("data-zone", "ok");
+    expect(readout).toHaveAttribute("data-silent");
+  });
+
+  it("shows the live level again when a source comes back", () => {
+    const emitter = createFrameEmitter<MeterFrame>();
+    const { container, rerender } = render(<DbReadout source={emitter} />);
+    emitter.emit({ channels: [{ peakDb: -12.34 }] });
+    advance(260);
+    rerender(<DbReadout value={Number.NEGATIVE_INFINITY} />);
+    rerender(<DbReadout source={emitter} />);
+    emitter.emit({ channels: [{ peakDb: -12.34 }] });
+    advance(260);
+    const readout = container.querySelector('[data-slot="db-readout"]');
+    expect(readout).toHaveTextContent("−12.3 dB");
+    expect(readout).toHaveAttribute("data-zone", "warn");
+  });
 });
 
 describe("ClipIndicator", () => {

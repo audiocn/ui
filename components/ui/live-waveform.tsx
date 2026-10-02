@@ -8,13 +8,48 @@ import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { useVisibility } from "@/hooks/use-visibility";
 import { resampleLevels } from "@/lib/audio/bands";
 import { clamp } from "@/lib/audio/decibels";
-import { subscribeFrame } from "@/lib/audio/frame-loop";
+import { createFrameTask } from "@/lib/audio/frame-loop";
 import type { FrameSource, VisualFrame } from "@/lib/audio/types";
 import { cn } from "@/lib/utils";
 
 const COLOR_REFRESH_FRAMES = 30;
 const REDUCED_MOTION_INTERVAL_MS = 250;
 const IDLE_ALPHA = 0.35;
+
+const noop = () => {
+  // Nothing to wake before the painter starts.
+};
+
+/**
+ * Calls `onChange` when the page theme may have changed the canvas colour: a
+ * class, style or data-theme change on the root element, or the system colour
+ * scheme. A sleeping painter would otherwise keep the old colour.
+ */
+const observeTheme = (onChange: () => void) => {
+  const stops: (() => void)[] = [];
+  if (typeof MutationObserver !== "undefined") {
+    const observer = new MutationObserver(onChange);
+    observer.observe(document.documentElement, {
+      attributeFilter: ["class", "style", "data-theme"],
+      attributes: true,
+    });
+    stops.push(() => {
+      observer.disconnect();
+    });
+  }
+  if (typeof window.matchMedia === "function") {
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    media.addEventListener("change", onChange);
+    stops.push(() => {
+      media.removeEventListener("change", onChange);
+    });
+  }
+  return () => {
+    for (const stop of stops) {
+      stop();
+    }
+  };
+};
 
 export interface LiveWaveformActions {
   /** Paint a frame directly. */
@@ -285,13 +320,21 @@ export const LiveWaveform = ({
 }: LiveWaveformProps) => {
   const reducedMotion = useReducedMotion();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const visibleRef = useVisibility(canvasRef);
+  // Wakes the painter when there is something new to draw. A drawn canvas
+  // sleeps until then.
+  const wakeRef = useRef<() => void>(noop);
+  const visibleRef = useVisibility(canvasRef, (visible) => {
+    if (visible) {
+      wakeRef.current();
+    }
+  });
   const frameRef = useRef<VisualFrame | null>(null);
   const dirtyRef = useRef(true);
 
   const paint = useCallback((frame: VisualFrame) => {
     frameRef.current = frame;
     dirtyRef.current = true;
+    wakeRef.current();
   }, []);
 
   useFrameSource(source, paint);
@@ -302,6 +345,7 @@ export const LiveWaveform = ({
       clear: () => {
         frameRef.current = null;
         dirtyRef.current = true;
+        wakeRef.current();
       },
       paint,
     }),
@@ -331,6 +375,7 @@ export const LiveWaveform = ({
     let color = "";
     let framesSinceColor = COLOR_REFRESH_FRAMES;
     let lastPaintMs = 0;
+    let wakeTask = noop;
     dirtyRef.current = true;
 
     const resize = () => {
@@ -342,12 +387,13 @@ export const LiveWaveform = ({
       canvas.height = Math.max(1, Math.round(rect.height * size.ratio));
       framesSinceColor = COLOR_REFRESH_FRAMES;
       dirtyRef.current = true;
+      wakeTask();
     };
     resize();
     const observer = new ResizeObserver(resize);
     observer.observe(canvas);
 
-    const tick = (nowMs: number) => {
+    const tick = (nowMs: number): boolean => {
       framesSinceColor += 1;
       if (framesSinceColor >= COLOR_REFRESH_FRAMES) {
         framesSinceColor = 0;
@@ -357,12 +403,14 @@ export const LiveWaveform = ({
           dirtyRef.current = true;
         }
       }
-      // Off screen it stays dirty, so it repaints when it comes back.
+      // Nothing new to draw, no size yet, or off screen: sleep. It stays dirty
+      // while hidden, and a frame, a resize, the theme or coming back into
+      // view wakes it.
       if (!dirtyRef.current || size.width === 0 || !visibleRef.current) {
-        return;
+        return false;
       }
       if (reducedMotion && nowMs - lastPaintMs < REDUCED_MOTION_INTERVAL_MS) {
-        return;
+        return true;
       }
       lastPaintMs = nowMs;
       dirtyRef.current = false;
@@ -375,7 +423,7 @@ export const LiveWaveform = ({
       const frame = frameRef.current;
       if (!(options.active && frame)) {
         drawIdle(context, size, options);
-        return;
+        return false;
       }
       if (options.variant === "line") {
         drawLine(context, size, frame, options);
@@ -385,12 +433,21 @@ export const LiveWaveform = ({
       if (options.fadeEdges) {
         fade(context, size, options.fadeWidth);
       }
+      return false;
     };
 
-    const unsubscribe = subscribeFrame(tick);
+    const task = createFrameTask(tick);
+    wakeTask = task.wake;
+    wakeRef.current = task.wake;
+    const stopObservingTheme = observeTheme(() => {
+      framesSinceColor = COLOR_REFRESH_FRAMES;
+      task.wake();
+    });
     return () => {
-      unsubscribe();
+      wakeRef.current = noop;
+      task.stop();
       observer.disconnect();
+      stopObservingTheme();
     };
   }, [
     active,

@@ -34,7 +34,7 @@ import {
   formatDb,
   SILENCE_DB,
 } from "@/lib/audio/decibels";
-import { subscribeFrame } from "@/lib/audio/frame-loop";
+import { createFrameTask, createPainterClock } from "@/lib/audio/frame-loop";
 import { createFrameEmitter } from "@/lib/audio/frame-source";
 import { resolveTaper } from "@/lib/audio/taper";
 import type { TaperInput } from "@/lib/audio/taper";
@@ -58,6 +58,11 @@ const ARIA_INTERVAL_MS = 250;
 const REDUCED_MOTION_INTERVAL_MS = 250;
 const DEFAULT_SEGMENTS = 24;
 const POSITION_EPSILON = 0.0005;
+/**
+ * A meter this close to its input has nothing visible left to animate (about
+ * 0.06 dB on the default range, under a pixel on any meter), so it sleeps.
+ */
+const SETTLE_EPSILON = 0.001;
 
 export type LevelMeterVariant = "solid" | "segmented" | "gradient";
 
@@ -90,6 +95,24 @@ const useLevelMeter = (part: string) => {
   return context;
 };
 
+/**
+ * Zones in rising order, as a new array. An insertion rather than the ES2023
+ * sorted-copy method, which projects compiling against ES2022 lack; a meter
+ * has a handful of zones.
+ */
+const byFromDb = (zones: MeterZone[]): MeterZone[] => {
+  const sorted: MeterZone[] = [];
+  for (const zone of zones) {
+    const index = sorted.findIndex((other) => other.fromDb > zone.fromDb);
+    if (index === -1) {
+      sorted.push(zone);
+    } else {
+      sorted.splice(index, 0, zone);
+    }
+  }
+  return sorted;
+};
+
 const buildZoneFill = (
   zones: MeterZone[],
   taper: Taper,
@@ -97,7 +120,7 @@ const buildZoneFill = (
   variant: LevelMeterVariant
 ) => {
   const direction = orientation === "horizontal" ? "to right" : "to top";
-  const sorted = zones.toSorted((a, b) => a.fromDb - b.fromDb);
+  const sorted = byFromDb(zones);
   // Rounded so the server and the browser print the same stops.
   const starts = sorted.map((zone) =>
     Number((taper.toPosition(zone.fromDb) * 100).toFixed(3))
@@ -171,16 +194,7 @@ interface ChannelState {
   active: boolean | null;
 }
 
-interface PainterOptions {
-  ballistics: BallisticsInput;
-  channels: Map<number, HTMLElement>;
-  latest: RefObject<MeterFrame | null>;
-  reducedMotion: boolean;
-  root: RefObject<HTMLElement | null>;
-  visible: RefObject<boolean>;
-}
-
-/** Read on every paint, so changing it doesn't rebuild the painter. */
+/** Handed to the painter when it changes, so it never rebuilds the painter. */
 interface MeterScale {
   maxDb: number;
   minDb: number;
@@ -188,7 +202,28 @@ interface MeterScale {
   zones: MeterZone[];
 }
 
+interface PainterOptions {
+  ballistics: BallisticsInput;
+  channels: Map<number, HTMLElement>;
+  latest: RefObject<MeterFrame | null>;
+  reducedMotion: boolean;
+  root: RefObject<HTMLElement | null>;
+  scale: MeterScale;
+  visible: RefObject<boolean>;
+}
+
+interface MeterPainter {
+  /** Paints one frame. Returns true while the meter needs another. */
+  paint: (frameMs: number) => boolean;
+  /** A new range, taper or zones, used from the next frame. */
+  setScale: (scale: MeterScale) => void;
+}
+
 const silentLevel: ChannelLevel = { peakDb: SILENCE_DB };
+
+const noop = () => {
+  // Nothing to wake before the painter starts.
+};
 
 const writePosition = (
   element: HTMLElement,
@@ -203,21 +238,34 @@ const writePosition = (
   return previous;
 };
 
+interface ChannelPaint {
+  /** The smoothed peak this frame, in dBFS. */
+  db: number;
+  /** Level, RMS and hold have all reached the input: nothing left to animate. */
+  settled: boolean;
+}
+
 /**
  * Paints a meter's channels outside React: steps ballistics, writes CSS
- * variables and data attributes, and throttles ARIA updates.
+ * variables and data attributes, and throttles ARIA updates. Returns true
+ * while it needs another frame, so a meter that has settled, or is off
+ * screen, stops costing frames until something wakes it.
  */
-const createMeterPainter = (options: PainterOptions) => {
+const createMeterPainter = (options: PainterOptions): MeterPainter => {
   const ballisticsOptions: BallisticsInput = options.reducedMotion
     ? "instant"
     : options.ballistics;
   const states = new Map<number, ChannelState>();
+  const clock = createPainterClock();
+  let { scale } = options;
   let clipUntil = 0;
   // Null until first painted: a painter rebuilt mid-clip must still clear
   // the attribute the previous one left.
   let clippingShown: boolean | null = null;
-  let lastAriaMs = 0;
-  let lastPaintMs = 0;
+  let lastAriaMs = Number.NEGATIVE_INFINITY;
+  let ariaShown: string | null = null;
+  let rootZoneShown: string | null = null;
+  let lastPaintMs = Number.NEGATIVE_INFINITY;
 
   const stateFor = (index: number, element: HTMLElement) => {
     const existing = states.get(index);
@@ -245,31 +293,24 @@ const createMeterPainter = (options: PainterOptions) => {
     index: number,
     element: HTMLElement,
     input: ChannelLevel,
-    nowMs: number,
-    scale: MeterScale
-  ) => {
+    nowMs: number
+  ): ChannelPaint => {
     const state = stateFor(index, element);
+    const inputRmsDb = input.rmsDb ?? input.peakDb;
     const peak = state.peak.step(input.peakDb, nowMs);
-    const rms = state.rms.step(input.rmsDb ?? input.peakDb, nowMs);
+    const rms = state.rms.step(inputRmsDb, nowMs);
     const { taper } = scale;
-    state.level = writePosition(
-      element,
-      "--meter-level",
-      state.level,
-      taper.toPosition(peak.db)
-    );
+    const level = taper.toPosition(peak.db);
+    const rmsLevel = taper.toPosition(rms.db);
+    const hold = taper.toPosition(peak.holdDb);
+    state.level = writePosition(element, "--meter-level", state.level, level);
     state.rmsLevel = writePosition(
       element,
       "--meter-rms",
       state.rmsLevel,
-      taper.toPosition(rms.db)
+      rmsLevel
     );
-    state.hold = writePosition(
-      element,
-      "--meter-hold",
-      state.hold,
-      taper.toPosition(peak.holdDb)
-    );
+    state.hold = writePosition(element, "--meter-hold", state.hold, hold);
 
     const zone = zoneForDb(peak.db, scale.zones);
     if (zone !== state.zone) {
@@ -281,60 +322,85 @@ const createMeterPainter = (options: PainterOptions) => {
       state.active = active;
       element.toggleAttribute("data-active", active);
     }
-    return peak.db;
+    const settled =
+      Math.abs(level - taper.toPosition(input.peakDb)) <= SETTLE_EPSILON &&
+      Math.abs(rmsLevel - taper.toPosition(inputRmsDb)) <= SETTLE_EPSILON &&
+      Math.abs(hold - level) <= SETTLE_EPSILON;
+    return { db: peak.db, settled };
   };
 
   const paintRoot = (
     root: HTMLElement,
     loudest: number,
     nowMs: number,
-    scale: MeterScale
+    settled: boolean
   ) => {
     const clipping = nowMs < clipUntil;
     if (clipping !== clippingShown) {
       clippingShown = clipping;
       root.toggleAttribute("data-clipping", clipping);
     }
-    if (nowMs - lastAriaMs < ARIA_INTERVAL_MS) {
+    const text = formatDb(loudest, { floorDb: scale.minDb });
+    const zone = zoneForDb(loudest, scale.zones);
+    if (text === ariaShown && zone === rootZoneShown) {
+      return;
+    }
+    // Throttled while the level moves; a settled level is written at once,
+    // so the value a screen reader finds is never a stale one.
+    if (!settled && nowMs - lastAriaMs < ARIA_INTERVAL_MS) {
       return;
     }
     lastAriaMs = nowMs;
+    ariaShown = text;
+    rootZoneShown = zone;
     const clamped = Math.min(scale.maxDb, Math.max(scale.minDb, loudest));
     root.setAttribute("aria-valuenow", clamped.toFixed(1));
-    root.setAttribute(
-      "aria-valuetext",
-      formatDb(loudest, { floorDb: scale.minDb })
-    );
-    root.dataset.zone = zoneForDb(loudest, scale.zones);
+    root.setAttribute("aria-valuetext", text);
+    root.dataset.zone = zone;
   };
 
-  return (nowMs: number, scale: MeterScale) => {
+  const paint = (frameMs: number): boolean => {
+    // Hidden: sleep. Coming back into view wakes the painter.
     if (!options.visible.current) {
-      return;
+      return false;
     }
+    const nowMs = clock(frameMs);
     if (
       options.reducedMotion &&
       nowMs - lastPaintMs < REDUCED_MOTION_INTERVAL_MS
     ) {
-      return;
+      return true;
     }
     lastPaintMs = nowMs;
     const frame = options.latest.current;
     let loudest = SILENCE_DB;
+    let settled = true;
+    let inputClipping = false;
     for (const [index, element] of options.channels) {
       const input = frame?.channels[index] ?? silentLevel;
       if (input.peakDb >= CLIP_THRESHOLD_DB) {
         clipUntil = nowMs + CLIP_HOLD_MS;
+        inputClipping = true;
       }
-      loudest = Math.max(
-        loudest,
-        paintChannel(index, element, input, nowMs, scale)
-      );
+      const painted = paintChannel(index, element, input, nowMs);
+      loudest = Math.max(loudest, painted.db);
+      settled &&= painted.settled;
     }
     const root = options.root.current;
     if (root) {
-      paintRoot(root, loudest, nowMs, scale);
+      paintRoot(root, loudest, nowMs, settled);
     }
+    // A clip light counting down after the input dropped needs the frames
+    // that turn it off; one held by a still-clipping input does not.
+    const releasingClip = nowMs < clipUntil && !inputClipping;
+    return !settled || releasingClip;
+  };
+
+  return {
+    paint,
+    setScale: (next) => {
+      scale = next;
+    },
   };
 };
 
@@ -673,13 +739,20 @@ export const LevelMeter = ({
   const latestRef = useRef<MeterFrame | null>(null);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const channelsRef = useRef(new Map<number, HTMLElement>());
-  const visibleRef = useVisibility(rootRef);
+  // Wakes the painter when something changed. A settled meter sleeps.
+  const wakeRef = useRef<() => void>(noop);
+  const visibleRef = useVisibility(rootRef, (visible) => {
+    if (visible) {
+      wakeRef.current();
+    }
+  });
   const [observedCount, setObservedCount] = useState<number | null>(null);
 
   const accept = useCallback(
     (frame: MeterFrame) => {
       latestRef.current = frame;
       frames.emit(frame);
+      wakeRef.current();
     },
     [frames]
   );
@@ -729,6 +802,7 @@ export const LevelMeter = ({
       } else {
         channelsRef.current.delete(index);
       }
+      wakeRef.current();
     },
     []
   );
@@ -746,20 +820,34 @@ export const LevelMeter = ({
     [maxDb, minDb, taperFn, zones]
   );
   const readScale = useEffectEvent(() => scale);
+  const painterRef = useRef<MeterPainter | null>(null);
 
   useEffect(() => {
-    const paint = createMeterPainter({
+    const painter = createMeterPainter({
       ballistics: JSON.parse(ballisticsKey) as BallisticsInput,
       channels: channelsRef.current,
       latest: latestRef,
       reducedMotion,
       root: rootRef,
+      scale: readScale(),
       visible: visibleRef,
     });
-    return subscribeFrame((nowMs) => {
-      paint(nowMs, readScale());
-    });
+    const task = createFrameTask(painter.paint);
+    painterRef.current = painter;
+    wakeRef.current = task.wake;
+    return () => {
+      painterRef.current = null;
+      wakeRef.current = noop;
+      task.stop();
+    };
   }, [ballisticsKey, reducedMotion, visibleRef]);
+
+  // A new range or zones array reaches the painter, and repaints a meter that
+  // had settled.
+  useEffect(() => {
+    painterRef.current?.setScale(scale);
+    wakeRef.current();
+  }, [scale]);
 
   useImperativeHandle(
     actionsRef,

@@ -15,7 +15,7 @@ interface FrameSource<T> {
 }
 ```
 
-Pass one as `source` and the component subscribes and paints itself on every animation frame, without re-rendering React. This is the fastest way, and the one to use for live audio.
+Pass one as `source` and the component subscribes and paints itself on every animation frame, without re-rendering React. This is the fastest way, and the one to use for live audio. A meter that has settled, has gone quiet or is off screen stops requesting frames, and the next frame or value wakes it, so an idle mixer costs nothing.
 
 ```tsx
 const analyser = useAudioAnalyser(stream);

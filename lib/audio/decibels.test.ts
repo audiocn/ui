@@ -76,6 +76,12 @@ describe("formatDb", () => {
     expect(formatDb(-0.04)).toBe("0.0 dB");
   });
 
+  it("shows two hyphens, never a dash, when there is no reading", () => {
+    expect(formatDb(Number.NaN)).toBe("-- dB");
+    expect(formatDb(Number.NaN, { unit: false })).toBe("--");
+    expect(formatDb(Number.NaN)).not.toContain("\u2014");
+  });
+
   it("formats silence and values below the floor", () => {
     expect(formatDb(Number.NEGATIVE_INFINITY)).toBe("−∞ dB");
     expect(formatDb(-70, { floorDb: -60 })).toBe("−∞ dB");
