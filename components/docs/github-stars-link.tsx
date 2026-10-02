@@ -1,7 +1,7 @@
 import { GitHubStars } from "@/components/docs/github-stars";
 import { siteConfig } from "@/lib/site";
 
-const ONE_DAY_IN_SECONDS = 86_400;
+const ONE_HOUR_IN_SECONDS = 3600;
 
 const getStargazersCount = async (): Promise<number> => {
   try {
@@ -9,7 +9,7 @@ const getStargazersCount = async (): Promise<number> => {
       `https://api.github.com/repos/${siteConfig.githubRepo}`,
       {
         headers: { Accept: "application/vnd.github+json" },
-        next: { revalidate: ONE_DAY_IN_SECONDS },
+        next: { revalidate: ONE_HOUR_IN_SECONDS },
       }
     );
     if (!response.ok) {
@@ -24,7 +24,7 @@ const getStargazersCount = async (): Promise<number> => {
   }
 };
 
-/** Navbar link to the repo with a server-fetched star count, revalidated daily. */
+/** Navbar link to the repo with a server-fetched star count, revalidated hourly. */
 export const GitHubStarsLink = async () => {
   const stargazersCount = await getStargazersCount();
 
