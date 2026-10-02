@@ -1,9 +1,11 @@
 import type { BaseLayoutProps } from "fumadocs-ui/layouts/shared";
 
-import { BrandLogo } from "@/components/brand-logo";
+import {
+  DocsBrandNavTitle,
+  HomeBrandNavTitle,
+} from "@/components/brand-nav-title";
 import { GitHubStarsLink } from "@/components/docs/github-stars-link";
 import { SidebarControls } from "@/components/docs/sidebar-controls";
-import { siteConfig } from "@/lib/site";
 
 interface BaseOptionsConfig {
   /**
@@ -32,16 +34,6 @@ export const baseOptions = ({
           } as const,
         ]),
   ],
-  nav: {
-    title: (
-      <span className="font-heading inline-flex items-center gap-1 font-semibold tracking-tight">
-        <BrandLogo
-          className={docs ? "size-6" : undefined}
-          size={docs ? 24 : 32}
-        />
-        {siteConfig.name}
-      </span>
-    ),
-  },
+  slots: { navTitle: docs ? DocsBrandNavTitle : HomeBrandNavTitle },
   ...(docs && { themeSwitch: { component: <SidebarControls /> } }),
 });

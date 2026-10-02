@@ -1,6 +1,8 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 
+import { createBrandArchive } from "./create-brand-archive.mjs";
+
 const require = createRequire(import.meta.url);
 const nextRequire = createRequire(require.resolve("next/package.json"));
 const sharp = nextRequire("sharp");
@@ -15,7 +17,7 @@ const icon = logo
   .replace('stroke-width="8"', 'stroke-width="10.5"')
   .replace(
     /(?<root><svg\b[^>]*>)/u,
-    '$<root>\n  <circle cx="64" cy="64" r="64" fill="#000" stroke="none" />\n  <g transform="translate(0 0.5)">'
+    '$<root>\n  <circle cx="64" cy="64" r="64" fill="#000" stroke="none" />\n  <g transform="translate(-1.5 5)">'
   )
   .replace("</svg>", "  </g>\n</svg>");
 await writeFile(new URL("../app/icon.svg", import.meta.url), icon);
@@ -60,3 +62,47 @@ await sharp(Buffer.from(icon), { density: svgDensity })
   .flatten({ background: "#000000" })
   .png()
   .toFile(new URL("../app/apple-icon.png", import.meta.url).pathname);
+
+const wordmark = await readFile(
+  new URL("../public/brand/wordmark.svg", import.meta.url),
+  "utf-8"
+);
+const whiteLogo = logo.toString().replace('stroke="#000"', 'stroke="#fff"');
+const whiteWordmark = wordmark.replace('fill="#000"', 'fill="#fff"');
+const assetExports = [
+  { bytes: logo, name: "logo.svg" },
+  { bytes: Buffer.from(whiteLogo), name: "logo-white.svg" },
+  { bytes: Buffer.from(wordmark), name: "wordmark.svg" },
+  { bytes: Buffer.from(whiteWordmark), name: "wordmark-white.svg" },
+];
+const pngExports = await Promise.all(
+  assetExports.map(async ({ name, bytes }) => ({
+    bytes: await sharp(bytes, { density: 576 })
+      .resize({ width: 1024 })
+      .png()
+      .toBuffer(),
+    name: name.replace(/\.svg$/u, ".png"),
+  }))
+);
+assetExports.push(...pngExports);
+await Promise.all(
+  assetExports.map(({ name, bytes }) =>
+    writeFile(new URL(`../public/brand/${name}`, import.meta.url), bytes)
+  )
+);
+const iconExports = await Promise.all(
+  ["icon.svg", "icon.png", "apple-icon.png", "favicon.ico"].map(
+    async (name) => ({
+      bytes: await readFile(new URL(`../app/${name}`, import.meta.url)),
+      name,
+    })
+  )
+);
+await writeFile(
+  new URL("../public/brand/audiocn-brand-assets.zip", import.meta.url),
+  createBrandArchive([...assetExports, ...iconExports])
+);
+await writeFile(
+  new URL("../lib/brand-assets.json", import.meta.url),
+  `${JSON.stringify({ logomarkSVG: logo.toString(), logotypeSVG: wordmark }, null, 2)}\n`
+);

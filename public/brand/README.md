@@ -1,10 +1,16 @@
 # audiocn logo
 
-Browser icons use a round black background, a vertically centered white knob and heavier strokes for clarity at small sizes. The Apple icon uses the same mark on solid black, with the system supplying its rounded mask.
+Browser icons use a round black background, an optically centered white knob and heavier strokes for clarity at small sizes. The icon shifts the mark 1.5 viewBox units left and 5 down to balance the open track and diagonal indicator. The Apple icon uses the same mark on solid black, with the system supplying its rounded mask.
 
 The approved mark is a thick, solid black open circular track with one diagonal indicator and no knob body. `logo.svg` is the transparent vector master used by the site and social cards. It recreates the selected raster concept using two rounded strokes, with no embedded bitmap. The site inverts the mark in dark mode for contrast.
 
 Run `pnpm brand:build` to regenerate the SVG browser icon, 16/32/48px ICO fallback, 64px PNG browser icon, and 180px Apple touch icon from this master. The normal build runs this too.
+
+The same command generates black and white SVG/PNG exports and `audiocn-brand-assets.zip`, containing the logo, wordmark and icons. PNG logos are transparent exports at 1024px width, not the source of the site logo. `lib/brand-assets.json` supplies the exact SVG source for clipboard actions without fetching during the clipboard permission gesture.
+
+The wordmark is outlined Outfit Semibold (600) with -0.025em tracking, matching the site heading font. It needs no font installation. Its outlines were prepared from the Google Fonts Outfit variable TTF with the installed Next.js fontkit. To change its typography, recreate `wordmark.svg`, then run `pnpm brand:build`.
+
+Right-click or long-press the navigation logo for SVG copy and download actions. The footer's Brand assets link downloads the complete archive. No guidelines page is included.
 
 Run `pnpm og:build` to refresh every social card and the existing README cards at 2x resolution after a branding change. `pnpm og:build --verify` also checks repeated captures are identical.
 

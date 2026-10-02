@@ -34,6 +34,13 @@ export const SiteFooter = () => (
         <Link className={FOOTER_LINK_CLASS} href="/contributors">
           Contributors
         </Link>
+        <a
+          className={FOOTER_LINK_CLASS}
+          download="audiocn-brand-assets.zip"
+          href="/brand/audiocn-brand-assets.zip"
+        >
+          Brand assets
+        </a>
       </nav>
     </div>
   </footer>
