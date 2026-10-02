@@ -346,7 +346,7 @@ export const LevelMeterChannels = ({
   return (
     <div
       className={cn(
-        "flex min-h-0 min-w-0 flex-1 gap-(--meter-gap)",
+        "relative flex min-h-0 min-w-0 flex-1 gap-(--meter-gap)",
         orientation === "horizontal" ? "flex-col" : "h-full flex-row",
         className
       )}
@@ -509,10 +509,19 @@ export type LevelMeterScaleProps = Omit<
   "minDb" | "maxDb" | "taper" | "orientation"
 >;
 
-export const LevelMeterScale = (props: LevelMeterScaleProps) => {
+export const LevelMeterScale = ({
+  className,
+  ...props
+}: LevelMeterScaleProps) => {
   const { maxDb, minDb, orientation, taper } = useLevelMeter("LevelMeterScale");
+  // Horizontal meters reserve space below the tracks for the scale.
   return (
     <DbScale
+      className={cn(
+        orientation === "horizontal" &&
+          "absolute top-[calc(100%+var(--meter-gap))] left-0 h-(--meter-scale-size)",
+        className
+      )}
       maxDb={maxDb}
       minDb={minDb}
       orientation={orientation}
@@ -558,7 +567,8 @@ const levelMeterVariants = cva(
     },
     variants: {
       orientation: {
-        horizontal: "w-full flex-row items-center",
+        horizontal:
+          "w-full flex-row items-center [--meter-scale-size:1rem] has-[[data-slot=db-scale]]:pb-[calc(var(--meter-scale-size)+var(--meter-gap))]",
         vertical: "min-h-32 flex-col items-center",
       },
       size: {
