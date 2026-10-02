@@ -4,6 +4,7 @@ import {
   createFrameTask,
   createPainterClock,
   MAX_FRAME_GAP_MS,
+  subscribeFrame,
 } from "@/lib/audio/frame-loop";
 import { useFakeFrames } from "@/test/fake-frames";
 
@@ -44,6 +45,22 @@ describe("createFrameTask", () => {
     expect(step).toHaveBeenCalledTimes(2);
     expect(vi.getTimerCount()).toBe(0);
     task.stop();
+  });
+
+  it("does not queue a duplicate frame when a task wakes during a tick", () => {
+    const step = vi.fn(() => false);
+    const task = createFrameTask(step);
+    const unsubscribe = subscribeFrame(() => task.wake());
+
+    try {
+      vi.advanceTimersByTime(FRAME_MS);
+
+      expect(step).toHaveBeenCalledTimes(2);
+      expect(vi.getTimerCount()).toBe(1);
+    } finally {
+      unsubscribe();
+      task.stop();
+    }
   });
 
   it("never runs again once stopped", () => {
