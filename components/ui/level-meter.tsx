@@ -559,7 +559,8 @@ export const LevelMeterClip = (props: LevelMeterClipProps) => {
 };
 
 const levelMeterVariants = cva(
-  "group/level-meter flex gap-2 [--meter-gap:0.25rem] data-dimmed:opacity-50",
+  // Animated bars and peak markers must not become the page's scroll anchor.
+  "group/level-meter flex gap-2 [--meter-gap:0.25rem] [overflow-anchor:none] data-dimmed:opacity-50",
   {
     defaultVariants: {
       orientation: "horizontal",
