@@ -256,9 +256,27 @@ describe("LiveWaveform scrolling", () => {
     const paints = context.clearRect.mock.calls.length;
     advance(160);
     expect(context.clearRect).toHaveBeenCalledTimes(paints);
+    expect(vi.getTimerCount()).toBe(0);
     actions.current?.clear();
     advance(16);
     expect(bars).toHaveLength(0);
+  });
+
+  it("clears a sleeping waveform when its source is disconnected", () => {
+    const { bars } = stubCanvas();
+    const source = createFrameEmitter<VisualFrame>();
+    const { rerender } = render(
+      <LiveWaveform fadeEdges={false} mode="scrolling" source={source} />
+    );
+    source.emit(frameOf());
+    advance(160);
+    expect(bars.length).toBeGreaterThan(0);
+    expect(vi.getTimerCount()).toBe(0);
+
+    rerender(<LiveWaveform fadeEdges={false} mode="scrolling" source={null} />);
+    advance(16);
+    expect(bars).toHaveLength(0);
+    expect(vi.getTimerCount()).toBe(0);
   });
 
   it("keeps scrolling continuous when drawing options change", () => {
