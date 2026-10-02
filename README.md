@@ -9,7 +9,7 @@ Level meters, visualizers, faders, knobs, channel strips, a complete mixer, play
 Copy, paste, make them yours.</p>
 
 <p>
-  <a href="https://audiocn.dev/docs/components"><img src="https://shieldcn.dev/badge/components-23.svg?logo=lu:AudioLines&amp;mode=light&amp;valueColor=10b981" alt="23 components" /></a>
+  <a href="https://audiocn.dev/docs/components"><img src="https://shieldcn.dev/badge/components-24.svg?logo=lu:AudioLines&amp;mode=light&amp;valueColor=10b981" alt="24 components" /></a>
   <a href="https://audiocn.dev/docs/blocks"><img src="https://shieldcn.dev/badge/blocks-6.svg?logo=lu:LayoutDashboard&amp;mode=light&amp;valueColor=10b981" alt="6 blocks" /></a>
   <a href="https://audiocn.dev/docs/hooks/use-audio-analyser"><img src="https://shieldcn.dev/badge/hooks-16.svg?logo=lu:Webhook&amp;mode=light&amp;valueColor=10b981" alt="16 hooks" /></a>
   <a href="./license.md"><img src="https://shieldcn.dev/badge/license-MIT.svg?logo=lu:Scale&amp;mode=light&amp;valueColor=10b981" alt="MIT licence" /></a>
@@ -68,7 +68,7 @@ Copy, paste, make them yours.</p>
 </table>
 
 <details>
-<summary><strong>All 23 components</strong></summary>
+<summary><strong>All 24 components</strong></summary>
 
 <br />
 
@@ -94,6 +94,7 @@ Copy, paste, make them yours.</p>
 | --- | --- |
 | [Fader](https://audiocn.dev/docs/components/fader) | A volume fader in decibels, with tapers, detents, a scale, reset and an editable value |
 | [Parameter Slider](https://audiocn.dev/docs/components/parameter-slider) | A labelled slider with a numeric input, unit, marks and reset |
+| [Tempo Control](https://audiocn.dev/docs/components/tempo-control) | An editable BPM input with tap tempo and keyboard stepping |
 | [Knob](https://audiocn.dev/docs/components/knob) | A rotary control for dense layouts, drawn in SVG |
 | [Pan Control](https://audiocn.dev/docs/components/pan-control) | Left and right balance with a fill from the centre and a centre detent |
 | [Channel Toggle](https://audiocn.dev/docs/components/channel-toggle) | Mute, solo and monitor buttons with their own pressed colours |
@@ -153,7 +154,7 @@ Web Audio plumbing so the components have something to show. Use them, or feed t
 | [`useAudioDevices`](https://audiocn.dev/docs/hooks/use-audio-devices) | Audio input or output devices, with permission state and live updates |
 | [`useDemoSignal`](https://audiocn.dev/docs/hooks/use-demo-signal) | Synthetic speech, music, tone or noise, for previews, prototypes and tests |
 
-Plus `useAudioContext`, `useFrameSource`, `useLevel`, `useClipHold`, `useReducedMotion` and `useAudioConfig`.
+Plus `useAudioContext`, `useFrameSource`, `useLevel`, `useClipHold`, `useTapTempo`, `useReducedMotion` and `useAudioConfig`.
 
 ## Quick start
 

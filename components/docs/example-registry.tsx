@@ -221,6 +221,18 @@ export const examples: Record<string, ComponentType | undefined> = {
   "system-audio-settings-demo": dynamic(
     () => import("@/components/examples/system-audio-settings-demo")
   ),
+  "tempo-control-controlled": dynamic(
+    () => import("@/components/examples/tempo-control-controlled")
+  ),
+  "tempo-control-demo": dynamic(
+    () => import("@/components/examples/tempo-control-demo")
+  ),
+  "tempo-control-pad": dynamic(
+    () => import("@/components/examples/tempo-control-pad")
+  ),
+  "tempo-control-states": dynamic(
+    () => import("@/components/examples/tempo-control-states")
+  ),
   "track-list-demo": dynamic(
     () => import("@/components/examples/track-list-demo")
   ),

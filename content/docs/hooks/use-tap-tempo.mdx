@@ -1,0 +1,94 @@
+---
+title: useTapTempo
+description: Tap tempo with a rolling average and idle reset.
+---
+
+`useTapTempo` powers the [tempo control](/docs/components/tempo-control). Use it with your own input, sound pad or keyboard shortcut.
+
+```npm
+npx shadcn@latest add @audiocn/use-tap-tempo
+```
+
+## Usage
+
+```tsx
+import { useTapTempo } from "@/hooks/use-tap-tempo";
+
+const tempo = useTapTempo({ defaultValue: 120 });
+```
+
+Call `tempo.tap()` once per beat. The second tap produces a BPM value; later taps average the last four intervals. A gap longer than two seconds starts a fresh sequence without changing the current value on its first tap. Taps less than 80 ms apart are ignored.
+
+BPM values are always whole numbers. Tapped tempos, `value`, `defaultValue` and `setValue()` round to the nearest integer.
+
+Call `tap()` from your app's keyboard handler or hotkey library.
+
+## Options
+
+<PropsTable
+  rows={[
+    ["value / defaultValue", "number", "120 (uncontrolled)", "BPM."],
+    ["min / max", "number", "30 / 600", "Positive integer BPM bounds."],
+    [
+      "tapTimeout",
+      "number",
+      "2000",
+      "Idle milliseconds before a new sequence. Set at least 60000 / min for slower tempos.",
+    ],
+    [
+      "disabled / readOnly",
+      "boolean",
+      "false",
+      "Prevent taps and value changes.",
+    ],
+    [
+      "onValueChange",
+      "(value, details) => void",
+      null,
+      "details.reason: tap, input or keyboard.",
+    ],
+    [
+      "onValueCommitted",
+      "(value) => void",
+      null,
+      "Called after a measured tap, including an unchanged value.",
+    ],
+  ]}
+/>
+
+## Returns
+
+<PropsTable
+  rows={[
+    [
+      "value",
+      "number",
+      null,
+      "Current integer BPM, clamped to the configured range.",
+    ],
+    [
+      "tap",
+      "(event?: Event) => void",
+      null,
+      "Record a tap. Pass its native event to include it in change details.",
+    ],
+    [
+      "setValue",
+      "(value, details?) => void",
+      null,
+      "Change BPM and clear tap history. The default reason is input.",
+    ],
+    [
+      "resetTaps",
+      "() => void",
+      null,
+      "Clear tap history without changing BPM.",
+    ],
+    [
+      "tapCount",
+      "number",
+      "0",
+      "Accepted taps, including the first. Use it to restart visual feedback.",
+    ],
+  ]}
+/>
