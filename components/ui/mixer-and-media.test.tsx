@@ -85,6 +85,30 @@ describe("ChannelStrip", () => {
     expect(screen.getByRole("group", { name: "Mic" })).toHaveClass("shrink-0");
   });
 
+  it("reserves a fader row only when the strip has a fader", () => {
+    render(
+      <ChannelStrip>
+        <ChannelStripTitle>Mic</ChannelStripTitle>
+      </ChannelStrip>
+    );
+    const layout = screen
+      .getByRole("group", { name: "Mic" })
+      .querySelector('[data-slot="channel-strip-layout"]');
+    const classes = layout?.className.split(" ") ?? [];
+    // Without a fader, the stacked and the wide layout are one meter row.
+    expect(classes).toContain(
+      "[grid-template-areas:'header_header_header'_'meter_value_controls']"
+    );
+    expect(classes).toContain(
+      "@xl/channel-strip:[grid-template-areas:'header_meter_value_controls']"
+    );
+    const faderRows = classes.filter((name) => name.includes("fader_value"));
+    expect(faderRows).toHaveLength(4);
+    for (const name of faderRows) {
+      expect(name).toContain("has-[>[data-slot=channel-strip-fader]]");
+    }
+  });
+
   it("exposes its state to custom parts", () => {
     render(
       <ChannelStrip solo>
