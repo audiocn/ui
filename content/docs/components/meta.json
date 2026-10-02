@@ -4,6 +4,7 @@
     "index",
     "---Meters and visualizers---",
     "level-meter",
+    "vu-meter",
     "db-scale",
     "db-readout",
     "clip-indicator",

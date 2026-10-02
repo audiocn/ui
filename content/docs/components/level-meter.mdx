@@ -166,7 +166,12 @@ meter.current?.paint({ channels: [{ peakDb: -9.1 }] });
       '"peak"',
       "How the meter moves.",
     ],
-    ["taper", '"linear" | "audio" | Taper', '"linear"', "Scale law."],
+    [
+      "taper",
+      '"linear" | "audio" | "vu" | Taper',
+      '"linear"',
+      "Scale law. vu is linear in amplitude, like a VU meter.",
+    ],
     [
       "orientation",
       '"horizontal" | "vertical"',
