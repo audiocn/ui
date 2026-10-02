@@ -18,7 +18,8 @@ const tick = (nowMs: number) => {
       reportError(error);
     }
   }
-  if (listeners.size > 0) {
+  // A listener can subscribe during this tick and already schedule the next one.
+  if (listeners.size > 0 && handle === null) {
     handle = requestAnimationFrame(tick);
   }
 };
