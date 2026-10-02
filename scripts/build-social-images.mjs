@@ -2,7 +2,14 @@
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import { once } from "node:events";
-import { mkdir, mkdtemp, readFile, unlink, writeFile } from "node:fs/promises";
+import {
+  mkdir,
+  mkdtemp,
+  readFile,
+  readdir,
+  unlink,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
@@ -12,6 +19,8 @@ import { chromium } from "@playwright/test";
 const root = process.cwd();
 const outputDirectory = path.join(root, "public/og");
 const manifestPath = path.join(root, "lib/social-images.json");
+const readmeDirectory = path.join(root, ".github/readme");
+const readmeScale = 2;
 const port = Number(process.env.AUDIOCN_SOCIAL_PORT ?? 3107);
 const verify = process.argv.includes("--verify");
 if (!Number.isInteger(port) || port < 1024 || port > 65_535) {
@@ -63,10 +72,10 @@ const waitForServer = async () => {
   throw new Error(`Social capture server did not become ready.\n${serverLog}`);
 };
 
-const capture = async (card) => {
+const capture = async (card, deviceScaleFactor = 1) => {
   const context = await browser.newContext({
     colorScheme: "dark",
-    deviceScaleFactor: 1,
+    deviceScaleFactor,
     locale: "en-US",
     viewport: { height: 630, width: 1200 },
   });
@@ -112,13 +121,16 @@ const capture = async (card) => {
     const bytes = await page.locator("[data-social-card]").screenshot({
       animations: "disabled",
       caret: "hide",
-      scale: "css",
+      scale: "device",
     });
-    if (bytes.readUInt32BE(16) !== 1200 || bytes.readUInt32BE(20) !== 630) {
-      throw new Error(`${card.id} did not render at 1200 × 630.`);
+    if (
+      bytes.readUInt32BE(16) !== 1200 * deviceScaleFactor ||
+      bytes.readUInt32BE(20) !== 630 * deviceScaleFactor
+    ) {
+      throw new Error(`${card.id} did not render at the requested scale.`);
     }
-    if (bytes.length > 1_500_000) {
-      throw new Error(`${card.id} exceeds the 1.5 MB social image budget.`);
+    if (bytes.length > 1_500_000 * deviceScaleFactor ** 2) {
+      throw new Error(`${card.id} exceeds the image budget for its scale.`);
     }
     const hash = createHash("sha256").update(bytes).digest("hex").slice(0, 12);
     return { bytes, card, filename: `${card.id}-${hash}.png` };
@@ -176,12 +188,31 @@ try {
       `social image: ${card.id} (${captures.length}/${socialCards.length})${verify ? " — verified identical" : ""}`
     );
   }
+  const readmeFiles = new Set(await readdir(readmeDirectory));
+  const readmeCaptures = [];
+  for (const card of socialCards) {
+    const filename = `${path.basename(card.pathname) || "home"}.png`;
+    if (readmeFiles.has(filename)) {
+      const result = await capture(card, readmeScale);
+      if (verify) {
+        const repeated = await capture(card, readmeScale);
+        if (!result.bytes.equals(repeated.bytes)) {
+          throw new Error(`${filename} changed between two README captures.`);
+        }
+      }
+      readmeCaptures.push({ bytes: result.bytes, filename });
+      console.log(`README image: ${filename}`);
+    }
+  }
   const previous = JSON.parse(await readFile(manifestPath, "utf-8"));
   const manifest = {};
   await mkdir(outputDirectory, { recursive: true });
   for (const { bytes, card, filename } of captures) {
     await writeFile(path.join(outputDirectory, filename), bytes);
     manifest[card.pathname] = { alt: card.alt, url: `/og/${filename}` };
+  }
+  for (const { bytes, filename } of readmeCaptures) {
+    await writeFile(path.join(readmeDirectory, filename), bytes);
   }
   await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
   // Only remove assets owned by the previous manifest, after all captures succeed.
@@ -202,7 +233,9 @@ try {
       );
     }
   }
-  console.log(`Saved ${captures.length} social images and their manifest.`);
+  console.log(
+    `Saved ${captures.length} social images, their manifest and ${readmeCaptures.length} README images.`
+  );
 } finally {
   await browser?.close();
   if (server.exitCode === null) {

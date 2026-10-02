@@ -11,7 +11,7 @@ interface BrandLogoProps {
   size?: number;
 }
 
-/** The wordmark supplies the accessible name; the visualizer is decorative. */
+/** The wordmark supplies the accessible name; the knob mark is decorative. */
 export const BrandLogo = ({
   className,
   size = DEFAULT_SIZE_PX,
