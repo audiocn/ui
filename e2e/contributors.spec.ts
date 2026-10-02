@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-const REPOSITORY_URL = "https://github.com/TheOrcDev/audiocn";
+const REPOSITORY_URL = "https://github.com/audiocn/ui";
 
 for (const url of ["/", "/docs/components/fader"]) {
   test(`the footer on ${url} credits the authors and links to the contributors`, async ({

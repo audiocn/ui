@@ -8,7 +8,7 @@ import {
 import type { Contributor, FetchImplementation } from "@/lib/contributors";
 import { siteConfig } from "@/lib/site";
 
-const REPOSITORY = "TheOrcDev/audiocn";
+const REPOSITORY = "audiocn/ui";
 const CONTRIBUTORS_URL = `https://api.github.com/repos/${REPOSITORY}/contributors?per_page=100`;
 
 const createApiContributor = (overrides: Record<string, unknown> = {}) => ({
