@@ -4,6 +4,7 @@ import { useEffect, useMemo } from "react";
 
 import { clamp, dbToGain, dbToLevel, gainToDb } from "@/lib/audio/decibels";
 import { subscribeFrame } from "@/lib/audio/frame-loop";
+import { appendHistory } from "@/lib/audio/history";
 import type { FrameSource, MeterFrame, VisualFrame } from "@/lib/audio/types";
 
 export type DemoSignalKind = "speech" | "music" | "tone" | "noise" | "silence";
@@ -188,9 +189,6 @@ export const createDemoSignal = (
   let historyIntervalMs = 50;
   let bands = new Float32Array(32);
   let history = new Float32Array(60);
-  let historyStart = 0;
-  let historyLength = 0;
-  let lastHistoryMs = 0;
   let startMs: number | null = null;
   const timeDomain = new Float32Array(TIME_DOMAIN_SIZE);
   const meterFrame: MeterFrame = { channels: [] };
@@ -222,20 +220,10 @@ export const createDemoSignal = (
       options.historySize !== history.length
     ) {
       history = new Float32Array(options.historySize);
-      historyStart = 0;
-      historyLength = 0;
+      visualFrame.historyStart = 0;
+      visualFrame.historyLength = 0;
+      visualFrame.historyPreviousLevel = undefined;
       visualFrame.history = history;
-    }
-  };
-
-  const pushHistory = (level: number) => {
-    const size = history.length;
-    if (historyLength < size) {
-      history[(historyStart + historyLength) % size] = level;
-      historyLength += 1;
-    } else {
-      history[historyStart] = level;
-      historyStart = (historyStart + 1) % size;
     }
   };
 
@@ -269,18 +257,13 @@ export const createDemoSignal = (
       bands[band] = clamp(bandTemplate(activeKind, x) * level * movement, 0, 1);
     }
 
-    if (nowMs - lastHistoryMs >= historyIntervalMs) {
-      lastHistoryMs = nowMs;
-      pushHistory(level);
-    }
+    appendHistory(visualFrame, level, nowMs, historyIntervalMs);
 
     for (let index = 0; index < TIME_DOMAIN_SIZE; index += 1) {
       const time = seconds + index / TIME_DOMAIN_RATE;
       timeDomain[index] = amplitude * sampleWave(activeKind, seed, time);
     }
 
-    visualFrame.historyStart = historyStart;
-    visualFrame.historyLength = historyLength;
     visualFrame.peakDb = gainToDb(loudest);
 
     for (const subscriber of meterSubscribers) {
@@ -294,7 +277,7 @@ export const createDemoSignal = (
   const updateLoop = () => {
     const active = meterSubscribers.size + visualSubscribers.size > 0;
     if (active && !stopLoop) {
-      stopLoop = subscribeFrame(produce);
+      stopLoop = subscribeFrame(produce, "update");
     } else if (!active && stopLoop) {
       stopLoop();
       stopLoop = null;

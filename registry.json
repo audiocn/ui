@@ -52,6 +52,14 @@
         {
           "path": "lib/audio/frame-source.ts",
           "type": "registry:lib"
+        },
+        {
+          "path": "lib/audio/history.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "lib/audio/history-playback.ts",
+          "type": "registry:lib"
         }
       ],
       "cssVars": {
