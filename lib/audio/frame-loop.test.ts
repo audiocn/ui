@@ -6,7 +6,7 @@ import {
   MAX_FRAME_GAP_MS,
   subscribeFrame,
 } from "@/lib/audio/frame-loop";
-import { useFakeFrames } from "@/test/fake-frames";
+import { advance, useFakeFrames } from "@/test/fake-frames";
 
 const FRAME_MS = 16;
 
@@ -110,5 +110,46 @@ describe("createPainterClock", () => {
     clock(500);
     expect(clock(400)).toBe(0);
     expect(clock(416)).toBe(16);
+  });
+});
+
+describe("subscribeFrame", () => {
+  beforeEach(() => {
+    useFakeFrames();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("updates sources before painting regardless of subscription order", () => {
+    const calls: string[] = [];
+    const stopPaint = subscribeFrame(() => calls.push("paint"));
+    const stopUpdate = subscribeFrame(() => calls.push("update"), "update");
+    try {
+      advance(16);
+      expect(calls).toEqual(["update", "paint"]);
+    } finally {
+      stopPaint();
+      stopUpdate();
+    }
+  });
+
+  it("keeps one animation loop when listeners change during a tick", () => {
+    const paint = vi.fn();
+    let stopPaint: (() => void) | undefined;
+    const stopUpdate = subscribeFrame(() => {
+      stopUpdate();
+      stopPaint = subscribeFrame(paint);
+    }, "update");
+    try {
+      advance(48);
+      expect(paint).toHaveBeenCalledTimes(3);
+    } finally {
+      stopUpdate();
+      stopPaint?.();
+    }
+    advance(32);
+    expect(paint).toHaveBeenCalledTimes(3);
   });
 });
