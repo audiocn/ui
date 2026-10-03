@@ -12,6 +12,7 @@ export type SocialPreviewName =
   | "spectrum"
   | "faders"
   | "parameters"
+  | "tempo"
   | "pan"
   | "volume"
   | "channel"
@@ -127,6 +128,7 @@ export const componentPreviews: Record<string, SocialPreviewName | undefined> =
     "smooth-waveform": "smooth-waveform",
     "sound-pad": "pads",
     spectrum: "spectrum",
+    "tempo-control": "tempo",
     "track-list": "tracks",
     "volume-control": "volume",
     waveform: "waveform",
@@ -164,6 +166,7 @@ const contextualPreviews: Record<string, SocialPreviewName | undefined> = {
   "/docs/hooks/use-reduced-motion": "smooth-waveform",
   "/docs/hooks/use-sound": "pads",
   "/docs/hooks/use-system-audio": "system-settings",
+  "/docs/hooks/use-tap-tempo": "tempo",
   "/docs/hooks/use-visibility": "bars",
   "/docs/hooks/use-waveform-data": "waveform",
   "/docs/hooks/use-web-audio-mixer": "system-mixer",
@@ -205,6 +208,7 @@ const previewDescriptions: Record<SocialPreviewName, string> = {
   "system-mixer":
     "a complete system audio mixer with microphone, music, sound pads and master controls",
   "system-settings": "system audio settings with capture, volume and a meter",
+  tempo: "an editable BPM input and a tap tempo button",
   theming: "the same audio controls in light and dark themes",
   toggles: "mute, solo and monitor controls with their pressed states",
   tracks: "a track list with active and playing states",

@@ -147,6 +147,19 @@
       ]
     },
     {
+      "name": "use-tap-tempo",
+      "type": "registry:hook",
+      "title": "useTapTempo",
+      "description": "Tap tempo with a rolling average and idle reset.",
+      "registryDependencies": ["@audiocn/core"],
+      "files": [
+        {
+          "path": "hooks/use-tap-tempo.ts",
+          "type": "registry:hook"
+        }
+      ]
+    },
+    {
       "name": "use-reduced-motion",
       "type": "registry:hook",
       "title": "useReducedMotion",
@@ -472,6 +485,24 @@
       "files": [
         {
           "path": "components/ui/parameter-slider.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "tempo-control",
+      "type": "registry:ui",
+      "title": "Tempo Control",
+      "description": "An editable BPM input with tap tempo, keyboard stepping and a rolling average.",
+      "dependencies": ["@base-ui/react", "class-variance-authority"],
+      "registryDependencies": [
+        "@audiocn/core",
+        "@audiocn/use-audio-config",
+        "@audiocn/use-tap-tempo"
+      ],
+      "files": [
+        {
+          "path": "components/ui/tempo-control.tsx",
           "type": "registry:ui"
         }
       ]

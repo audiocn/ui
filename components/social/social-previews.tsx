@@ -45,6 +45,7 @@ import {
 } from "@/components/ui/mixer";
 import { SmoothWaveform } from "@/components/ui/smooth-waveform";
 import { Spectrum } from "@/components/ui/spectrum";
+import { TempoControl } from "@/components/ui/tempo-control";
 import {
   Waveform,
   WaveformCanvas,
@@ -371,6 +372,8 @@ const BlocksPreview = () => (
   </div>
 );
 
+const TempoPreview = () => <TempoControl defaultValue={120} size="lg" />;
+
 const previews: Record<SocialPreviewName, ComponentType> = {
   bars: BarsPreview,
   blocks: BlocksPreview,
@@ -400,6 +403,7 @@ const previews: Record<SocialPreviewName, ComponentType> = {
   spectrum: SpectrumPreview,
   "system-mixer": SystemMixerPreview,
   "system-settings": SystemSettingsPreview,
+  tempo: TempoPreview,
   theming: ThemingPreview,
   toggles: TogglesPreview,
   tracks: TracksPreview,
