@@ -30,15 +30,27 @@ import {
   MixerSeparator,
   MixerTitle,
 } from "@/components/ui/mixer";
-import { useDemoSignal } from "@/hooks/use-demo-signal";
 import { useMixer } from "@/hooks/use-mixer";
 import { formatDb } from "@/lib/audio/decibels";
 import type { FrameSource, MeterFrame } from "@/lib/audio/types";
+import { useDemoMixer } from "@/lib/docs/use-demo-mixer";
 
 const channels = [
   { icon: <MicrophoneIcon />, id: "mic", kind: "speech", title: "Microphone" },
-  { icon: <DesktopIcon />, id: "system", kind: "noise", title: "System audio" },
-  { icon: <MusicNotesIcon />, id: "music", kind: "music", title: "Music" },
+  {
+    channels: 2,
+    icon: <DesktopIcon />,
+    id: "system",
+    kind: "noise",
+    title: "System audio",
+  },
+  {
+    channels: 2,
+    icon: <MusicNotesIcon />,
+    id: "music",
+    kind: "music",
+    title: "Music",
+  },
 ] as const;
 
 const Strip = ({
@@ -104,14 +116,7 @@ const Strip = ({
 
 const MixerDemo = () => {
   const mixer = useMixer({ channels: channels.map(({ id }) => ({ id })) });
-  const speech = useDemoSignal({ kind: "speech" });
-  const noise = useDemoSignal({ channels: 2, kind: "noise" });
-  const music = useDemoSignal({ channels: 2, kind: "music" });
-  const sources = {
-    mic: speech.meter,
-    music: music.meter,
-    system: noise.meter,
-  };
+  const demo = useDemoMixer(channels, mixer.state);
 
   return (
     <Mixer className="w-full max-w-2xl">
@@ -125,7 +130,7 @@ const MixerDemo = () => {
             id={channel.id}
             key={channel.id}
             mixer={mixer}
-            source={sources[channel.id]}
+            source={demo.sources[channel.id]}
             title={channel.title}
           />
         ))}
@@ -144,7 +149,7 @@ const MixerDemo = () => {
               aria-label="Master level"
               channelCount={2}
               size="sm"
-              source={music.meter}
+              source={demo.master}
             />
           </ChannelStripMeter>
           <ChannelStripFader>

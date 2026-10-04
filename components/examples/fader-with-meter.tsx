@@ -13,7 +13,7 @@ import { useDemoSignal } from "@/hooks/use-demo-signal";
 
 const FaderWithMeter = () => {
   const [gainDb, setGainDb] = useState(0);
-  const signal = useDemoSignal({ channels: 2, kind: "music" });
+  const signal = useDemoSignal({ channels: 2, gainDb, kind: "music" });
 
   return (
     <Fader

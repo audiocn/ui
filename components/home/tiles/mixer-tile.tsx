@@ -28,11 +28,12 @@ import {
   MixerMaster,
   MixerSeparator,
 } from "@/components/ui/mixer";
-import { useDemoSignal } from "@/hooks/use-demo-signal";
 import type { DemoSignalKind } from "@/hooks/use-demo-signal";
 import { useMixer } from "@/hooks/use-mixer";
 import type { Mixer as MixerController } from "@/hooks/use-mixer";
 import { formatDb } from "@/lib/audio/decibels";
+import type { FrameSource, MeterFrame } from "@/lib/audio/types";
+import { useDemoMixer } from "@/lib/docs/use-demo-mixer";
 
 interface Channel {
   id: string;
@@ -92,15 +93,12 @@ const INITIAL_CHANNELS = CHANNELS.map(({ id, gainDb }) => ({ gainDb, id }));
 const Strip = ({
   channel,
   mixer,
+  source,
 }: {
   channel: Channel;
   mixer: MixerController;
+  source: FrameSource<MeterFrame>;
 }) => {
-  const signal = useDemoSignal({
-    channels: channel.channels,
-    kind: channel.kind,
-    seed: channel.seed,
-  });
   const state = mixer.channel(channel.id);
   if (!state) {
     return null;
@@ -120,7 +118,7 @@ const Strip = ({
           aria-label={`${channel.name} level`}
           channelCount={channel.channels}
           size="sm"
-          source={signal.meter}
+          source={source}
         />
       </ChannelStripMeter>
       <ChannelStripFader>
@@ -156,7 +154,7 @@ const Strip = ({
 
 const MixerTile = () => {
   const mixer = useMixer({ channels: INITIAL_CHANNELS });
-  const program = useDemoSignal({ channels: 2, kind: "music", seed: 9 });
+  const demo = useDemoMixer(CHANNELS, mixer.state);
 
   return (
     // The card label titles the tile, so the mixer is named here instead of
@@ -169,7 +167,12 @@ const MixerTile = () => {
     >
       <MixerChannels>
         {CHANNELS.map((channel) => (
-          <Strip channel={channel} key={channel.id} mixer={mixer} />
+          <Strip
+            channel={channel}
+            key={channel.id}
+            mixer={mixer}
+            source={demo.sources[channel.id]}
+          />
         ))}
       </MixerChannels>
       <MixerSeparator />
@@ -186,7 +189,7 @@ const MixerTile = () => {
               aria-label="Master level"
               channelCount={2}
               size="sm"
-              source={program.meter}
+              source={demo.master}
             />
           </ChannelStripMeter>
           <ChannelStripFader>

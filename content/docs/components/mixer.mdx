@@ -5,6 +5,19 @@ description: The container for channel strips, with shared meter settings and ke
 
 <ComponentPreview name="mixer-demo" />
 
+The preview meters each synthetic channel after its fader, mute and solo settings. The master combines those channels, then applies the master fader.
+
+<details>
+<summary>Copy the demo signal helper</summary>
+
+The example uses a docs-only `useDemoMixer` helper. To copy the preview, save the code below as `lib/docs/use-demo-mixer.ts`. It uses [`useDemoSignal`](/docs/hooks/use-demo-signal) and [`useMixer`](/docs/hooks/use-mixer).
+
+Mono channels feed both sides. The helper estimates peak by summing amplitudes and RMS by summing powers. For audio samples, connect [`useWebAudioMixer`](/docs/hooks/use-web-audio-mixer) to the same components.
+
+<ComponentSource path="lib/docs/use-demo-mixer.ts" />
+
+</details>
+
 ## Installation
 
 ```npm

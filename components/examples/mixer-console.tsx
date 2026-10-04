@@ -49,8 +49,13 @@ const ConsoleStrip = ({
   seed: number;
   mixer: MixerController;
 }) => {
-  const signal = useDemoSignal({ kind, seed });
   const channel = mixer.channel(id);
+  const signal = useDemoSignal({
+    gainDb: channel?.gainDb,
+    kind,
+    playing: mixer.isAudible(id),
+    seed,
+  });
   if (!channel) {
     return null;
   }

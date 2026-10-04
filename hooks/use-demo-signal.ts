@@ -22,6 +22,8 @@ export interface DemoSignalOptions {
   historySize?: number;
   /** Time between history entries. Default 50 ms. */
   historyIntervalMs?: number;
+  /** Gain applied to the signal in dB. Default 0; -Infinity silences it. */
+  gainDb?: number;
   /** When false the signal falls silent. Default true. */
   playing?: boolean;
 }
@@ -186,6 +188,7 @@ export const createDemoSignal = (
   let channels = 1;
   let seed = 1;
   let playing = true;
+  let gainDb = 0;
   let historyIntervalMs = 50;
   let bands = new Float32Array(32);
   let history = new Float32Array(60);
@@ -210,6 +213,7 @@ export const createDemoSignal = (
     channels = clamp(Math.round(options.channels ?? channels), 1, 8);
     seed = options.seed ?? seed;
     playing = options.playing ?? playing;
+    gainDb = options.gainDb ?? gainDb;
     historyIntervalMs = options.historyIntervalMs ?? historyIntervalMs;
     if (options.bands !== undefined && options.bands !== bands.length) {
       bands = new Float32Array(options.bands);
@@ -231,7 +235,9 @@ export const createDemoSignal = (
     startMs ??= nowMs;
     const seconds = (nowMs - startMs) / MS_PER_SECOND;
     const activeKind: DemoSignalKind = playing ? kind : "silence";
-    const amplitude = Math.min(1, amplitudeFor(activeKind, seed, seconds));
+    const inputAmplitude = Math.min(1, amplitudeFor(activeKind, seed, seconds));
+    const gain = dbToGain(gainDb);
+    const amplitude = inputAmplitude * gain;
     const crestGain = dbToGain(-CREST_DB[activeKind]);
 
     meterFrame.channels.length = channels;
@@ -241,7 +247,7 @@ export const createDemoSignal = (
         channel === 0
           ? 1
           : 1 + 0.3 * (smoothNoise(seed + 17 * channel, seconds * 3) - 0.5);
-      const channelAmplitude = Math.min(1, amplitude * wobble);
+      const channelAmplitude = Math.min(1, inputAmplitude * wobble) * gain;
       loudest = Math.max(loudest, channelAmplitude);
       meterFrame.channels[channel] = {
         peakDb: gainToDb(channelAmplitude),
@@ -312,6 +318,7 @@ export const useDemoSignal = (options: DemoSignalOptions = {}): DemoSignal => {
   const {
     bands,
     channels,
+    gainDb,
     historyIntervalMs,
     historySize,
     kind,
@@ -323,6 +330,7 @@ export const useDemoSignal = (options: DemoSignalOptions = {}): DemoSignal => {
     signal.configure({
       bands,
       channels,
+      gainDb,
       historyIntervalMs,
       historySize,
       kind,
@@ -333,6 +341,7 @@ export const useDemoSignal = (options: DemoSignalOptions = {}): DemoSignal => {
     signal,
     bands,
     channels,
+    gainDb,
     historyIntervalMs,
     historySize,
     kind,
