@@ -83,7 +83,12 @@ const Strip = ({
         </ChannelStripText>
       </ChannelStripHeader>
       <ChannelStripMeter>
-        <LevelMeter aria-label={`${title} level`} size="sm" source={source} />
+        <LevelMeter
+          aria-label={`${title} level`}
+          ballistics={mixer.isAudible(id) ? undefined : "instant"}
+          size="sm"
+          source={source}
+        />
       </ChannelStripMeter>
       <ChannelStripFader>
         <Fader
@@ -117,6 +122,7 @@ const Strip = ({
 const MixerDemo = () => {
   const mixer = useMixer({ channels: channels.map(({ id }) => ({ id })) });
   const demo = useDemoMixer(channels, mixer.state);
+  const audible = channels.some(({ id }) => mixer.isAudible(id));
 
   return (
     <Mixer className="w-full max-w-2xl">
@@ -147,6 +153,7 @@ const MixerDemo = () => {
           <ChannelStripMeter>
             <LevelMeter
               aria-label="Master level"
+              ballistics={audible ? undefined : "instant"}
               channelCount={2}
               size="sm"
               source={demo.master}

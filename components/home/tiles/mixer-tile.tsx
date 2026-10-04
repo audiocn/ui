@@ -116,6 +116,7 @@ const Strip = ({
       <ChannelStripMeter>
         <LevelMeter
           aria-label={`${channel.name} level`}
+          ballistics={mixer.isAudible(channel.id) ? undefined : "instant"}
           channelCount={channel.channels}
           size="sm"
           source={source}
@@ -155,6 +156,7 @@ const Strip = ({
 const MixerTile = () => {
   const mixer = useMixer({ channels: INITIAL_CHANNELS });
   const demo = useDemoMixer(CHANNELS, mixer.state);
+  const audible = CHANNELS.some(({ id }) => mixer.isAudible(id));
 
   return (
     // The card label titles the tile, so the mixer is named here instead of
@@ -187,6 +189,7 @@ const MixerTile = () => {
           <ChannelStripMeter>
             <LevelMeter
               aria-label="Master level"
+              ballistics={audible ? undefined : "instant"}
               channelCount={2}
               size="sm"
               source={demo.master}

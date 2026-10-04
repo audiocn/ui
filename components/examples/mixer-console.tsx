@@ -71,6 +71,7 @@ const ConsoleStrip = ({
       <ChannelStripMeter>
         <LevelMeter
           aria-label={`${title} level`}
+          ballistics={mixer.isAudible(id) ? undefined : "instant"}
           size="sm"
           source={signal.meter}
         />

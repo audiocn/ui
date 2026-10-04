@@ -74,6 +74,7 @@ const Strip = ({
       <ChannelStripMeter>
         <LevelMeter
           aria-label={`${title} level`}
+          ballistics={mixer.isAudible(id) ? undefined : "instant"}
           channelCount={2}
           className="h-full"
           size="sm"

@@ -45,6 +45,7 @@ const ChannelStripDemo = () => {
       <ChannelStripMeter>
         <LevelMeter
           aria-label="Microphone level"
+          ballistics={muted ? "instant" : undefined}
           size="sm"
           source={signal.meter}
         />
