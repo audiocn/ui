@@ -23,6 +23,8 @@ export const Preview = () => {
 
 <ComponentPreview name="frame-source-demo" />
 
+Pass a fader's value as `gainDb` to meter the signal after gain. Set `playing: false` to mute it. Gain changes preserve the signal's timing and subscriptions, and boosted readings can exceed 0 dBFS.
+
 ## Options
 
 <PropsTable
@@ -34,6 +36,12 @@ export const Preview = () => {
       "What the signal sounds like.",
     ],
     ["channels", "number", "1", "1 for mono, 2 for stereo."],
+    [
+      "gainDb",
+      "number",
+      "0",
+      "Gain applied to meter and visual frames. -Infinity silences the signal.",
+    ],
     ["seed", "number", "1", "Changes the pattern while keeping it repeatable."],
     ["bands", "number", "32", "Frequency bands per visual frame."],
     ["historySize", "number", "60", "Entries in the level history ring."],
