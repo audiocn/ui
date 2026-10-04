@@ -412,7 +412,12 @@ export const KnobDial = ({
       aria-valuenow={value}
       aria-valuetext={format(value)}
       className={cn(
-        "relative size-(--knob-size) cursor-grab touch-none rounded-full outline-none aria-disabled:cursor-default data-dragging:cursor-grabbing",
+        "relative size-(--knob-size) cursor-grab touch-none rounded-full outline-none aria-disabled:cursor-default",
+        {
+          "data-dragging:cursor-ew-resize": dial.dragDirection === "horizontal",
+          "data-dragging:cursor-grabbing": dial.dragDirection === "circular",
+          "data-dragging:cursor-ns-resize": dial.dragDirection === "vertical",
+        },
         className
       )}
       data-dragging={dragging ? "" : undefined}
