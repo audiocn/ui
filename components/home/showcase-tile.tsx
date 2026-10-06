@@ -22,10 +22,6 @@ const TILES = {
     ),
     placeholder: <Skeleton className="h-10 w-full" />,
   },
-  eq: {
-    Component: lazy(() => import("@/components/home/tiles/eq-tile")),
-    placeholder: <Skeleton className="h-46 w-full" />,
-  },
   faders: {
     Component: lazy(() => import("@/components/home/tiles/faders-tile")),
     placeholder: <Skeleton className="h-62 w-full" />,
@@ -65,6 +61,10 @@ const TILES = {
   voice: {
     Component: lazy(() => import("@/components/home/tiles/voice-tile")),
     placeholder: <Skeleton className="h-40 w-full" />,
+  },
+  "volume-knob": {
+    Component: lazy(() => import("@/components/home/tiles/volume-knob-tile")),
+    placeholder: <Skeleton className="size-44" />,
   },
   waveform: {
     Component: lazy(() => import("@/components/home/tiles/waveform-tile")),
