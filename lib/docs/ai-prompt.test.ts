@@ -33,6 +33,22 @@ npx shadcn@latest add @audiocn/bar-visualizer
 
 A \`FrameSource\` drives the bars.
 
+## Examples
+
+### Idle and loading
+
+\`idle\` decides what bars do without a signal.
+
+\`\`\`tsx title="components/examples/bar-visualizer-states.tsx"
+const BarVisualizerStates = () => <BarVisualizer idle="pulse" />;
+\`\`\`
+
+### Inside a badge
+
+\`\`\`tsx title="components/examples/bar-visualizer-mini.tsx"
+const BarVisualizerMini = () => <Badge><BarVisualizer /></Badge>;
+\`\`\`
+
 ## Accessibility
 
 Pass \`aria-label\`.
@@ -81,18 +97,67 @@ describe("buildAiPrompt", () => {
     expect(prompt).toContain("each with a matching `-foreground` token");
   });
 
-  it("flags items an example needs that the command does not install", () => {
-    expect(prompt).toContain("`@audiocn/use-demo-signal`");
-  });
-
   it("keeps the page body and closes with what to do next", () => {
     expect(prompt).toContain("## Usage");
+    expect(prompt).toContain("A `FrameSource` drives the bars.");
     expect(prompt).toContain("## Accessibility");
     expect(prompt).toContain(
       "- Import it from `@/components/ui/bar-visualizer`."
     );
     expect(prompt).toContain("- Keep the accessibility notes above.");
     expect(prompt).toContain("https://audiocn.dev/llms.txt");
+  });
+
+  it("replaces the examples with a link to each one", () => {
+    expect(prompt).not.toContain("## Examples");
+    expect(prompt).not.toContain("bar-visualizer-states.tsx");
+    expect(prompt).not.toContain("BarVisualizerMini");
+
+    expect(prompt).toContain(
+      "- This page in the browser, with a live preview and the full source of each example: https://audiocn.dev/docs/components/bar-visualizer"
+    );
+    expect(prompt).toContain(
+      "  - Idle and loading: https://audiocn.dev/docs/components/bar-visualizer#idle-and-loading"
+    );
+    expect(prompt).toContain(
+      "  - Inside a badge: https://audiocn.dev/docs/components/bar-visualizer#inside-a-badge"
+    );
+  });
+
+  // The anchors have to match the ids the docs page puts on its headings.
+  it("slugs an example title the way the page does", () => {
+    const linked = buildAiPrompt({
+      body: "## Examples\n\n### Latching, driven by hand\n\n### LevelMeterScale, LevelMeterValue, LevelMeterClip\n",
+      install: resolveInstall(item("level-meter")),
+      pathname: "/docs/components/level-meter",
+      title: "Level Meter",
+    });
+    expect(linked).toContain("#latching-driven-by-hand");
+    expect(linked).toContain("#levelmeterscale-levelmetervalue-levelmeterclip");
+  });
+
+  it("still warns about an item only the linked examples import", () => {
+    expect(prompt).toContain("The examples on this page also import");
+    expect(prompt).toContain("`@audiocn/use-demo-signal`");
+  });
+
+  it("keeps the sections that follow the examples", () => {
+    const resources = prompt.indexOf("## Resources");
+    expect(prompt.indexOf("## Accessibility")).toBeLessThan(resources);
+    expect(resources).toBeGreaterThan(prompt.indexOf("## After installing"));
+  });
+
+  it("links the page plainly when it has no examples", () => {
+    const hook = buildAiPrompt({
+      body: "## Usage\n\nCall it.\n",
+      install: resolveInstall(item("use-audio-analyser")),
+      pathname: "/docs/hooks/use-audio-analyser",
+      title: "useAudioAnalyser",
+    });
+    expect(hook).toContain(
+      "- This page in the browser: https://audiocn.dev/docs/hooks/use-audio-analyser"
+    );
+    expect(hook).not.toContain("live preview");
   });
 
   it("points at feeding data only for something that takes frames", () => {

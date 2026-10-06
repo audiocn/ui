@@ -15,12 +15,39 @@ test("a component page serves a Markdown twin written for agents", async ({
     "# Add Bar Visualizer from audiocn to this project"
   );
   expect(markdown).toContain(INSTALL);
-  // The example, inlined from the file the page previews.
+  // The demo the page leads with, inlined from its file.
   expect(markdown).toContain("components/examples/bar-visualizer-demo.tsx");
   expect(markdown).toContain("| Prop | Type | Default | Description |");
   expect(markdown).toContain("@/components/ui/bar-visualizer");
   // Every MDX component has a Markdown form, so none leak as JSX.
   expect(markdown).not.toMatch(/<(?:ComponentPreview|PropsTable|Callout)\b/u);
+});
+
+test("the examples become links to the page's own anchors", async ({
+  page,
+  request,
+}) => {
+  const response = await request.get(`${PAGE}.md`);
+  const markdown = await response.text();
+
+  expect(markdown).not.toContain("## Examples");
+  expect(markdown).toContain("## Resources");
+  expect(markdown).toContain(
+    `- Idle and loading: https://audiocn.dev${PAGE}#idle-and-loading`
+  );
+  // The demo files the section used to inline.
+  expect(markdown).not.toContain("bar-visualizer-states.tsx");
+
+  // Each anchor has to exist on the rendered page.
+  await page.goto(PAGE);
+  const anchors = markdown
+    .split("\n")
+    .filter((line) => line.includes(`${PAGE}#`))
+    .map((line) => line.slice(line.lastIndexOf("#") + 1));
+  expect(anchors.length).toBeGreaterThan(0);
+  await Promise.all(
+    anchors.map((anchor) => expect(page.locator(`#${anchor}`)).toHaveCount(1))
+  );
 });
 
 test("a page with no registry item still has a Markdown twin", async ({

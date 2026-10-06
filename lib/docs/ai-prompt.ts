@@ -121,6 +121,81 @@ const stripInstallCommand = (body: string, name: string): string => {
   return collapse(kept.join("\n"));
 };
 
+const SUBHEADING = /^###\s+/u;
+const NON_SLUG = /[^a-z0-9 -]+/gu;
+const SPACES = /\s+/gu;
+
+export interface ExampleLink {
+  title: string;
+  /** The heading's id on the rendered page, such as `idle-and-loading`. */
+  anchor: string;
+}
+
+/** The same slug the docs page puts on the heading. */
+const slugify = (text: string): string =>
+  text.toLowerCase().replaceAll(NON_SLUG, "").trim().replaceAll(SPACES, "-");
+
+/**
+ * Lift the `## Examples` section out of the body, keeping each example's title
+ * and anchor for the Resources section. The demo files are most of the document
+ * and most of each one is layout for the docs page rather than something to
+ * copy; the API reference carries the same props.
+ */
+const takeExamples = (
+  body: string
+): { body: string; examples: ExampleLink[] } => {
+  const examples: ExampleLink[] = [];
+  let inExamples = false;
+
+  const kept = mapBlocks(body, (lines, isFence) => {
+    if (isFence) {
+      return inExamples ? [] : lines;
+    }
+
+    const heading = headingText(lines[0]);
+    if (heading !== undefined) {
+      inExamples = heading === "Examples";
+      return inExamples ? [] : lines;
+    }
+
+    if (!inExamples) {
+      return lines;
+    }
+    if (SUBHEADING.test(lines[0])) {
+      const title = lines[0].replace(SUBHEADING, "").trim();
+      examples.push({ anchor: slugify(title), title });
+    }
+    return [];
+  });
+
+  return { body: collapse(kept), examples };
+};
+
+const resourcesSection = (
+  pathname: string,
+  examples: ExampleLink[]
+): string => {
+  const page = absoluteUrl(pathname);
+  const lines = ["## Resources", ""];
+
+  if (examples.length > 0) {
+    lines.push(
+      `- This page in the browser, with a live preview and the full source of each example: ${page}`,
+      ...examples.map(({ title, anchor }) => `  - ${title}: ${page}#${anchor}`)
+    );
+  } else {
+    lines.push(`- This page in the browser: ${page}`);
+  }
+
+  lines.push(
+    "- Every docs page is available as Markdown by appending `.md` to its URL.",
+    `- Index of all components, hooks and blocks: ${absoluteUrl("/llms.txt")}`,
+    `- Full documentation in one file: ${absoluteUrl("/llms-full.txt")}`
+  );
+
+  return lines.join("\n");
+};
+
 const IMPORT = /^import\s[\s\S]*?from\s+"@\/[^"]+";$/gmu;
 const QUOTED = /"[^"]+"/u;
 
@@ -205,9 +280,12 @@ export const buildAiPrompt = ({
   const { item } = install;
   const noun = nounFor(item);
   const command = `npx shadcn@latest add ${siteConfig.registryNamespace}/${item.name}`;
-  const pageBody = stripInstallCommand(body, item.name);
+  const { body: pageBody, examples } = takeExamples(
+    stripInstallCommand(body, item.name)
+  );
   const dependsOn = installList(install);
-  const extra = extraItems(pageBody, install);
+  // From the whole page: the examples it links to import these too.
+  const extra = extraItems(body, install);
 
   const sections: string[] = [
     `# Add ${title} from audiocn to this project`,
@@ -262,7 +340,7 @@ export const buildAiPrompt = ({
       (entry) => `\`${siteConfig.registryNamespace}/${entry.name}\``
     );
     sections.push(
-      `The examples below also import ${entries.join(", ")}, which the command above does not install. Add them only to run an example as written; a real app feeds the ${noun} from its own audio instead.`
+      `The examples on this page also import ${entries.join(", ")}, which the command above does not install. Add them only to run an example as written; a real app feeds the ${noun} from its own audio instead.`
     );
   }
 
@@ -284,13 +362,7 @@ export const buildAiPrompt = ({
 
   sections.push(
     `## After installing\n\n${after.join("\n")}`,
-    [
-      "## More from audiocn",
-      "",
-      "- Every docs page is available as Markdown by appending `.md` to its URL.",
-      `- Index of all components, hooks and blocks: ${absoluteUrl("/llms.txt")}`,
-      `- Full documentation in one file: ${absoluteUrl("/llms-full.txt")}`,
-    ].join("\n")
+    resourcesSection(pathname, examples)
   );
 
   return `${collapse(sections.join("\n\n"))}\n`;
