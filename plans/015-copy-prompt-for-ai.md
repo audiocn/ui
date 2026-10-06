@@ -162,6 +162,7 @@ Differences from the plan above, all discovered while writing it:
 - The dropdown menu trigger renders a `Button` through Base UI's `render` prop. Styling the trigger with `buttonVariants()` instead trips `shadcn/require-static-classes`.
 - `components/ui/dropdown-menu.tsx` is stock shadcn output, so it joins `SHADCN_FILES` in `oxlint.config.ts` rather than being rewritten in house style.
 - The TypeScript target is ES2017, which rules out named capture groups, so the regexes in `ai-prompt.ts` capture nothing and the matched text is sliced instead.
+- "Copy component source" fetches `/r/<name>.json` on the deployment being read, not `siteConfig.registryUrl`. The canonical URL 308-redirects to `www`, and a redirect response carries no CORS headers, so the browser refuses the chain and the fetch throws from every origin but `www.audiocn.dev`. The absolute URL is still right for "Open in v0" and the prompt's fallback instructions, which are fetched server-side. Anything the browser fetches from this feature has to be same-origin.
 
 ## Later, not in this plan
 
