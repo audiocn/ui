@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo } from "react";
 
-import { createDemoSignal } from "@/hooks/use-demo-signal";
+import { createDemoSignal, useDemoSignalInput } from "@/hooks/use-demo-signal";
 import type { DemoSignalOptions } from "@/hooks/use-demo-signal";
 import { isChannelAudible } from "@/hooks/use-mixer";
 import type { MixerState } from "@/hooks/use-mixer";
@@ -13,6 +13,9 @@ import type { FrameSource, MeterFrame } from "@/lib/audio/types";
 interface DemoMixerChannel extends DemoSignalOptions {
   id: string;
 }
+
+/** The channel that meters the site's live input, when one is on. */
+const LIVE_CHANNEL_ID = "mic";
 
 /** Docs-only metering: sum peak amplitudes and RMS powers, with mono on both sides. */
 export const createDemoMixer = (channels: readonly DemoMixerChannel[]) => {
@@ -84,20 +87,34 @@ export const createDemoMixer = (channels: readonly DemoMixerChannel[]) => {
       masterGain = state.master.muted ? 0 : dbToGain(state.master.gainDb);
     },
     master,
+    setInput: (input: AudioNode | null) => {
+      for (const { id, signal } of signals) {
+        if (id === LIVE_CHANNEL_ID) {
+          signal.configure({ input });
+        }
+      }
+    },
     sources: Object.fromEntries(
       signals.map(({ id, signal }) => [id, signal.meter])
     ),
   };
 };
 
-/** Keep channel definitions stable; gain, mute and solo follow mixer state. */
+/**
+ * Keep channel definitions stable; gain, mute and solo follow mixer state, and
+ * the `mic` channel follows the live input from a `DemoSignalProvider`.
+ */
 export const useDemoMixer = (
   channels: readonly DemoMixerChannel[],
   state: MixerState
 ) => {
   const demo = useMemo(() => createDemoMixer(channels), [channels]);
+  const input = useDemoSignalInput();
   useEffect(() => {
     demo.configure(state);
   }, [demo, state]);
+  useEffect(() => {
+    demo.setInput(input);
+  }, [demo, input]);
   return demo;
 };

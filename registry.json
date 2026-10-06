@@ -174,8 +174,8 @@
       "name": "use-demo-signal",
       "type": "registry:hook",
       "title": "useDemoSignal",
-      "description": "A synthetic speech, music, tone or noise signal as frame sources, for previews, prototypes and tests.",
-      "registryDependencies": ["@audiocn/core"],
+      "description": "A synthetic speech, music, tone or noise signal as frame sources, for previews, prototypes and tests. A provider can swap in live audio, such as a microphone.",
+      "registryDependencies": ["@audiocn/core", "@audiocn/use-audio-analyser"],
       "files": [
         {
           "path": "hooks/use-demo-signal.ts",

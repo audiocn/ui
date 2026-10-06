@@ -151,7 +151,7 @@ Web Audio plumbing so the components have something to show. Use them, or feed t
 | [`useSound`](https://audiocn.dev/docs/hooks/use-sound) | Low-latency playback of short sounds decoded into memory |
 | [`useWaveformData`](https://audiocn.dev/docs/hooks/use-waveform-data) | Decode an audio file and reduce it to cached waveform peaks |
 | [`useAudioDevices`](https://audiocn.dev/docs/hooks/use-audio-devices) | Audio input or output devices, with permission state and live updates |
-| [`useDemoSignal`](https://audiocn.dev/docs/hooks/use-demo-signal) | Synthetic speech, music, tone or noise, for previews, prototypes and tests |
+| [`useDemoSignal`](https://audiocn.dev/docs/hooks/use-demo-signal) | Synthetic speech, music, tone or noise, for previews, prototypes and tests; a provider swaps in live input |
 
 Plus `useAudioContext`, `useFrameSource`, `useLevel`, `useClipHold`, `useReducedMotion` and `useAudioConfig`.
 

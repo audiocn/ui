@@ -65,3 +65,21 @@ export const createFakeAudioContext = () => {
     gains,
   };
 };
+
+/**
+ * A live input node on a fake AudioContext. Analysers fed from it read a
+ * steady `sample`, so tests can tell live frames from synthetic ones.
+ */
+export const createFakeInput = (sample = 0.5) => {
+  const audio = createFakeAudioContext();
+  const { createAnalyser } = audio.fake;
+  audio.fake.createAnalyser = () => {
+    const analyser = createAnalyser();
+    analyser.getFloatTimeDomainData.mockImplementation(
+      (samples: Float32Array) => samples.fill(sample)
+    );
+    return analyser;
+  };
+  const input = { ...fakeNode(), context: audio.context };
+  return { audio, input, node: input as unknown as AudioNode };
+};

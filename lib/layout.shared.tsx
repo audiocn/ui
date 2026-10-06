@@ -5,6 +5,7 @@ import {
   HomeBrandNavTitle,
 } from "@/components/brand-nav-title";
 import { GitHubStarsLink } from "@/components/docs/github-stars-link";
+import { LiveInputSwitch } from "@/components/docs/live-input";
 import { SidebarControls } from "@/components/docs/sidebar-controls";
 
 interface BaseOptionsConfig {
@@ -27,6 +28,11 @@ export const baseOptions = ({
     ...(docs
       ? []
       : [
+          {
+            children: <LiveInputSwitch />,
+            secondary: true,
+            type: "custom",
+          } as const,
           {
             children: <GitHubStarsLink />,
             secondary: true,

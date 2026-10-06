@@ -8,6 +8,7 @@ import {
   DocsSearchDialog,
   SearchGroupsProvider,
 } from "@/components/docs/search-dialog";
+import { LiveInputProvider } from "@/components/docs/live-input";
 import { SiteFooter } from "@/components/docs/site-footer";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
@@ -76,7 +77,9 @@ const RootLayout = ({
             theme={{ enabled: false }}
           >
             <TooltipProvider>
-              <div className="flex min-h-0 flex-1 flex-col">{children}</div>
+              <LiveInputProvider>
+                <div className="flex min-h-0 flex-1 flex-col">{children}</div>
+              </LiveInputProvider>
               <SiteFooter />
               <Toaster />
             </TooltipProvider>
