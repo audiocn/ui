@@ -7,6 +7,14 @@ import {
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
+import { PageActions } from "@/components/docs/page-actions";
+import { buildCompactPrompt, markdownUrlFor } from "@/lib/docs/ai-prompt";
+import {
+  registryItemForPath,
+  registryItemPath,
+  registryItemUrl,
+} from "@/lib/docs/registry";
+import { siteConfig } from "@/lib/site";
 import { getPageMetadata } from "@/lib/social-metadata";
 import { source } from "@/lib/source";
 import { getMDXComponents } from "@/mdx-components";
@@ -24,11 +32,26 @@ const Page = async ({ params }: PageProps) => {
   }
 
   const MdxContent = page.data.body;
+  const item = registryItemForPath(page.url);
 
   return (
     <DocsPage full={page.data.full} toc={page.data.toc}>
       <DocsTitle>{page.data.title}</DocsTitle>
       <DocsDescription>{page.data.description}</DocsDescription>
+      {item && (
+        <PageActions
+          compactPrompt={buildCompactPrompt({
+            name: item.name,
+            pathname: page.url,
+            title: page.data.title,
+          })}
+          installCommand={`npx shadcn@latest add ${siteConfig.registryNamespace}/${item.name}`}
+          markdownUrl={markdownUrlFor(page.url)}
+          registryUrl={registryItemUrl(item.name)}
+          sourceUrl={registryItemPath(item.name)}
+          title={page.data.title}
+        />
+      )}
       <DocsBody>
         <MdxContent components={getMDXComponents()} />
       </DocsBody>

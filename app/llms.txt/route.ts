@@ -18,6 +18,8 @@ export const GET = () => {
     "",
     `Install components with the shadcn CLI after adding "${siteConfig.registryNamespace}": "${siteConfig.registryUrl}" to the registries in components.json.`,
     "",
+    "Append `.md` to any page below for a Markdown version with install steps, usage and the full API, written for AI agents.",
+    "",
     "## Docs",
     "",
     ...lines,
