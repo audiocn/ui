@@ -24,7 +24,7 @@ interface ConsoleFaderProps {
 
 const ConsoleFader = ({ label, kind, seed, initialDb }: ConsoleFaderProps) => {
   const [gainDb, setGainDb] = useState(initialDb);
-  const signal = useDemoSignal({ channels: 2, kind, seed });
+  const signal = useDemoSignal({ channels: 2, gainDb, kind, seed });
 
   return (
     <div className="flex flex-col items-center gap-2">

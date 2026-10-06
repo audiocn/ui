@@ -328,6 +328,32 @@ describe("Knob", () => {
     expect(face?.outerHTML).toBe(faceMarkup);
   });
 
+  it("marks the mini cap with an engraved line that turns with the value", () => {
+    const { container } = render(
+      <Knob aria-label="Gain" defaultValue={50}>
+        <KnobDial>
+          <KnobCap variant="mini" />
+        </KnobDial>
+      </Knob>
+    );
+    const cap = container.querySelector("[data-slot='knob-cap']");
+    const pointer = () =>
+      container.querySelector("[data-slot='knob-cap-pointer']");
+    const end = (axis: "x" | "y") =>
+      Number(pointer()?.getAttribute(`${axis}2`));
+    expect(cap).toHaveAttribute("data-variant", "mini");
+    expect(container.querySelector("[data-slot='knob-cap-dot']")).toBeNull();
+    // At the middle of the arc the line points straight up.
+    expect(end("x")).toBeCloseTo(50);
+    expect(end("y")).toBeLessThan(50);
+    fireEvent.keyDown(screen.getByRole("slider"), { key: "End" });
+    expect(end("x")).toBeGreaterThan(50);
+    expect(end("y")).toBeGreaterThan(50);
+    fireEvent.keyDown(screen.getByRole("slider"), { key: "Home" });
+    expect(end("x")).toBeLessThan(50);
+    expect(end("y")).toBeGreaterThan(50);
+  });
+
   it("clicks on graduations only with clickSound", () => {
     const start = vi.fn();
     const fakeContext = {

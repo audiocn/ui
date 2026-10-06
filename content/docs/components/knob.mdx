@@ -47,7 +47,7 @@ The value keeps one width across the whole range, so the layout never moves whil
 </Knob>
 ```
 
-`KnobTrack`, `KnobRange` and `KnobPointer` are SVG elements inside a 100 × 100 view box, so you can add your own shapes next to them. `KnobScale` and `KnobCap` are another set of parts for the same dial, shown in the [volume dial](#volume-dial).
+`KnobTrack`, `KnobRange` and `KnobPointer` are SVG elements inside a 100 × 100 view box, so you can add your own shapes next to them. `KnobScale` and `KnobCap` are another set of parts for the same dial, shown in the [volume dial](#volume-dial) and the [metal knobs](#metal-knobs).
 
 ## Examples
 
@@ -55,8 +55,8 @@ The value keeps one width across the whole range, so the layout never moves whil
 
 Choose `dragDirection` to match how you want to move the dial:
 
-- `vertical`, the default: drag up to increase the value, down to decrease it.
-- `horizontal`: drag right to increase the value, left to decrease it.
+- `vertical`, the default: drag up to increase the value, down to decrease it. The cursor shows an up/down arrow while dragging.
+- `horizontal`: drag right to increase the value, left to decrease it. The cursor shows a left/right arrow while dragging.
 - `circular`: turn clockwise to increase the value, anticlockwise to decrease it.
 
 Hold Shift for finer control in all three modes. For vertical and horizontal drags, `sensitivity` sets the distance in pixels for the full range. The default is `200`.
@@ -75,6 +75,20 @@ A hi-fi volume dial: `KnobScale` draws numbered ticks around the dial and `KnobC
 
 Ticks between `origin` and the value light up, so a bipolar knob lights from its centre. The ticks are spread evenly along the arc, so they follow `scale="log"` too.
 
+### Metal knobs
+
+The same aluminium at everyday sizes: swap `KnobPointer` for `<KnobCap variant="mini" />`. The mini cap fills the inside of `KnobTrack` and marks the value with an engraved line, which still reads at `size="sm"`.
+
+<ComponentPreview name="knob-metal" />
+
+```tsx
+<KnobDial>
+  <KnobTrack />
+  <KnobRange />
+  <KnobCap variant="mini" />
+</KnobDial>
+```
+
 ## Theming
 
 | Variable or attribute | Meaning                                   |
@@ -85,6 +99,7 @@ Ticks between `origin` and the value light up, so a bipolar knob lights from its
 | `data-at-origin`      | The value sits at `origin`                |
 | `--knob-cap-metal`    | `KnobCap`'s metal, white by default       |
 | `--knob-cap-shade`    | `KnobCap`'s shading, black by default     |
+| `--knob-cap-pitch`    | Spacing of `KnobCap`'s brushed rings      |
 | `data-active`         | On `KnobScale` ticks inside the lit range |
 | `data-major`          | On `KnobScale`'s long ticks               |
 
@@ -190,5 +205,18 @@ The dial is a focusable slider with `aria-valuetext` from `format`, named by `Kn
       "Every nth tick is numbered. 0 hides the numbers.",
     ],
     ["format", "(value: number) => string", "the knob's format", null],
+  ]}
+/>
+
+### KnobCap
+
+<PropsTable
+  rows={[
+    [
+      "variant",
+      '"default" | "mini"',
+      '"default"',
+      "default sits inside KnobScale with an indicator dot. mini fills the inside of KnobTrack with an engraved line, for small knobs.",
+    ],
   ]}
 />

@@ -6,7 +6,6 @@ import {
   MusicNotesIcon,
 } from "@phosphor-icons/react";
 import type { ReactNode } from "react";
-import { useState } from "react";
 
 import {
   ChannelStrip,
@@ -22,27 +21,49 @@ import { MuteToggle, SoloToggle } from "@/components/ui/channel-toggle";
 import { Fader } from "@/components/ui/fader";
 import { LevelMeter } from "@/components/ui/level-meter";
 import { useDemoSignal } from "@/hooks/use-demo-signal";
+import type { DemoSignalKind } from "@/hooks/use-demo-signal";
+import { useMixer } from "@/hooks/use-mixer";
+import type { Mixer } from "@/hooks/use-mixer";
 import { formatDb } from "@/lib/audio/decibels";
-import type { FrameSource, MeterFrame } from "@/lib/audio/types";
+
+const INITIAL_CHANNELS = [{ id: "mic" }, { id: "music" }, { id: "game" }];
 
 const Strip = ({
+  id,
+  mixer,
   title,
   icon,
   accent,
-  source,
+  kind,
+  seed,
 }: {
+  id: string;
+  mixer: Mixer;
   title: string;
   icon: ReactNode;
   accent: string;
-  source: FrameSource<MeterFrame>;
+  kind: DemoSignalKind;
+  seed?: number;
 }) => {
-  const [gainDb, setGainDb] = useState(0);
-  const [muted, setMuted] = useState(false);
+  const channel = mixer.channel(id);
+  const signal = useDemoSignal({
+    channels: 2,
+    gainDb: channel?.gainDb,
+    kind,
+    playing: mixer.isAudible(id),
+    seed,
+  });
+
+  if (!channel) {
+    return null;
+  }
 
   return (
     <ChannelStrip
       accent={accent}
-      muted={muted}
+      dimmed={mixer.isDimmed(id)}
+      muted={channel.muted}
+      solo={channel.solo}
       orientation="vertical"
       variant="card"
     >
@@ -53,55 +74,72 @@ const Strip = ({
       <ChannelStripMeter>
         <LevelMeter
           aria-label={`${title} level`}
+          ballistics={mixer.isAudible(id) ? undefined : "instant"}
           channelCount={2}
           className="h-full"
           size="sm"
-          source={source}
+          source={signal.meter}
         />
       </ChannelStripMeter>
       <ChannelStripFader>
         <Fader
           aria-label={`${title} volume`}
-          onValueChange={setGainDb}
+          onValueChange={(gainDb) => mixer.setGain(id, gainDb)}
           size="sm"
           taper="audio"
-          value={gainDb}
+          value={channel.gainDb}
         />
       </ChannelStripFader>
-      <ChannelStripValue>{formatDb(gainDb)}</ChannelStripValue>
+      <ChannelStripValue>{formatDb(channel.gainDb)}</ChannelStripValue>
       <ChannelStripControls>
-        <MuteToggle onPressedChange={setMuted} pressed={muted} size="sm">
+        <MuteToggle
+          aria-label={`Mute ${title}`}
+          onPressedChange={(muted) => mixer.setMuted(id, muted)}
+          pressed={channel.muted}
+          size="sm"
+        >
           M
         </MuteToggle>
-        <SoloToggle size="sm">S</SoloToggle>
+        <SoloToggle
+          aria-label={`Solo ${title}`}
+          onPressedChange={(solo) => mixer.setSolo(id, solo)}
+          pressed={channel.solo}
+          size="sm"
+        >
+          S
+        </SoloToggle>
       </ChannelStripControls>
     </ChannelStrip>
   );
 };
 
 const ChannelStripConsole = () => {
-  const voice = useDemoSignal({ channels: 2, kind: "speech" });
-  const music = useDemoSignal({ channels: 2, kind: "music" });
-  const game = useDemoSignal({ channels: 2, kind: "noise", seed: 3 });
-
+  const mixer = useMixer({ channels: INITIAL_CHANNELS });
   return (
     <div className="flex h-96 max-w-full gap-3 overflow-x-auto">
       <Strip
         accent="var(--chart-2)"
         icon={<MicrophoneIcon />}
-        source={voice.meter}
+        id="mic"
+        mixer={mixer}
+        kind="speech"
         title="Mic"
       />
       <Strip
         accent="var(--chart-1)"
         icon={<MusicNotesIcon />}
-        source={music.meter}
+        id="music"
+        mixer={mixer}
+        kind="music"
         title="Music"
       />
       <Strip
         accent="var(--chart-4)"
         icon={<DesktopIcon />}
-        source={game.meter}
+        id="game"
+        mixer={mixer}
+        kind="noise"
+        seed={3}
         title="Game"
       />
     </div>

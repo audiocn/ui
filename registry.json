@@ -511,7 +511,7 @@
       "name": "knob",
       "type": "registry:ui",
       "title": "Knob",
-      "description": "A rotary control drawn in SVG, with vertical, horizontal or circular dragging, fine adjustment, reset, a bipolar origin, an optional click sound and a volume dial skin with a numbered scale and an aluminium cap.",
+      "description": "A rotary control drawn in SVG, with vertical, horizontal or circular dragging, fine adjustment, reset, a bipolar origin, an optional click sound and a volume dial skin with a numbered scale and an aluminium cap, and a mini aluminium cap for small knobs.",
       "dependencies": ["class-variance-authority"],
       "registryDependencies": [
         "@audiocn/core",
