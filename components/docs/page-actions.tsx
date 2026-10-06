@@ -85,6 +85,8 @@ export interface PageActionsProps {
   markdownUrl: string;
   /** The registry item JSON, such as `https://audiocn.dev/r/knob.json`. */
   registryUrl: string;
+  /** The same item on this deployment, such as `/r/knob.json`. */
+  sourceUrl: string;
   /** The npx form of the install command, switched per package manager. */
   installCommand: string;
   /** The short prompt handed to a chat URL, which cannot carry the page. */
@@ -100,6 +102,7 @@ export const PageActions = ({
   title,
   markdownUrl,
   registryUrl,
+  sourceUrl,
   installCommand,
   compactPrompt,
 }: PageActionsProps) => {
@@ -173,7 +176,7 @@ export const PageActions = ({
           <DropdownMenuItem
             onClick={() =>
               run("Component source copied", () =>
-                fetchRegistrySource(registryUrl)
+                fetchRegistrySource(sourceUrl)
               )
             }
           >

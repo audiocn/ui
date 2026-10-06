@@ -9,6 +9,8 @@ import {
   importPathFor,
   itemForImportPath,
   registryItemForPath,
+  registryItemPath,
+  registryItemUrl,
   resolveInstall,
 } from "@/lib/docs/registry";
 
@@ -73,6 +75,17 @@ describe("importPathFor", () => {
     );
     expect(importPathFor(item("music-player"))).toBe(
       "@/components/blocks/music-player/music-player"
+    );
+  });
+});
+
+describe("registryItemPath", () => {
+  // The canonical URL redirects to `www`, which a browser fetch cannot follow
+  // cross-origin, so the button needs the path on its own deployment.
+  it("is the canonical URL's path, same origin as the reader", () => {
+    expect(registryItemPath("bar-visualizer")).toBe("/r/bar-visualizer.json");
+    expect(new URL(registryItemUrl("knob")).pathname).toBe(
+      registryItemPath("knob")
     );
   });
 });

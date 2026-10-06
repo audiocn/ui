@@ -9,7 +9,11 @@ import { notFound } from "next/navigation";
 
 import { PageActions } from "@/components/docs/page-actions";
 import { buildCompactPrompt, markdownUrlFor } from "@/lib/docs/ai-prompt";
-import { registryItemForPath, registryItemUrl } from "@/lib/docs/registry";
+import {
+  registryItemForPath,
+  registryItemPath,
+  registryItemUrl,
+} from "@/lib/docs/registry";
 import { siteConfig } from "@/lib/site";
 import { getPageMetadata } from "@/lib/social-metadata";
 import { source } from "@/lib/source";
@@ -44,6 +48,7 @@ const Page = async ({ params }: PageProps) => {
           installCommand={`npx shadcn@latest add ${siteConfig.registryNamespace}/${item.name}`}
           markdownUrl={markdownUrlFor(page.url)}
           registryUrl={registryItemUrl(item.name)}
+          sourceUrl={registryItemPath(item.name)}
           title={page.data.title}
         />
       )}

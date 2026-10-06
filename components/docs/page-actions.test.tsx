@@ -7,6 +7,7 @@ import { PageActions } from "@/components/docs/page-actions";
 const MARKDOWN = "# Add Bar Visualizer from audiocn to this project\n";
 const SOURCE = "export const BarVisualizer = () => null;";
 const REGISTRY_URL = "https://audiocn.dev/r/bar-visualizer.json";
+const SOURCE_URL = "/r/bar-visualizer.json";
 const MARKDOWN_URL = "/docs/components/bar-visualizer.md";
 
 const props = {
@@ -14,15 +15,18 @@ const props = {
   installCommand: "npx shadcn@latest add @audiocn/bar-visualizer",
   markdownUrl: MARKDOWN_URL,
   registryUrl: REGISTRY_URL,
+  sourceUrl: SOURCE_URL,
   title: "Bar Visualizer",
 };
 
 const respond = (body: string) =>
   ({ ok: true, status: 200, text: () => Promise.resolve(body) }) as Response;
 
+// Only same-origin URLs answer: the canonical one redirects to `www` and a
+// redirect carries no CORS headers, so the browser refuses it.
 const bodies: Record<string, string> = {
   [MARKDOWN_URL]: MARKDOWN,
-  [REGISTRY_URL]: JSON.stringify({ files: [{ content: SOURCE }] }),
+  [SOURCE_URL]: JSON.stringify({ files: [{ content: SOURCE }] }),
 };
 
 const fetchedTimes = (url: string) =>
@@ -90,7 +94,7 @@ describe("PageActions", () => {
       .toBe("bunx --bun shadcn@latest add @audiocn/bar-visualizer");
   });
 
-  it("copies the component source out of the registry item", async () => {
+  it("copies the component source from this deployment's registry item", async () => {
     const user = userEvent.setup();
     render(<PageActions {...props} />);
 
@@ -100,6 +104,8 @@ describe("PageActions", () => {
     );
 
     await expect.poll(clipboard).toBe(SOURCE);
+    expect(fetch).toHaveBeenCalledWith(SOURCE_URL);
+    expect(fetch).not.toHaveBeenCalledWith(REGISTRY_URL);
   });
 
   it("hands the chat tools a prompt, and v0 the registry item", async () => {

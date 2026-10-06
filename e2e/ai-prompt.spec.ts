@@ -104,10 +104,37 @@ test("the menu copies the install command and links out to the chat tools", asyn
   ).toHaveAttribute("href", /v0\.dev\/chat\/api\/open\?url=.+bar-visualizer/u);
 
   await menu.getByRole("menuitem", { name: "Copy install command" }).click();
+  await expect(page.getByText("Install command copied")).toBeVisible();
   // pnpm is the default the docs show.
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
     "pnpm dlx shadcn@latest add @audiocn/bar-visualizer"
   );
+});
+
+test("the menu copies the component source off this deployment", async ({
+  context,
+  page,
+}) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await page.goto(PAGE);
+  await page
+    .getByRole("button", { name: "More actions for AI agents" })
+    .click();
+  await page
+    .getByRole("menu")
+    .getByRole("menuitem", { name: "Copy component source" })
+    .click();
+  // The source is fetched, so wait for the copy to land.
+  await expect(page.getByText("Component source copied")).toBeVisible();
+
+  const copied = await page.evaluate(() => navigator.clipboard.readText());
+  expect(copied).toContain("export const BarVisualizer");
+  // The real file, not the registry JSON that wraps it.
+  expect(copied).not.toContain('"$schema"');
+
+  const item = await page.request.get("/r/bar-visualizer.json");
+  const { files } = (await item.json()) as { files: { content: string }[] };
+  expect(copied).toBe(files[0]?.content);
 });
 
 test("pages that document no item have no prompt button", async ({ page }) => {

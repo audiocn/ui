@@ -43,6 +43,14 @@ export const getRegistryItem = (name: string): RegistryItem | undefined =>
 export const registryItemUrl = (name: string): string =>
   siteConfig.registryUrl.replace("{name}", name);
 
+/**
+ * The same item on whichever deployment is being read, for fetching from the
+ * browser. The canonical URL redirects to `www`, and a redirect carries no
+ * CORS headers, so a cross-origin fetch of it fails.
+ */
+export const registryItemPath = (name: string): string =>
+  new URL(registryItemUrl(name)).pathname;
+
 /** The file a page's component lives in, such as `components/ui/knob.tsx`. */
 export const primaryFile = (item: RegistryItem): string =>
   item.files[0]?.path ?? "";
