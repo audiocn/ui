@@ -150,7 +150,21 @@ describe("ClickSound.play", () => {
     sound.play({ context: audio.context });
     sound.play({ context: audio.context });
     expect(audio.sources).toHaveLength(1);
+    expect(audio.sources[0]?.start).toHaveBeenCalledOnce();
     expect(audio.fake.resume).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not count a dropped click against minIntervalMs", () => {
+    const audio = suspendedContext();
+    const running = createFakeAudioContext();
+    const sound = createClickSound();
+    const options = { minIntervalMs: 30 };
+    sound.play({ ...options, context: audio.context });
+    clock.now = 40;
+    sound.play({ ...options, context: audio.context });
+    clock.now = 50;
+    sound.play({ ...options, context: running.context });
+    expect(running.sources).toHaveLength(1);
   });
 
   it("always starts scheduled clicks on a suspended context", () => {
@@ -158,35 +172,43 @@ describe("ClickSound.play", () => {
     const sound = createClickSound();
     sound.play({ context: audio.context, when: 1 });
     sound.play({ context: audio.context, when: 2 });
-    expect(audio.sources).toHaveLength(2);
+    expect(audio.sources.map((source) => source.start.mock.calls)).toEqual([
+      [[1]],
+      [[2]],
+    ]);
   });
 
-  it("plays when a later resume starts the context", async () => {
+  it("plays when a later resume starts the context", () => {
     const audio = suspendedContext();
     const sound = createClickSound();
     sound.play({ context: audio.context });
-    const started = Promise.resolve();
     audio.fake.resume.mockImplementationOnce(() => {
       audio.fake.state = "running";
-      return started;
+      return Promise.resolve();
     });
     sound.play({ context: audio.context });
-    await started;
     sound.play({ context: audio.context });
     expect(audio.sources).toHaveLength(2);
   });
 
-  it("queues a click again after a refused resume", async () => {
+  it("cancels the queued click when the resume is refused", async () => {
     const audio = createFakeAudioContext();
     audio.fake.state = "suspended";
-    audio.fake.resume.mockRejectedValueOnce(new Error("Not allowed"));
+    audio.fake.resume.mockRejectedValue(new Error("Not allowed"));
     const sound = createClickSound();
-    sound.play({ context: audio.context });
-    // Each try is dropped until the refused resume frees the queue.
-    await vi.waitFor(() => {
-      sound.play({ context: audio.context });
-      expect(audio.sources).toHaveLength(2);
-    });
+    const playUntilQueued = (count: number) =>
+      vi.waitFor(() => {
+        sound.play({ context: audio.context });
+        expect(audio.sources).toHaveLength(count);
+      });
+    await playUntilQueued(1);
+    await playUntilQueued(2);
+    await playUntilQueued(3);
+    const live = audio.sources.filter(
+      (source) => source.stop.mock.calls.length === 0
+    );
+    expect(live.length).toBeLessThanOrEqual(1);
+    expect(audio.sources[0]?.disconnect).toHaveBeenCalled();
   });
 
   it("queues clicks per context", () => {

@@ -432,8 +432,14 @@ describe("Knob", () => {
     });
     render(
       <>
-        <Knob aria-label="Quiet" defaultValue={50} />
-        <Knob aria-label="Volume" clickSound defaultValue={59} />
+        <Knob defaultValue={50}>
+          <KnobDial />
+          <KnobLabel>Quiet</KnobLabel>
+        </Knob>
+        <Knob clickSound defaultValue={59}>
+          <KnobDial />
+          <KnobLabel>Volume</KnobLabel>
+        </Knob>
       </>
     );
     expect(audio.getSharedAudioContext).not.toHaveBeenCalled();
@@ -446,8 +452,9 @@ describe("Knob", () => {
       );
     }
 
-    const [, clicking] = screen.getAllByRole("slider");
-    fireEvent.keyDown(clicking as HTMLElement, { key: "ArrowUp" });
+    fireEvent.keyDown(screen.getByRole("slider", { name: "Volume" }), {
+      key: "ArrowUp",
+    });
     expect(shared.sources).toHaveLength(1);
     expect(audio.getSharedAudioContext).toHaveBeenCalled();
   });

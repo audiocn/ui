@@ -41,7 +41,8 @@ export type ClickPlayOptions = {
 export interface ClickSound {
   /**
    * Plays once. A suspended context is resumed, which needs a user gesture,
-   * and holds one click until it runs; more clicks meanwhile are dropped.
+   * and holds one click until it runs; more clicks meanwhile are dropped,
+   * and a refused resume cancels the held click.
    */
   readonly play: (options?: ClickPlayOptions) => void;
   /** A new sound with these parameters deep-merged over this one's. */
@@ -106,11 +107,13 @@ const synthesize = (
   return buffer;
 };
 
+/** Whether the context resumed. Without a user gesture the browser refuses. */
 const resumeContext = async (context: AudioContext) => {
   try {
     await context.resume();
+    return true;
   } catch {
-    // Without a user gesture the browser refuses; the next click tries again.
+    return false;
   }
 };
 
@@ -146,6 +149,7 @@ const clickSound = (params: ClickSoundParams): ClickSound => {
       gain.disconnect();
     });
     source.start(when);
+    return source;
   };
 
   const heldBack = (minIntervalMs = 0) => {
@@ -157,11 +161,16 @@ const clickSound = (params: ClickSoundParams): ClickSound => {
     return false;
   };
 
+  /** Frees the context's queue, cancelling the click if it never resumed. */
   const releaseWhenResumed = async (
     context: AudioContext,
-    resumed: Promise<void>
+    resumed: Promise<boolean>,
+    source: AudioBufferSourceNode
   ) => {
-    await resumed;
+    if (!(await resumed)) {
+      source.stop();
+      source.disconnect();
+    }
     queued.delete(context);
   };
 
@@ -170,22 +179,26 @@ const clickSound = (params: ClickSoundParams): ClickSound => {
     if (!context || context.state === "closed") {
       return;
     }
-    const scheduled = options.when !== undefined;
-    if (!scheduled && heldBack(options.minIntervalMs)) {
+    if (options.when !== undefined) {
+      if (context.state === "suspended") {
+        resumeContext(context);
+      }
+      start(context, options);
       return;
     }
-    if (context.state === "suspended") {
-      // Always ask again: only a resume inside a user gesture starts it.
-      const resumed = resumeContext(context);
-      if (!scheduled) {
-        if (queued.has(context)) {
-          return;
-        }
-        queued.add(context);
-        releaseWhenResumed(context, resumed);
+    if (context.state !== "suspended") {
+      if (!heldBack(options.minIntervalMs)) {
+        start(context, options);
       }
+      return;
     }
-    start(context, options);
+    // Always ask again: only a resume inside a user gesture starts it.
+    const resumed = resumeContext(context);
+    if (queued.has(context) || heldBack(options.minIntervalMs)) {
+      return;
+    }
+    queued.add(context);
+    releaseWhenResumed(context, resumed, start(context, options));
   };
 
   return {
