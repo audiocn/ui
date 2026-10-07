@@ -19,6 +19,8 @@ import type {
   KeyboardEvent,
   PointerEvent,
   ReactNode,
+  Ref,
+  RefCallback,
   RefObject,
 } from "react";
 
@@ -40,6 +42,10 @@ const FINE_FACTOR = 0.1;
 const PRECISION = 1e6;
 const DEGREES_TO_RADIANS = Math.PI / 180;
 const HALF_TURN = 180;
+const FULL_TURN = 360;
+
+/** How dragging turns a dial. */
+export type DialDragDirection = "vertical" | "horizontal" | "circular";
 
 export type KnobChangeReason =
   | "drag"
@@ -118,7 +124,7 @@ const useDial = (part: string) => {
 interface KnobDialContextValue {
   change: (value: number, details: KnobChangeDetails) => void;
   commit: (value: number) => void;
-  dragDirection: "vertical" | "horizontal" | "circular";
+  dragDirection: DialDragDirection;
   fineStep: number;
   largeStep: number;
   latestRef: RefObject<number>;
@@ -278,9 +284,9 @@ const dragAngle = (
     ? pointerAngle(event, event.currentTarget)
     : null;
 
-/** The shortest turn from one angle to another, in -180..180 degrees. */
+/** The shortest turn from one angle to another, in -180..180 degrees, across any number of turns. */
 export const turnBetween = (from: number, to: number) =>
-  ((to - from + HALF_TURN * 3) % (HALF_TURN * 2)) - HALF_TURN;
+  ((((to - from + HALF_TURN) % FULL_TURN) + FULL_TURN) % FULL_TURN) - HALF_TURN;
 
 /**
  * The next position, from the movement since the last pointer event, so
@@ -310,16 +316,29 @@ const dragPosition = (
   return clamp(last.position + (delta / dial.sensitivity) * fine, 0, 1);
 };
 
+/** Points a ref at the element, or calls it. Returns a callback ref's cleanup. */
+const setRef = <T,>(ref: Ref<T> | undefined, node: T | null) => {
+  if (typeof ref === "function") {
+    return ref(node);
+  }
+  if (ref) {
+    ref.current = node;
+  }
+};
+
 /**
- * Turns a dial one step per wheel step: +1 for clockwise, -1 for anticlockwise.
- * A non-passive wheel listener blocks scrolling, so the dial only holds one
- * while it has focus. Elsewhere the wheel scrolls the page.
+ * The dial element's ref, merged with the consumer's `ref`. Calls `onTurn`
+ * once per wheel step while `enabled`: 1 for wheel up, which callers treat as
+ * clockwise, -1 for down. A non-passive wheel listener blocks scrolling, so
+ * the dial only holds one while it has focus. Elsewhere the wheel scrolls the
+ * page.
  */
 export const useDialWheel = (
-  elementRef: RefObject<HTMLElement | null>,
+  ref: Ref<HTMLDivElement> | undefined,
   enabled: boolean,
   onTurn: (turn: 1 | -1, event: WheelEvent) => void
-) => {
+): RefCallback<HTMLDivElement> => {
+  const elementRef = useRef<HTMLDivElement | null>(null);
   const turn = useEffectEvent(onTurn);
 
   useEffect(() => {
@@ -351,31 +370,51 @@ export const useDialWheel = (
       element.removeEventListener("focus", attach);
       element.removeEventListener("blur", detach);
     };
-  }, [elementRef, enabled]);
+  }, [enabled]);
+
+  return useCallback(
+    (node: HTMLDivElement | null) => {
+      elementRef.current = node;
+      const cleanup = setRef(ref, node);
+      return () => {
+        elementRef.current = null;
+        if (typeof cleanup === "function") {
+          cleanup();
+        } else {
+          setRef(ref, null);
+        }
+      };
+    },
+    [ref]
+  );
 };
 
 export const KnobDial = ({
   className,
   children,
+  ref,
   style,
   ...props
 }: ComponentProps<"div">) => {
   const { arc, disabled, format, labelId, position, setEditing, value } =
     useKnob("KnobDial");
   const dial = useKnobDial();
-  const dialRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<DragState | null>(null);
   const [dragging, setDragging] = useState(false);
-  useDialWheel(dialRef, dial.allowWheel && !disabled, (turn, event) => {
-    const fine = event.shiftKey || event.altKey;
-    const increment = fine ? dial.fineStep : dial.step;
-    const next = dial.quantize(
-      dial.latestRef.current + turn * increment,
-      increment
-    );
-    dial.change(next, { event, reason: "wheel" });
-    dial.commit(next);
-  });
+  const dialRef = useDialWheel(
+    ref,
+    dial.allowWheel && !disabled,
+    (turn, event) => {
+      const fine = event.shiftKey || event.altKey;
+      const increment = fine ? dial.fineStep : dial.step;
+      const next = dial.quantize(
+        dial.latestRef.current + turn * increment,
+        increment
+      );
+      dial.change(next, { event, reason: "wheel" });
+      dial.commit(next);
+    }
+  );
   const dialAngle = angleFor(position, arc);
 
   const reset = () => {
@@ -1085,7 +1124,7 @@ export interface KnobProps extends Omit<
   /** Sweep in degrees. Default 270. */
   arc?: number;
   /** How dragging turns the knob. Default `vertical`. */
-  dragDirection?: "vertical" | "horizontal" | "circular";
+  dragDirection?: DialDragDirection;
   /** Pixels of vertical or horizontal drag for the full range. Default 200. */
   sensitivity?: number;
   /** Default `linear`. */
