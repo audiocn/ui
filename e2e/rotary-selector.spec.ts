@@ -71,8 +71,6 @@ test("rotary selectors drag only from the circle around the cap", async ({
   await expectIgnored(at(98, 2));
   await expectIgnored(at(2, 98));
   await expectIgnored(at(98, 98));
-  // The run of the triangle's leader, left of the dial.
-  await expectIgnored(at(-13, 34.2));
   // Down is anticlockwise: the next index, since these positions run anticlockwise.
   await drag(page, at(50, 50), 0, 24);
   await expectIndex(dial, 1);
@@ -124,6 +122,22 @@ test("circled rotary selectors follow the pointer and hold an end in the gap", a
   await page.mouse.up();
 });
 
+test("a press on a position label selects it, and never drags", async ({
+  page,
+}) => {
+  const { at, dial } = await selector(page, "Waveform");
+  // The saw's glyph, left of the end of its leader.
+  const glyph = at(-31, 65.8);
+  await page.mouse.move(...glyph);
+  await page.mouse.down();
+  await page.mouse.move(glyph[0], glyph[1] + 48, { steps: 8 });
+  await expect(dial).not.toHaveAttribute("data-dragging");
+  await expectIndex(dial, 0);
+  await page.mouse.move(...glyph, { steps: 8 });
+  await page.mouse.up();
+  await expect(dial).toHaveAttribute("aria-valuetext", "Saw");
+});
+
 test("rotary selectors select a position from its label", async ({ page }) => {
   const { dial } = await selector(page, "Instrument select");
   const preview = page
@@ -160,8 +174,22 @@ test("an unfocused rotary selector lets the wheel scroll the page", async ({
 }) => {
   const { at, dial } = await selector(page, "Instrument select");
   await page.mouse.move(...at(50, 50));
+  // The window sees the wheel last, after any listener on the dial.
+  await page.evaluate(() => {
+    window.addEventListener(
+      "wheel",
+      (event) => {
+        document.body.dataset.wheelPrevented = String(event.defaultPrevented);
+      },
+      { once: true }
+    );
+  });
   const before = await scrollY(page);
   await page.mouse.wheel(0, 100);
+  await expect(page.locator("body")).toHaveAttribute(
+    "data-wheel-prevented",
+    "false"
+  );
   await expect.poll(() => scrollY(page)).toBeGreaterThan(before);
   await expectIndex(dial, 1);
 });

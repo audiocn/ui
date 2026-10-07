@@ -21,6 +21,7 @@ import type {
   RefObject,
 } from "react";
 
+import type { DialDragDirection } from "@/components/ui/knob";
 import {
   DialProvider,
   pointAt,
@@ -41,7 +42,7 @@ const CENTER = 50;
 const DIAL_RADIUS = 50;
 const FULL_TURN = 360;
 const HALF_TURN = 180;
-/** Steps this close to a full turn wrap, so `360 / 7` works. */
+/** Sweeps within half a degree of a turn wrap, so a rounded step like 51.4 (360 / 7) works. */
 const WRAP_TOLERANCE = 0.5;
 /** Pointer travel per position for vertical and horizontal drags. */
 const DRAG_STEP_PX = 24;
@@ -134,7 +135,7 @@ interface RotarySelectorContextValue {
   stepAngle: number;
   wraps: boolean;
   disabled: boolean;
-  dragDirection: "vertical" | "horizontal" | "circular";
+  dragDirection: DialDragDirection;
   allowWheel: boolean;
   labelId: string;
   valueText: string;
@@ -216,9 +217,11 @@ const nearestIndex = (angle: number, angles: readonly number[]) => {
 };
 
 /**
- * The end of a selector that does not wrap whose gap the pointer is in, or
- * null while it is over the positions. `previous` catches a fast flick that
- * crosses a narrow gap between two pointer events.
+ * On a selector that does not wrap: the index of the end next to the gap the
+ * pointer is in, or null while the pointer is over the positions. A fast
+ * flick can jump over a narrow gap between two pointer events, so a jump
+ * from one side to the other the short way round, from `previous`, counts as
+ * entering the gap too.
  */
 const gapEnd = (
   pointer: number,
@@ -293,7 +296,7 @@ const circularDrag = (pointer: number, drag: DragState, geometry: Geometry) => {
 };
 
 export interface RotarySelectorDialProps extends ComponentProps<"div"> {
-  /** Radius of the drag circle, in view box units. Default: the cap's. */
+  /** Radius of the drag circle, in view box units. Default: the cap's, or 50 without a cap. */
   hitRadius?: number;
 }
 
@@ -306,26 +309,30 @@ export const RotarySelectorDial = ({
   hitRadius,
   className,
   children,
+  ref,
   style,
   ...props
 }: RotarySelectorDialProps) => {
   const selector = useRotarySelector("RotarySelectorDial");
   const { angles, change, commit, disabled, dragDirection, latestRef } =
     selector;
-  const dialRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<DragState | null>(null);
   const [dragging, setDragging] = useState(false);
   const [capRadius, setCapRadius] = useState<number | null>(null);
   const angle = angles[selector.index] ?? 0;
 
-  useDialWheel(dialRef, selector.allowWheel && !disabled, (turn, event) => {
-    const { current } = latestRef;
-    change(stepFrom(current, turn, selector) ?? current, {
-      event,
-      reason: "wheel",
-    });
-    commit();
-  });
+  const dialRef = useDialWheel(
+    ref,
+    selector.allowWheel && !disabled,
+    (turn, event) => {
+      const { current } = latestRef;
+      change(stepFrom(current, turn, selector) ?? current, {
+        event,
+        reason: "wheel",
+      });
+      commit();
+    }
+  );
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (disabled) {
@@ -353,7 +360,10 @@ export const RotarySelectorDial = ({
     event.currentTarget.focus();
     dragRef.current = {
       held: null,
-      pointer: null,
+      pointer:
+        dragDirection === "circular"
+          ? pointerAngle(event, event.currentTarget)
+          : null,
       travel: 0,
       x: event.clientX,
       y: event.clientY,
@@ -467,6 +477,9 @@ interface PositionPartProps {
   position: RotarySelectorPosition;
 }
 
+export interface RotarySelectorPositionLabelProps
+  extends PositionPartProps, ComponentProps<"g"> {}
+
 /** Print for one position that selects it when clicked. Not a tab stop. */
 export const RotarySelectorPositionLabel = ({
   position,
@@ -475,7 +488,7 @@ export const RotarySelectorPositionLabel = ({
   onDoubleClick,
   onPointerDown,
   ...props
-}: PositionPartProps & ComponentProps<"g">) => {
+}: RotarySelectorPositionLabelProps) => {
   const { change, commit, disabled } = useRotarySelector(
     "RotarySelectorPositionLabel"
   );
@@ -560,8 +573,10 @@ export interface RotarySelectorLeader {
   path: string;
 }
 
-/** A column (`x`) or a row (`y`) in the view box. */
-type LeaderTarget = { x: number; y?: never } | { y: number; x?: never };
+/** Where a leader's run ends: a column (`x`) or a row (`y`) in the view box. */
+export type RotarySelectorLeaderTarget =
+  | { x: number; y?: never }
+  | { y: number; x?: never };
 
 const roundForMessage = (value: number) => Number(value.toFixed(1));
 
@@ -570,7 +585,7 @@ const leaderGeometry = (
   angle: number,
   from: number,
   ray: number,
-  to: LeaderTarget
+  to: RotarySelectorLeaderTarget
 ) => {
   const start = pointAt(angle, from);
   const bend = pointAt(angle, from + ray);
@@ -608,7 +623,7 @@ const leaderGeometry = (
   return { leader: { bend, end, path }, problems };
 };
 
-/** One console warning per problem in development, again only when they change. */
+/** One console warning per problem in development, repeated only when the problems change. */
 const useLeaderWarnings = (value: RotarySelectorItem, problems: string[]) => {
   const messages = problems
     .map(
@@ -626,17 +641,19 @@ const useLeaderWarnings = (value: RotarySelectorItem, problems: string[]) => {
   }, [messages]);
 };
 
-export type RotarySelectorPositionLeaderProps = PositionPartProps &
-  Omit<ComponentProps<"path">, "children" | "from" | "to"> & {
-    /** Radius the leader starts at. */
-    from: number;
-    /** Length of the radial segment. */
-    ray: number;
-    /** End of the run: a column `x` or a row `y`. */
-    to: LeaderTarget;
-    /** Placed at the leader's end, or a function that places them. */
-    children?: ReactNode | ((leader: RotarySelectorLeader) => ReactNode);
-  };
+export interface RotarySelectorPositionLeaderProps
+  extends
+    PositionPartProps,
+    Omit<ComponentProps<"path">, "children" | "from" | "to"> {
+  /** Radius the leader starts at. */
+  from: number;
+  /** Length of the radial segment. */
+  ray: number;
+  /** End of the run: a column `x` or a row `y`. */
+  to: RotarySelectorLeaderTarget;
+  /** Placed at the leader's end, or a function that places them. */
+  children?: ReactNode | ((leader: RotarySelectorLeader) => ReactNode);
+}
 
 /**
  * A line from a position to its label: a radial ray, then a horizontal run to
@@ -768,7 +785,7 @@ export interface RotarySelectorProps<
   /** Text for `aria-valuetext` and RotarySelectorValue. Default `String`. */
   format?: (value: Values[number]) => string;
   /** How dragging the cap turns the selector. Default `vertical`. */
-  dragDirection?: "vertical" | "horizontal" | "circular";
+  dragDirection?: DialDragDirection;
   /** The wheel turns the selector while it has focus. Default true. */
   allowWheel?: boolean;
   /**
@@ -781,14 +798,24 @@ export interface RotarySelectorProps<
   children: (selector: RotarySelectorRenderProps<Values[number]>) => ReactNode;
 }
 
-const sweepError = (count: number, stepAngle: number) => {
+/** What makes the positions impossible to lay out, or null. */
+const geometryError = (count: number, stepAngle: number) => {
+  if (count === 0) {
+    return "RotarySelector: values is empty.";
+  }
+  if (!Number.isFinite(stepAngle) || stepAngle === 0) {
+    return `RotarySelector: stepAngle must be a finite number other than 0, not ${stepAngle}.`;
+  }
+  const sweep = count * Math.abs(stepAngle);
+  if (sweep <= FULL_TURN + WRAP_TOLERANCE) {
+    return null;
+  }
   const step = roundForMessage(Math.abs(stepAngle));
-  const sweep = roundForMessage(count * Math.abs(stepAngle));
-  return `RotarySelector: ${count} values × ${step}° = ${sweep}°, max ${FULL_TURN}°.`;
+  return `RotarySelector: ${count} values × ${step}° = ${roundForMessage(sweep)}°, max ${FULL_TURN}°.`;
 };
 
-/** Overlapping positions throw in development, and log in production. */
-const useSweepCheck = (error: string | null) => {
+/** Impossible geometry throws in development, and logs in production. */
+const useGeometryCheck = (error: string | null) => {
   if (error && process.env.NODE_ENV !== "production") {
     throw new Error(error);
   }
@@ -797,6 +824,22 @@ const useSweepCheck = (error: string | null) => {
       console.error(error);
     }
   }, [error]);
+};
+
+/** A development warning for a value the selector cannot show. */
+const useMissingValueWarning = (
+  name: "value" | "resetValue",
+  value: RotarySelectorItem | undefined,
+  values: readonly RotarySelectorItem[]
+) => {
+  const missing = value !== undefined && !values.includes(value);
+  useEffect(() => {
+    if (missing && process.env.NODE_ENV !== "production") {
+      console.warn(
+        `RotarySelector: ${name} ${JSON.stringify(value)} is not in values.`
+      );
+    }
+  }, [missing, name, value]);
 };
 
 /** Controlled or uncontrolled index, with change notifications and a click. */
@@ -817,7 +860,7 @@ const useSelectedIndex = <Value extends RotarySelectorItem>(
 
   const change = useCallback(
     (next: number, details: RotarySelectorChangeDetails) => {
-      if (next === latestRef.current) {
+      if (next === latestRef.current || next < 0 || next >= values.length) {
         return;
       }
       latestRef.current = next;
@@ -867,9 +910,9 @@ export const RotarySelector = <
   const stepAngle = typeof stepAngleProp === "number" ? stepAngleProp : 30;
   const count = values.length;
   const sweep = count * Math.abs(stepAngle);
-  useSweepCheck(
-    sweep > FULL_TURN + WRAP_TOLERANCE ? sweepError(count, stepAngle) : null
-  );
+  useGeometryCheck(geometryError(count, stepAngle));
+  useMissingValueWarning("value", valueProp, values);
+  useMissingValueWarning("resetValue", resetValue, values);
 
   const labelId = useId();
   const playClick = useDialClick(
@@ -917,7 +960,10 @@ export const RotarySelector = <
   const selected = values[index] as Value;
 
   const commit = useCallback(() => {
-    onValueCommitted?.(values[latestRef.current] as Value);
+    const committed = values[latestRef.current];
+    if (committed !== undefined) {
+      onValueCommitted?.(committed);
+    }
   }, [latestRef, onValueCommitted, values]);
 
   const contextValue = useMemo<RotarySelectorContextValue>(
@@ -936,8 +982,8 @@ export const RotarySelector = <
         commit();
       },
       stepAngle,
-      valueText: format(selected),
-      valueWidth: Math.max(...values.map((item) => format(item).length)),
+      valueText: count > 0 ? format(selected) : "",
+      valueWidth: Math.max(0, ...values.map((item) => format(item).length)),
       wraps: Math.abs(sweep - FULL_TURN) <= WRAP_TOLERANCE,
     }),
     [
@@ -945,6 +991,7 @@ export const RotarySelector = <
       angles,
       change,
       commit,
+      count,
       disabled,
       dragDirection,
       format,

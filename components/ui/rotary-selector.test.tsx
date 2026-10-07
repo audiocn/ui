@@ -1,5 +1,5 @@
 import { createEvent, fireEvent, render, screen } from "@testing-library/react";
-import { Fragment, useState } from "react";
+import { createRef, Fragment, useState } from "react";
 import type { ComponentProps, ReactNode } from "react";
 import { describe, expect, expectTypeOf, it, onTestFinished, vi } from "vitest";
 
@@ -185,7 +185,7 @@ describe("RotarySelector", () => {
 
   it("turns clockwise with Up and Right, anticlockwise with Down and Left", () => {
     render(<Waves defaultValue="triangle" />);
-    press("ArrowUp");
+    expect(press("ArrowUp").defaultPrevented).toBe(true);
     expect(valueNow()).toBe(2);
     press("ArrowRight");
     expect(valueNow()).toBe(3);
@@ -234,16 +234,28 @@ describe("RotarySelector", () => {
     expect(valueNow()).toBe(3);
   });
 
-  it("wraps when the steps add up to a turn within rounding", () => {
-    const SEVEN = ["a", "b", "c", "d", "e", "f", "g"] as const;
-    render(
-      <RotarySelector stepAngle={360 / 7} values={SEVEN}>
-        {() => <RotarySelectorDial aria-label="Seven" />}
-      </RotarySelector>
-    );
-    expect(dial()).toHaveAttribute("data-wraps", "");
+  it("wraps when the steps add up to a turn within half a degree", () => {
+    for (const stepAngle of [89.9, 90.1]) {
+      const { unmount } = render(<Waves stepAngle={stepAngle} />);
+      expect(dial()).toHaveAttribute("data-wraps", "");
+      press("ArrowDown");
+      expect(valueNow()).toBe(3);
+      unmount();
+    }
+    render(<Waves stepAngle={89} />);
+    expect(dial()).not.toHaveAttribute("data-wraps");
     press("ArrowDown");
-    expect(valueNow()).toBe(6);
+    expect(valueNow()).toBe(0);
+  });
+
+  it("throws in development when the steps pass a turn by more than half a degree", () => {
+    const quiet = vi.spyOn(console, "error").mockImplementation(() => null);
+    onTestFinished(() => {
+      quiet.mockRestore();
+    });
+    expect(() => render(<Waves stepAngle={90.2} />)).toThrow(
+      "RotarySelector: 4 values × 90.2° = 360.8°, max 360°."
+    );
   });
 
   it("throws in development when the positions overlap", () => {
@@ -259,6 +271,57 @@ describe("RotarySelector", () => {
         </RotarySelector>
       )
     ).toThrow("RotarySelector: 13 values × 30° = 390°, max 360°.");
+  });
+
+  it("throws in development without values or with an unusable step", () => {
+    const quiet = vi.spyOn(console, "error").mockImplementation(() => null);
+    onTestFinished(() => {
+      quiet.mockRestore();
+    });
+    expect(() =>
+      render(
+        <RotarySelector values={[]}>
+          {() => <RotarySelectorDial aria-label="Empty" />}
+        </RotarySelector>
+      )
+    ).toThrow("RotarySelector: values is empty.");
+    for (const stepAngle of [0, Number.NaN, Number.POSITIVE_INFINITY]) {
+      expect(() => render(<Waves stepAngle={stepAngle} />)).toThrow(
+        `RotarySelector: stepAngle must be a finite number other than 0, not ${stepAngle}.`
+      );
+    }
+  });
+
+  it("logs a selector without values in production and still renders", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    const logged = vi.spyOn(console, "error").mockImplementation(() => null);
+    onTestFinished(() => {
+      vi.unstubAllEnvs();
+      logged.mockRestore();
+    });
+    render(
+      <RotarySelector values={[]}>
+        {() => <RotarySelectorDial aria-label="Empty" />}
+      </RotarySelector>
+    );
+    expect(logged).toHaveBeenCalledWith("RotarySelector: values is empty.");
+    press("End");
+    expect(dial()).toHaveAttribute("aria-valuemax", "-1");
+  });
+
+  it("warns in development about a value or reset value missing from values", () => {
+    const warn = warnings();
+    const values: string[] = ["a", "b"];
+    render(
+      <RotarySelector resetValue="z" value="y" values={values}>
+        {() => <RotarySelectorDial aria-label="Missing" />}
+      </RotarySelector>
+    );
+    expect(warn.mock.calls.map(([message]) => message)).toEqual([
+      'RotarySelector: value "y" is not in values.',
+      'RotarySelector: resetValue "z" is not in values.',
+    ]);
+    expect(valueNow()).toBe(0);
   });
 
   it("logs overlapping positions in production and still renders", () => {
@@ -341,6 +404,18 @@ describe("RotarySelector", () => {
     fireEvent.pointerUp(element);
     expect(onValueCommitted).toHaveBeenCalledTimes(3);
     expect(onValueCommitted).toHaveBeenLastCalledWith("triangle");
+
+    dial().focus();
+    fireEvent.wheel(dial(), { deltaY: 100 });
+    expect(onValueCommitted).toHaveBeenCalledTimes(4);
+    expect(onValueCommitted).toHaveBeenLastCalledWith("sine");
+    // Down from the first value goes nowhere, and still commits.
+    fireEvent.wheel(dial(), { deltaY: 100 });
+    expect(onValueCommitted).toHaveBeenCalledTimes(5);
+    expect(onValueCommitted).toHaveBeenLastCalledWith("sine");
+    fireEvent.doubleClick(dial());
+    expect(onValueCommitted).toHaveBeenCalledTimes(6);
+    expect(onValueCommitted).toHaveBeenLastCalledWith("square");
   });
 
   it("resets on double-click and Alt+click", () => {
@@ -361,6 +436,25 @@ describe("RotarySelector", () => {
     fireEvent.click(label("square"));
     fireEvent.doubleClick(label("square"));
     expect(valueNow()).toBe(3);
+  });
+
+  it("leaves a press on a label to the label, without a drag", () => {
+    const onValueChange = vi.fn();
+    render(<Waves onValueChange={onValueChange} />);
+    const element = draggable();
+    fireEvent.pointerDown(label("saw"), { button: 0, clientY: 100 });
+    fireEvent.pointerMove(element, { clientY: 40 });
+    expect(element).not.toHaveAttribute("data-dragging");
+    expect(onValueChange).not.toHaveBeenCalled();
+  });
+
+  it("drags with the main button only", () => {
+    render(<Waves />);
+    const element = draggable();
+    fireEvent.pointerDown(element, { button: 2, clientY: 100 });
+    fireEvent.pointerMove(element, { clientY: 40 });
+    expect(element).not.toHaveAttribute("data-dragging");
+    expect(valueNow()).toBe(0);
   });
 
   it("resets to the default value without a reset value", () => {
@@ -428,6 +522,60 @@ describe("RotarySelector", () => {
     expect(valueNow()).toBe(1);
   });
 
+  it("finds the nearest position whatever turn the angles are given in", () => {
+    for (const startAngle of [0, 360, -720]) {
+      const { unmount } = render(
+        <Waves
+          dragDirection="circular"
+          startAngle={startAngle}
+          stepAngle={90}
+        />
+      );
+      const element = draggable();
+      fireEvent.pointerDown(element, { button: 0, ...around(0) });
+      fireEvent.pointerMove(element, around(-90));
+      expect(valueNow()).toBe(3);
+      fireEvent.pointerMove(element, around(100));
+      expect(valueNow()).toBe(1);
+      unmount();
+    }
+  });
+
+  it("holds the end when the first move crosses the gap", () => {
+    // From -150° to 150°: a 30° gap at the bottom.
+    const ELEVEN = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"];
+    render(
+      <RotarySelector
+        defaultValue="k"
+        dragDirection="circular"
+        startAngle={-150}
+        values={ELEVEN}
+      >
+        {() => <RotarySelectorDial aria-label="Eleven" />}
+      </RotarySelector>
+    );
+    const element = draggable();
+    fireEvent.pointerDown(element, { button: 0, ...around(150) });
+    fireEvent.pointerMove(element, around(-150));
+    expect(valueNow()).toBe(10);
+  });
+
+  it("holds the end when a fast flick crosses a narrow gap between two moves", () => {
+    // From -120° to 120°: a 90° gap at the bottom.
+    const NINE = ["a", "b", "c", "d", "e", "f", "g", "h", "i"];
+    render(
+      <RotarySelector dragDirection="circular" startAngle={-120} values={NINE}>
+        {() => <RotarySelectorDial aria-label="Nine" />}
+      </RotarySelector>
+    );
+    const element = draggable();
+    fireEvent.pointerDown(element, { button: 0, ...around(0) });
+    fireEvent.pointerMove(element, around(130));
+    expect(valueNow()).toBe(8);
+    fireEvent.pointerMove(element, around(-130));
+    expect(valueNow()).toBe(8);
+  });
+
   it("circles straight across the gap of a selector that wraps", () => {
     render(<Waves dragDirection="circular" stepAngle={90} />);
     const element = draggable();
@@ -455,6 +603,21 @@ describe("RotarySelector", () => {
     });
   });
 
+  it("takes the wheel with a ref of its own on the dial", () => {
+    const objectRef = createRef<HTMLDivElement>();
+    const callbackRef = vi.fn();
+    for (const ref of [objectRef, callbackRef]) {
+      const { unmount } = render(<Waves dial={{ ref }} />);
+      dial().focus();
+      fireEvent.wheel(dial(), { deltaY: -100 });
+      expect(valueNow()).toBe(1);
+      unmount();
+    }
+    expect(objectRef.current).toBeNull();
+    expect(callbackRef).toHaveBeenCalledWith(expect.any(HTMLDivElement));
+    expect(callbackRef).toHaveBeenLastCalledWith(null);
+  });
+
   it("ignores the wheel when allowWheel is false", () => {
     render(<Waves allowWheel={false} />);
     dial().focus();
@@ -473,6 +636,14 @@ describe("RotarySelector", () => {
     press("ArrowUp");
     fireEvent.click(label("saw"));
     fireEvent.doubleClick(dial());
+    const element = draggable();
+    fireEvent.pointerDown(element, { button: 0, clientY: 100 });
+    fireEvent.pointerMove(element, { clientY: 40 });
+    expect(element).not.toHaveAttribute("data-dragging");
+    element.focus();
+    const wheel = createEvent.wheel(element, { deltaY: -100 });
+    fireEvent(element, wheel);
+    expect(wheel.defaultPrevented).toBe(false);
     expect(onValueChange).not.toHaveBeenCalled();
     unmount();
 
@@ -658,6 +829,17 @@ describe("RotarySelectorPositionLeader", () => {
     expect(warn).toHaveBeenCalledExactlyOnceWith(
       'RotarySelectorPositionLeader for "only": the ray is too short (1 < 2).'
     );
+  });
+
+  it("stays quiet about impossible geometry in production", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    onTestFinished(() => {
+      vi.unstubAllEnvs();
+    });
+    const warn = warnings();
+    const { container } = leaderAt(90, { from: 40, ray: 5, to: { x: -18 } });
+    expect(leaderPath(container)).toHaveAttribute("data-invalid", "");
+    expect(warn).not.toHaveBeenCalled();
   });
 
   it("warns when the bend is past its column", () => {
