@@ -31,7 +31,6 @@ import { clamp } from "@/lib/audio/decibels";
 import { linearTaper, logTaper } from "@/lib/audio/taper";
 import type { Taper } from "@/lib/audio/types";
 import { createWheelStepper } from "@/lib/audio/wheel";
-import type { WheelStepper } from "@/lib/audio/wheel";
 import { cn } from "@/lib/utils";
 
 const VIEWBOX = 100;
@@ -186,7 +185,8 @@ const COORDINATE_PRECISION = 1e4;
 const roundCoordinate = (value: number) =>
   Math.round(value * COORDINATE_PRECISION) / COORDINATE_PRECISION;
 
-const pointAt = (angle: number, radius: number) => {
+/** A point in the dial's view box, at an angle clockwise from 12 o'clock. */
+export const pointAt = (angle: number, radius: number) => {
   const radians = angle * DEGREES_TO_RADIANS;
   return {
     x: roundCoordinate(CENTER + radius * Math.sin(radians)),
@@ -256,7 +256,7 @@ interface DragState {
 const DEAD_ZONE = 0.25;
 
 /** The pointer's angle around the dial centre, clockwise from 12 o'clock. */
-const pointerAngle = (
+export const pointerAngle = (
   event: { clientX: number; clientY: number },
   element: HTMLElement
 ): number | null => {
@@ -279,7 +279,7 @@ const dragAngle = (
     : null;
 
 /** The shortest turn from one angle to another, in -180..180 degrees. */
-const turnBetween = (from: number, to: number) =>
+export const turnBetween = (from: number, to: number) =>
   ((to - from + HALF_TURN * 3) % (HALF_TURN * 2)) - HALF_TURN;
 
 /**
@@ -311,41 +311,29 @@ const dragPosition = (
 };
 
 /**
+ * Turns a dial one step per wheel step: +1 for clockwise, -1 for anticlockwise.
  * A non-passive wheel listener blocks scrolling, so the dial only holds one
  * while it has focus. Elsewhere the wheel scrolls the page.
  */
-const useDialWheel = (
-  elementRef: RefObject<HTMLDivElement | null>,
-  dial: KnobDialContextValue,
-  disabled: boolean
+export const useDialWheel = (
+  elementRef: RefObject<HTMLElement | null>,
+  enabled: boolean,
+  onTurn: (turn: 1 | -1, event: WheelEvent) => void
 ) => {
-  const { allowWheel } = dial;
-  const onWheel = useEffectEvent(
-    (event: WheelEvent, stepWheel: WheelStepper) => {
-      event.preventDefault();
-      const turn = stepWheel(event);
-      if (turn === 0) {
-        return;
-      }
-      const fine = event.shiftKey || event.altKey;
-      const increment = fine ? dial.fineStep : dial.step;
-      const next = dial.quantize(
-        dial.latestRef.current + turn * increment,
-        increment
-      );
-      dial.change(next, { event, reason: "wheel" });
-      dial.commit(next);
-    }
-  );
+  const turn = useEffectEvent(onTurn);
 
   useEffect(() => {
     const element = elementRef.current;
-    if (!element || disabled || !allowWheel) {
+    if (!element || !enabled) {
       return;
     }
     const stepWheel = createWheelStepper();
     const listener = (event: WheelEvent) => {
-      onWheel(event, stepWheel);
+      event.preventDefault();
+      const step = stepWheel(event);
+      if (step !== 0) {
+        turn(step, event);
+      }
     };
     const attach = () => {
       element.addEventListener("wheel", listener, { passive: false });
@@ -363,7 +351,7 @@ const useDialWheel = (
       element.removeEventListener("focus", attach);
       element.removeEventListener("blur", detach);
     };
-  }, [allowWheel, disabled, elementRef]);
+  }, [elementRef, enabled]);
 };
 
 export const KnobDial = ({
@@ -378,7 +366,16 @@ export const KnobDial = ({
   const dialRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<DragState | null>(null);
   const [dragging, setDragging] = useState(false);
-  useDialWheel(dialRef, dial, disabled);
+  useDialWheel(dialRef, dial.allowWheel && !disabled, (turn, event) => {
+    const fine = event.shiftKey || event.altKey;
+    const increment = fine ? dial.fineStep : dial.step;
+    const next = dial.quantize(
+      dial.latestRef.current + turn * increment,
+      increment
+    );
+    dial.change(next, { event, reason: "wheel" });
+    dial.commit(next);
+  });
   const dialAngle = angleFor(position, arc);
 
   const reset = () => {
@@ -1188,30 +1185,25 @@ const useKnobValue = ({
   return { change, latestRef, value };
 };
 
-const soundFor = (clickSound: boolean | ClickSound): ClickSound | null => {
-  if (clickSound === true) {
-    return knobClick;
-  }
-  if (clickSound === false) {
-    return null;
-  }
-  return clickSound;
-};
-
 /**
- * Plays the click through the provided audio context, or the shared one,
- * which is only created when a click plays. Null for silence.
+ * Plays the dial's own sound for `true`, or the given one, through the
+ * provided audio context, or the shared one, which is only created when a
+ * click plays. Null for silence.
  */
-const useKnobClick = (clickSound: boolean | ClickSound) => {
+export const useDialClick = (
+  clickSound: boolean | ClickSound,
+  ownSound: ClickSound,
+  minIntervalMs: number
+) => {
   const context = useProvidedAudioContext();
-  const sound = soundFor(clickSound);
+  const sound = clickSound === true ? ownSound : clickSound || null;
   return useMemo(
     () =>
       sound &&
       (() => {
-        sound.play({ context, minIntervalMs: CLICK_INTERVAL_MS });
+        sound.play({ context, minIntervalMs });
       }),
-    [context, sound]
+    [context, minIntervalMs, sound]
   );
 };
 
@@ -1263,7 +1255,7 @@ export const Knob = ({
 
   // Clicks land on KnobScale's long ticks, or every largeStep without one.
   const [detents, setDetents] = useState<readonly number[] | null>(null);
-  const playClick = useKnobClick(clickSound);
+  const playClick = useDialClick(clickSound, knobClick, CLICK_INTERVAL_MS);
   const clicksBetween = useMemo(() => {
     if (!playClick) {
       return null;
