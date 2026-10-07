@@ -81,7 +81,6 @@ const useKnob = (part: string) => {
 export interface DialProviderProps {
   /** The turn shown by the cap and pointer: degrees clockwise from 12 o'clock. */
   angle: number;
-  disabled: boolean;
   /** The cap inside reports its outer radius, or null when it goes away. */
   onCapRadiusChange?: (radius: number | null) => void;
   children?: ReactNode;
@@ -97,13 +96,12 @@ const DialContext = createContext<DialContextValue | null>(null);
  */
 export const DialProvider = ({
   angle,
-  disabled,
   onCapRadiusChange,
   children,
 }: DialProviderProps) => {
   const value = useMemo(
-    () => ({ angle, disabled, onCapRadiusChange }),
-    [angle, disabled, onCapRadiusChange]
+    () => ({ angle, onCapRadiusChange }),
+    [angle, onCapRadiusChange]
   );
   return <DialContext.Provider value={value}>{children}</DialContext.Provider>;
 };
@@ -490,9 +488,7 @@ export const KnobDial = ({
         className="size-full overflow-visible"
         viewBox={`0 0 ${VIEWBOX} ${VIEWBOX}`}
       >
-        <DialProvider angle={dialAngle} disabled={disabled}>
-          {children}
-        </DialProvider>
+        <DialProvider angle={dialAngle}>{children}</DialProvider>
         <circle
           className="[pointer-events:all] cursor-grab touch-none group-aria-disabled/knob-dial:cursor-default group-data-dragging/knob-dial:cursor-[inherit]"
           cx={CENTER}
@@ -791,12 +787,16 @@ export const KnobCap = ({
   const id = useSvgId();
   const cap = CAP[variant];
 
-  useEffect(() => {
-    onCapRadiusChange?.(cap.bezel);
+  // Reported before paint, so a dial sizes its drag area from the first frame.
+  const reportRadius = useEffectEvent((radius: number | null) => {
+    onCapRadiusChange?.(radius);
+  });
+  useLayoutEffect(() => {
+    reportRadius(cap.bezel);
     return () => {
-      onCapRadiusChange?.(null);
+      reportRadius(null);
     };
-  }, [cap.bezel, onCapRadiusChange]);
+  }, [cap.bezel]);
 
   return (
     <g
