@@ -23,7 +23,7 @@ import type {
 
 import { useAudioConfig } from "@/hooks/use-audio-config";
 import type { AudioSize } from "@/hooks/use-audio-config";
-import { useAudioContext } from "@/hooks/use-audio-context";
+import { useProvidedAudioContext } from "@/hooks/use-audio-context";
 import { createClickSound } from "@/lib/audio/click";
 import type { ClickSound } from "@/lib/audio/click";
 import { clamp } from "@/lib/audio/decibels";
@@ -1125,10 +1125,23 @@ const useKnobValue = ({
   return { change, latestRef, value };
 };
 
-/** Plays the click through the surrounding audio context; null for silence. */
+const soundFor = (clickSound: boolean | ClickSound): ClickSound | null => {
+  if (clickSound === true) {
+    return knobClick;
+  }
+  if (clickSound === false) {
+    return null;
+  }
+  return clickSound;
+};
+
+/**
+ * Plays the click through the provided audio context, or the shared one,
+ * which is only created when a click plays. Null for silence.
+ */
 const useKnobClick = (clickSound: boolean | ClickSound) => {
-  const { context } = useAudioContext();
-  const sound = clickSound === true ? knobClick : clickSound || null;
+  const context = useProvidedAudioContext();
+  const sound = soundFor(clickSound);
   return useMemo(
     () =>
       sound &&

@@ -21,7 +21,7 @@ export type ClickSoundChanges = {
 };
 
 export type ClickPlayOptions = {
-  /** Default: the shared page context. */
+  /** Unset or null: the shared page context. */
   context?: AudioContext | null;
   /** Default: the context's speakers. */
   destination?: AudioNode;
@@ -39,10 +39,13 @@ export type ClickPlayOptions = {
 );
 
 export interface ClickSound {
-  /** Plays once. Resumes a suspended context (needs a user gesture). */
-  play: (options?: ClickPlayOptions) => void;
+  /**
+   * Plays once. On a suspended context it resumes first, which needs a user
+   * gesture, and drops the click if the context cannot start in time.
+   */
+  readonly play: (options?: ClickPlayOptions) => void;
   /** A new sound with these parameters deep-merged over this one's. */
-  with: (changes: ClickSoundChanges) => ClickSound;
+  readonly with: (changes: ClickSoundChanges) => ClickSound;
   /** The full parameters after merging, for docs or a tuning UI. */
   readonly params: ClickSoundParams;
 }
@@ -57,15 +60,25 @@ const DEFAULT_PARAMS: ClickSoundParams = {
 };
 
 const MS_PER_SECOND = 1000;
+/** A click that waited longer than this for its context to start is dropped. */
+const STALE_CLICK_MS = 100;
 
 const merge = (
   base: ClickSoundParams,
   changes: ClickSoundChanges
 ): ClickSoundParams => ({
-  ...base,
-  ...changes,
-  noise: { ...base.noise, ...changes.noise },
-  tone: { ...base.tone, ...changes.tone },
+  lengthMs: changes.lengthMs ?? base.lengthMs,
+  noise: {
+    decayMs: changes.noise?.decayMs ?? base.noise.decayMs,
+    gain: changes.noise?.gain ?? base.noise.gain,
+  },
+  pitchSpread: changes.pitchSpread ?? base.pitchSpread,
+  tone: {
+    decayMs: changes.tone?.decayMs ?? base.tone.decayMs,
+    gain: changes.tone?.gain ?? base.tone.gain,
+    hz: changes.tone?.hz ?? base.tone.hz,
+  },
+  volume: changes.volume ?? base.volume,
 });
 
 /** The sum of a decaying noise snap and a decaying sine ring. */
@@ -106,28 +119,22 @@ const resumeContext = async (context: AudioContext) => {
 const clickSound = (params: ClickSoundParams): ClickSound => {
   const buffers = new WeakMap<BaseAudioContext, AudioBuffer>();
   let lastPlayedAt = Number.NEGATIVE_INFINITY;
+  let resuming = false;
 
   const bufferFor = (context: BaseAudioContext) => {
-    const buffer = buffers.get(context) ?? synthesize(context, params);
+    const cached = buffers.get(context);
+    if (cached) {
+      return cached;
+    }
+    const buffer = synthesize(context, params);
     buffers.set(context, buffer);
     return buffer;
   };
 
-  const play = (options: ClickPlayOptions = {}) => {
-    const context = options.context ?? getSharedAudioContext();
-    if (!context) {
-      return;
-    }
-    if (options.when === undefined) {
-      const now = performance.now();
-      if (now - lastPlayedAt < (options.minIntervalMs ?? 0)) {
-        return;
-      }
-      lastPlayedAt = now;
-    }
-    if (context.state === "suspended") {
-      resumeContext(context);
-    }
+  const start = (
+    context: AudioContext,
+    { destination, when }: ClickPlayOptions
+  ) => {
     const source = context.createBufferSource();
     source.buffer = bufferFor(context);
     source.playbackRate.value =
@@ -135,12 +142,63 @@ const clickSound = (params: ClickSoundParams): ClickSound => {
     const gain = context.createGain();
     gain.gain.value = params.volume;
     source.connect(gain);
-    gain.connect(options.destination ?? context.destination);
+    gain.connect(destination ?? context.destination);
     source.addEventListener("ended", () => {
       source.disconnect();
       gain.disconnect();
     });
-    source.start(options.when);
+    source.start(when);
+  };
+
+  /** Starts once the context runs, so refused clicks never pile up. */
+  const startAfterResume = async (
+    context: AudioContext,
+    options: ClickPlayOptions
+  ) => {
+    const askedAt = performance.now();
+    resuming = true;
+    try {
+      await context.resume();
+    } catch {
+      // Without a user gesture the browser refuses; this click is dropped.
+      return;
+    } finally {
+      resuming = false;
+    }
+    if (performance.now() - askedAt <= STALE_CLICK_MS) {
+      start(context, options);
+    }
+  };
+
+  const heldBack = (minIntervalMs = 0) => {
+    const now = performance.now();
+    if (now - lastPlayedAt < minIntervalMs) {
+      return true;
+    }
+    lastPlayedAt = now;
+    return false;
+  };
+
+  const play = (options: ClickPlayOptions = {}) => {
+    const context = options.context ?? getSharedAudioContext();
+    if (!context || context.state === "closed") {
+      return;
+    }
+    if (options.when !== undefined) {
+      if (context.state === "suspended") {
+        resumeContext(context);
+      }
+      start(context, options);
+      return;
+    }
+    if (resuming || heldBack(options.minIntervalMs)) {
+      return;
+    }
+    if (context.state === "running") {
+      start(context, options);
+      return;
+    }
+    startAfterResume(context, options);
   };
 
   return {
@@ -151,5 +209,5 @@ const clickSound = (params: ClickSoundParams): ClickSound => {
 };
 
 /** A synthesised click. Without changes, Knob's tick. */
-export const createClickSound = (changes: ClickSoundChanges = {}) =>
+export const createClickSound = (changes: ClickSoundChanges = {}): ClickSound =>
   clickSound(merge(DEFAULT_PARAMS, changes));

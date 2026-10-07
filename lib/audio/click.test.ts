@@ -12,6 +12,14 @@ vi.mock(import("@/hooks/use-audio-context"), async (importOriginal) => ({
 
 const clock = { now: 0 };
 
+/** A suspended context whose resume settles as `resume` does. */
+const suspendedContext = (resume: Promise<void>) => {
+  const audio = createFakeAudioContext();
+  audio.fake.state = "suspended";
+  audio.fake.resume.mockReturnValue(resume);
+  return audio;
+};
+
 beforeEach(() => {
   clock.now = 0;
   vi.spyOn(performance, "now").mockImplementation(() => clock.now);
@@ -45,6 +53,16 @@ describe("createClickSound", () => {
       tone: { ...thud.params.tone, hz: 900 },
     });
     expect(thud.params.tone.hz).toBe(460);
+  });
+
+  it("keeps the base value for changes left undefined", () => {
+    const thud = createClickSound({ tone: { hz: 460 }, volume: 0.18 });
+    expect(
+      createClickSound({ tone: { hz: undefined }, volume: undefined }).params
+    ).toEqual(createClickSound().params);
+    expect(
+      thud.with({ tone: { hz: undefined }, volume: undefined }).params
+    ).toEqual(thud.params);
   });
 
   it("synthesises lengthMs of audio at the context's sample rate", () => {
@@ -126,11 +144,64 @@ describe("ClickSound.play", () => {
     expect(() => createClickSound().play()).not.toThrow();
   });
 
-  it("resumes a suspended context", () => {
-    const audio = createFakeAudioContext();
-    audio.fake.state = "suspended";
+  it("plays on a suspended context once it resumes", async () => {
+    const resumed = Promise.resolve();
+    const audio = suspendedContext(resumed);
     createClickSound().play({ context: audio.context });
     expect(audio.fake.resume).toHaveBeenCalledOnce();
+    expect(audio.sources).toHaveLength(0);
+    await resumed;
+    expect(audio.sources).toHaveLength(1);
+  });
+
+  it("drops the click when the browser refuses to resume", async () => {
+    const refused = Promise.reject(new Error("Not allowed"));
+    const audio = suspendedContext(refused);
+    createClickSound().play({ context: audio.context });
+    await expect(refused).rejects.toThrow();
+    expect(audio.sources).toHaveLength(0);
+  });
+
+  it("drops the click when the context starts too late", async () => {
+    const audio = createFakeAudioContext();
+    audio.fake.state = "suspended";
+    // Without a user gesture, resume waits until the next one.
+    const resumed = Promise.resolve();
+    audio.fake.resume.mockImplementation(() => {
+      clock.now = 60_000;
+      return resumed;
+    });
+    createClickSound().play({ context: audio.context });
+    await resumed;
+    expect(audio.sources).toHaveLength(0);
+  });
+
+  it("plays one click for many made while resuming", async () => {
+    const resumed = Promise.resolve();
+    const audio = suspendedContext(resumed);
+    const sound = createClickSound();
+    sound.play({ context: audio.context });
+    sound.play({ context: audio.context });
+    await resumed;
+    expect(audio.sources).toHaveLength(1);
+  });
+
+  it("schedules on a suspended context at once", () => {
+    const audio = createFakeAudioContext();
+    audio.fake.state = "suspended";
+    createClickSound().play({ context: audio.context, when: 1 });
+    expect(audio.fake.resume).toHaveBeenCalledOnce();
+    expect(audio.sources[0]?.start).toHaveBeenCalledWith(1);
+  });
+
+  it("does nothing on a closed context", () => {
+    const audio = createFakeAudioContext();
+    audio.fake.state = "closed";
+    createClickSound().play({ context: audio.context });
+    createClickSound().play({ context: audio.context, when: 1 });
+    expect(audio.fake.createBuffer).not.toHaveBeenCalled();
+    expect(audio.sources).toHaveLength(0);
+    expect(audio.gains).toHaveLength(0);
   });
 
   it("varies pitch within pitchSpread", () => {
@@ -161,6 +232,8 @@ describe("ClickSound.play", () => {
     const tick = createClickSound();
     tick.play(options);
     clock.now = 10;
+    tick.play(options);
+    expect(audio.sources).toHaveLength(1);
     tick.with({ volume: 0.5 }).play(options);
     expect(audio.sources).toHaveLength(2);
   });

@@ -178,7 +178,7 @@ The dial is a focusable slider with `aria-valuetext` from `format`, named by `Kn
       "clickSound",
       "boolean | ClickSound",
       "false",
-      "Plays a click on each graduation: KnobScale's long ticks, or every largeStep without a scale. true plays a soft tick; a ClickSound replaces it. At most every 30 ms, through the AudioContext from useAudioContext.",
+      "Plays a click on each graduation: KnobScale's long ticks, or every largeStep without a scale. true plays a soft tick; a ClickSound replaces it. At most every 30 ms, through the AudioContextProvider context or the shared one. A silent knob never creates an AudioContext.",
     ],
     ["format", "(value: number) => string", "String", null],
     [
