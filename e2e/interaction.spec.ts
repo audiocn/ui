@@ -152,6 +152,39 @@ test("knobs turn when circled, finer with Shift", async ({ page }) => {
   await page.mouse.up();
 });
 
+test("knobs ignore drags from the corners of their box", async ({ page }) => {
+  await page.goto("/docs/components/knob#drag-directions");
+  const dial = page.getByRole("slider", { exact: true, name: "Vertical" });
+  await dial.scrollIntoViewIfNeeded();
+  const box = await dial.boundingBox();
+  if (!box) {
+    throw new Error("The knob is not visible.");
+  }
+  const drag = async (x: number, y: number) => {
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.mouse.move(x, y - 50, { steps: 8 });
+    await page.mouse.up();
+  };
+
+  const left = box.x + 2;
+  const right = box.x + box.width - 2;
+  const top = box.y + 2;
+  const bottom = box.y + box.height - 2;
+  const expectIgnored = async (x: number, y: number) => {
+    await drag(x, y);
+    await expect(dial).not.toBeFocused();
+    await expect(dial).toHaveAttribute("aria-valuenow", "0");
+  };
+
+  await expectIgnored(left, top);
+  await expectIgnored(right, top);
+  await expectIgnored(left, bottom);
+  await expectIgnored(right, bottom);
+  await drag(box.x + box.width / 2, bottom);
+  await expect(dial).toHaveAttribute("aria-valuenow", "12");
+});
+
 test("knobs reset with Alt+click and take typed values", async ({ page }) => {
   await page.goto("/docs/components/knob");
   const preview = page.locator('[data-slot="component-preview"]').first();
