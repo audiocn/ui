@@ -27,6 +27,7 @@ Drag the dial up to increase the value and down to decrease it. Set `dragDirecti
 | Action | Result |
 | --- | --- |
 | Drag | Turns the knob |
+| Wheel, while the dial has focus | One step per notch. A trackpad adds up its movement and ignores the scroll that carries on after you lift your fingers |
 | Shift+drag, Shift+wheel | Ten times finer, for precise adjustment. Press or release Shift mid-drag without a jump |
 | Double-click the dial, Alt+click | Resets to `resetValue` |
 | Double-click the value or label, Enter on the dial | Type a value; Enter applies it, Escape cancels |
@@ -173,7 +174,12 @@ The dial is a focusable slider with `aria-valuetext` from `format`, named by `Kn
       "Pixels of vertical or horizontal drag for the full range.",
     ],
     ["scale", '"linear" | "log"', '"linear"', null],
-    ["allowWheel", "boolean", "false", null],
+    [
+      "allowWheel",
+      "boolean",
+      "true",
+      "The wheel turns the knob only while it has focus. Otherwise it scrolls the page.",
+    ],
     [
       "clickSound",
       "boolean | ClickSound",
