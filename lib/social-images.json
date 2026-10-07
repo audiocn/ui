@@ -127,6 +127,10 @@
     "alt": "Volume Control — audiocn: a volume slider with a mute control and numeric value.",
     "url": "/og/components-volume-control-79e0b12eedf6.png"
   },
+  "/docs/components/vu-meter": {
+    "alt": "VU Meter — audiocn: a stereo pair of analog VU meters with backlit faces and needles.",
+    "url": "/og/components-vu-meter-1f184c662cc3.png"
+  },
   "/docs/components/waveform": {
     "alt": "audiocn Waveform: an audio clip with a mirrored waveform, a playhead, a selected region and a marker.",
     "url": "/og/waveform-a632811591d8.png"

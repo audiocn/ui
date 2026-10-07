@@ -7,6 +7,7 @@ const pages = [
   "/docs/components/electric-bar-visualizer",
   "/docs/components/electric-waveform",
   "/docs/components/smooth-waveform",
+  "/docs/components/vu-meter",
   "/docs/blocks/soundboard",
 ];
 

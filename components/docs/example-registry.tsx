@@ -231,6 +231,22 @@ export const examples: Record<string, ComponentType | undefined> = {
   "volume-control-popover": dynamic(
     () => import("@/components/examples/volume-control-popover")
   ),
+  "vu-meter-calibration": dynamic(
+    () => import("@/components/examples/vu-meter-calibration")
+  ),
+  "vu-meter-demo": dynamic(() => import("@/components/examples/vu-meter-demo")),
+  "vu-meter-microphone": dynamic(
+    () => import("@/components/examples/vu-meter-microphone")
+  ),
+  "vu-meter-pivot": dynamic(
+    () => import("@/components/examples/vu-meter-pivot")
+  ),
+  "vu-meter-stereo": dynamic(
+    () => import("@/components/examples/vu-meter-stereo")
+  ),
+  "vu-meter-variants": dynamic(
+    () => import("@/components/examples/vu-meter-variants")
+  ),
   "waveform-demo": dynamic(() => import("@/components/examples/waveform-demo")),
   "waveform-regions": dynamic(
     () => import("@/components/examples/waveform-regions")

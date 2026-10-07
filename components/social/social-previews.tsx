@@ -46,6 +46,14 @@ import {
 import { SmoothWaveform } from "@/components/ui/smooth-waveform";
 import { Spectrum } from "@/components/ui/spectrum";
 import {
+  VuMeter,
+  VuMeterFace,
+  VuMeterLabel,
+  VuMeterLegend,
+  VuMeterNeedle,
+  VuMeterScale,
+} from "@/components/ui/vu-meter";
+import {
   Waveform,
   WaveformCanvas,
   WaveformCursor,
@@ -331,6 +339,29 @@ const SmoothPreview = () => (
     />
   </div>
 );
+const VU_SIDES = [
+  { label: "L", name: "Left channel", rmsDb: -19.5 },
+  { label: "R", name: "Right channel", rmsDb: -17 },
+];
+const VuPreview = () => (
+  <div className="grid w-full grid-cols-2 gap-10">
+    {VU_SIDES.map((side) => (
+      <VuMeter
+        aria-label={side.name}
+        ballistics="instant"
+        key={side.label}
+        rmsDb={side.rmsDb}
+      >
+        <VuMeterFace>
+          <VuMeterScale />
+          <VuMeterNeedle />
+          <VuMeterLegend>VU</VuMeterLegend>
+          <VuMeterLabel>{side.label}</VuMeterLabel>
+        </VuMeterFace>
+      </VuMeter>
+    ))}
+  </div>
+);
 const SpectrumPreview = () => (
   <Spectrum className="h-64 w-full" peakHold source={socialVisualSource} />
 );
@@ -404,6 +435,7 @@ const previews: Record<SocialPreviewName, ComponentType> = {
   toggles: TogglesPreview,
   tracks: TracksPreview,
   volume: VolumePreview,
+  vu: VuPreview,
   waveform: WaveformPreview,
 };
 
