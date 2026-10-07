@@ -41,7 +41,6 @@ const CENTER = 50;
 /** The dial's edge, in view box units. */
 const DIAL_RADIUS = 50;
 const FULL_TURN = 360;
-const HALF_TURN = 180;
 /** Sweeps within half a degree of a turn wrap, so a rounded step like 51.4 (360 / 7) works. */
 const WRAP_TOLERANCE = 0.5;
 /** Pointer travel per position for vertical and horizontal drags. */
@@ -205,56 +204,30 @@ const keyTarget = (key: string, index: number, geometry: Geometry) => {
   return turn ? (stepFrom(index, turn, geometry) ?? index) : undefined;
 };
 
-const nearestIndex = (angle: number, angles: readonly number[]) => {
-  let nearest = 0;
-  for (const [index, candidate] of angles.entries()) {
-    const distance = Math.abs(turnBetween(candidate, angle));
-    if (distance < Math.abs(turnBetween(angles[nearest] ?? 0, angle))) {
-      nearest = index;
-    }
-  }
-  return nearest;
-};
-
-/** Whether a move between two angles, the short way round, reaches or passes `angle`. */
-const passes = (from: number, to: number, angle: number) => {
-  const start = turnBetween(angle, from);
-  const end = turnBetween(angle, to);
-  return (
-    Math.sign(start) !== Math.sign(end) &&
-    Math.abs(start) + Math.abs(end) <= HALF_TURN
-  );
-};
-
 /**
- * On a selector that does not wrap: the index of the end next to the gap the
- * pointer is in, or null while the pointer is over the positions. The end is
- * the one the pointer came from: a move from `previous` that passes the
- * middle of the gap, even in one fast flick, came from the other side.
+ * Circular drags follow the pointer's angle unwrapped across turns, so a
+ * selector that does not wrap stops at its ends like a real switch: past an
+ * end, the pointer has to come back the way it went. The first angle is
+ * taken within half a turn of the middle of the positions.
  */
-const gapEnd = (
+const unwrappedAngle = (
   pointer: number,
   previous: number | null,
-  { angles, stepAngle }: Geometry
+  angles: readonly number[]
 ) => {
-  const [first] = angles;
-  const last = angles.at(-1);
-  if (first === undefined || last === undefined) {
-    return null;
+  const reference = previous ?? ((angles[0] ?? 0) + (angles.at(-1) ?? 0)) / 2;
+  return reference + turnBetween(reference, pointer);
+};
+
+/** The index at an unwrapped angle: round the turn when wrapping, else stopped at the ends. */
+const indexAt = (angle: number, { angles, stepAngle, wraps }: Geometry) => {
+  const count = angles.length;
+  // A step of 0, already reported as an error, gives NaN here.
+  const steps = Math.round((angle - (angles[0] ?? 0)) / stepAngle) || 0;
+  if (wraps) {
+    return ((steps % count) + count) % count;
   }
-  const middle = (first + last) / 2;
-  const halfSweep = (Math.abs(last - first) + Math.abs(stepAngle)) / 2;
-  const offset = turnBetween(middle, pointer);
-  let side = 0;
-  if (previous !== null && passes(previous, pointer, middle + HALF_TURN)) {
-    side = Math.sign(turnBetween(middle, previous));
-  } else if (Math.abs(offset) > halfSweep) {
-    side = Math.sign(offset);
-  }
-  if (side === 0) {
-    return null;
-  }
-  return side > 0 === stepAngle > 0 ? angles.length - 1 : 0;
+  return Math.max(0, Math.min(steps, count - 1));
 };
 
 interface DragState {
@@ -262,10 +235,8 @@ interface DragState {
   y: number;
   /** Vertical and horizontal drags: pixels toward the next step. */
   travel: number;
-  /** Circular drags: the pointer's last readable angle. */
-  pointer: number | null;
-  /** Circular drags: the end held since the pointer entered the gap. */
-  held: number | null;
+  /** Circular drags: the pointer's last readable angle, unwrapped across turns. */
+  angle: number | null;
 }
 
 /** The index after a vertical or horizontal move, and the travel left over. */
@@ -285,26 +256,6 @@ const linearDrag = (
     next = stepFrom(next, turn, geometry) ?? next;
   }
   return { next, travel };
-};
-
-/**
- * The nearest position to the pointer. On a selector that does not wrap, the
- * pointer can pass through the gap: the value holds the end it reached until
- * the pointer comes near that end again, or passes it in one move.
- */
-const circularDrag = (pointer: number, drag: DragState, geometry: Geometry) => {
-  const nearest = nearestIndex(pointer, geometry.angles);
-  const end = geometry.wraps ? null : gapEnd(pointer, drag.pointer, geometry);
-  let { held } = drag;
-  if (end !== null) {
-    held ??= end;
-  } else if (held !== null) {
-    const passed =
-      drag.pointer !== null &&
-      passes(drag.pointer, pointer, geometry.angles[held] ?? 0);
-    held = passed || nearest === held ? null : held;
-  }
-  return { held, next: held ?? nearest };
 };
 
 export interface RotarySelectorDialProps extends ComponentProps<"div"> {
@@ -370,12 +321,12 @@ export const RotarySelectorDial = ({
     }
     event.currentTarget.setPointerCapture(event.pointerId);
     event.currentTarget.focus();
+    const pointer =
+      dragDirection === "circular"
+        ? pointerAngle(event, event.currentTarget)
+        : null;
     dragRef.current = {
-      held: null,
-      pointer:
-        dragDirection === "circular"
-          ? pointerAngle(event, event.currentTarget)
-          : null,
+      angle: pointer === null ? null : unwrappedAngle(pointer, null, angles),
       travel: 0,
       x: event.clientX,
       y: event.clientY,
@@ -394,9 +345,9 @@ export const RotarySelectorDial = ({
       if (pointer === null) {
         return;
       }
-      const { held, next } = circularDrag(pointer, drag, selector);
-      dragRef.current = { ...drag, held, pointer };
-      change(next, details);
+      const unwrapped = unwrappedAngle(pointer, drag.angle, angles);
+      dragRef.current = { ...drag, angle: unwrapped };
+      change(indexAt(unwrapped, selector), details);
       return;
     }
     const { next, travel } = linearDrag(event, drag, latestRef.current, {

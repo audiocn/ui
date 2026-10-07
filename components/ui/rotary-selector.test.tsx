@@ -531,7 +531,7 @@ describe("RotarySelector", () => {
     expect(valueNow()).toBe(0);
   });
 
-  it("stays at the end it reached when circled through the gap", () => {
+  it("stays at the end it reached until the pointer comes back past it", () => {
     // -45°, -15°, 15° and 45°: the gap is the bottom 240°.
     render(<Waves dragDirection="circular" startAngle={-45} />);
     const element = draggable();
@@ -542,12 +542,28 @@ describe("RotarySelector", () => {
     fireEvent.pointerMove(element, around(180));
     fireEvent.pointerMove(element, around(270));
     expect(valueNow()).toBe(3);
-    // Back over the dial, it follows again once it nears that end, even
-    // short of its exact angle.
-    fireEvent.pointerMove(element, around(-20));
+    // Back the way it came, it follows again once past the end.
+    fireEvent.pointerMove(element, around(180));
+    fireEvent.pointerMove(element, around(90));
     expect(valueNow()).toBe(3);
     fireEvent.pointerMove(element, around(40));
+    expect(valueNow()).toBe(3);
     fireEvent.pointerMove(element, around(-10));
+    expect(valueNow()).toBe(1);
+  });
+
+  it("keeps the end like a stop when the pointer goes on around", () => {
+    render(<Waves dragDirection="circular" startAngle={-45} />);
+    const element = draggable();
+    fireEvent.pointerDown(element, { button: 0, ...around(40) });
+    for (const angle of [90, 180, 270, -20, 40, -10]) {
+      fireEvent.pointerMove(element, around(angle));
+      expect(valueNow()).toBe(3);
+    }
+    // Unwinding the extra turn brings it back.
+    for (const angle of [40, -20, 270, 180, 90, 40, -10]) {
+      fireEvent.pointerMove(element, around(angle));
+    }
     expect(valueNow()).toBe(1);
   });
 
@@ -602,10 +618,38 @@ describe("RotarySelector", () => {
     // From -150° to 150°: a 30° gap at the bottom, around 180°.
     const ELEVEN = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"];
     const drags = [
-      { from: 150, gap: 170, path: [120, 90], positions: [9, 8], step: 30 },
-      { from: -150, gap: -170, path: [-120, -90], positions: [1, 2], step: 30 },
+      { from: 150, gap: [170], path: [120, 90], positions: [9, 8], step: 30 },
+      {
+        from: -150,
+        gap: [-170],
+        path: [-120, -90],
+        positions: [1, 2],
+        step: 30,
+      },
       // Anticlockwise: the first value sits at 150°.
-      { from: 150, gap: 170, path: [120, 90], positions: [1, 2], step: -30 },
+      { from: 150, gap: [170], path: [120, 90], positions: [1, 2], step: -30 },
+      // Over the middle of the gap and back.
+      {
+        from: 150,
+        gap: [170, -170],
+        path: [120, 90],
+        positions: [9, 8],
+        step: 30,
+      },
+      {
+        from: -150,
+        gap: [-170, 170],
+        path: [-120, -90],
+        positions: [1, 2],
+        step: 30,
+      },
+      {
+        from: 150,
+        gap: [170, -170],
+        path: [120, 90],
+        positions: [1, 2],
+        step: -30,
+      },
     ];
     for (const { from, gap, path, positions, step } of drags) {
       const { unmount } = render(
@@ -621,9 +665,10 @@ describe("RotarySelector", () => {
       );
       const element = draggable();
       fireEvent.pointerDown(element, { button: 0, ...around(from) });
-      fireEvent.pointerMove(element, around(gap));
-      const held = valueNow();
-      expect(held).toBe(step > 0 === from > 0 ? 10 : 0);
+      for (const angle of gap) {
+        fireEvent.pointerMove(element, around(angle));
+        expect(valueNow()).toBe(step > 0 === from > 0 ? 10 : 0);
+      }
       fireEvent.pointerMove(element, around(path[0] ?? 0));
       expect(valueNow()).toBe(positions[0]);
       fireEvent.pointerMove(element, around(path[1] ?? 0));

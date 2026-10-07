@@ -115,10 +115,12 @@ test("circled rotary selectors follow the pointer and hold an end in the gap", a
   await expectIndex(dial, 3);
   await circle(page, around, 30, 240);
   await expectIndex(dial, 4);
-  // Back over the dial from the far side, it waits for the end it holds.
+  // On around to the far side, it stays at the end, like a stop.
   await circle(page, around, 240, 300);
   await expectIndex(dial, 4);
-  await circle(page, around, -60, 60);
+  // Back the way it came, it follows again once past the end.
+  await circle(page, around, 300, 60);
+  await expectIndex(dial, 4);
   await circle(page, around, 60, -30);
   await expectIndex(dial, 1);
   await page.mouse.up();
