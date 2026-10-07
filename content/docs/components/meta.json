@@ -17,6 +17,7 @@
     "---Controls---",
     "fader",
     "parameter-slider",
+    "tempo-control",
     "knob",
     "pan-control",
     "channel-toggle",

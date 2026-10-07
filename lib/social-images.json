@@ -226,5 +226,13 @@
   "/docs/installation": {
     "alt": "Installation — audiocn: level meters, rotary knobs, faders and a waveform.",
     "url": "/og/installation-b954ff0e47d0.png"
+  },
+  "/docs/components/tempo-control": {
+    "alt": "Tempo Control — audiocn: an editable BPM input and a tap tempo button.",
+    "url": "/og/components-tempo-control-8f75a1302020.png"
+  },
+  "/docs/hooks/use-tap-tempo": {
+    "alt": "useTapTempo — audiocn: an editable BPM input and a tap tempo button.",
+    "url": "/og/hooks-use-tap-tempo-f2ab03e45734.png"
   }
 }
