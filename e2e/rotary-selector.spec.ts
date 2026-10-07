@@ -1,0 +1,167 @@
+import { expect, test } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
+
+const PAGE = "/docs/components/rotary-selector";
+
+/** The named dial, scrolled into view, with its box and view box mapping. */
+const selector = async (page: Page, name: string) => {
+  await page.goto(PAGE);
+  const dial = page.getByRole("slider", { exact: true, name });
+  await dial.scrollIntoViewIfNeeded();
+  const box = await dial.boundingBox();
+  if (!box) {
+    throw new Error(`The ${name} selector is not visible.`);
+  }
+  /** A point in client coordinates, from the dial's 100 × 100 view box. */
+  const at = (x: number, y: number) =>
+    [box.x + (box.width * x) / 100, box.y + (box.height * y) / 100] as const;
+  /** A point at a radius, clockwise in degrees from 12 o'clock. */
+  const around = (degrees: number, radius = 35) => {
+    const radians = (degrees * Math.PI) / 180;
+    return at(50 + radius * Math.sin(radians), 50 - radius * Math.cos(radians));
+  };
+  return { around, at, dial };
+};
+
+const drag = async (
+  page: Page,
+  [x, y]: readonly [number, number],
+  dx: number,
+  dy: number
+) => {
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await page.mouse.move(x + dx, y + dy, { steps: 8 });
+  await page.mouse.up();
+};
+
+/** Moves the pointer along an arc, ten degrees at a time. */
+const circle = async (
+  page: Page,
+  around: (degrees: number) => readonly [number, number],
+  from: number,
+  to: number
+) => {
+  const direction = Math.sign(to - from);
+  for (let angle = from + direction * 10; ; angle += direction * 10) {
+    const reached = direction > 0 ? angle >= to : angle <= to;
+    // The pointer moves one point at a time, in order.
+    // eslint-disable-next-line no-await-in-loop
+    await page.mouse.move(...around(reached ? to : angle));
+    if (reached) {
+      return;
+    }
+  }
+};
+
+const expectIndex = (dial: Locator, index: number) =>
+  expect(dial).toHaveAttribute("aria-valuenow", String(index));
+
+test("rotary selectors drag only from the circle around the cap", async ({
+  page,
+}) => {
+  const { at, dial } = await selector(page, "Waveform");
+  const expectIgnored = async (point: readonly [number, number]) => {
+    await drag(page, point, 0, 48);
+    await expect(dial).not.toBeFocused();
+    await expectIndex(dial, 0);
+  };
+
+  await expectIgnored(at(2, 2));
+  await expectIgnored(at(98, 2));
+  await expectIgnored(at(2, 98));
+  await expectIgnored(at(98, 98));
+  // The run of the triangle's leader, left of the dial.
+  await expectIgnored(at(-13, 34.2));
+  // Down is anticlockwise: the next index, since these positions run anticlockwise.
+  await drag(page, at(50, 50), 0, 24);
+  await expectIndex(dial, 1);
+  await expect(dial).toBeFocused();
+});
+
+for (const direction of ["Vertical", "Horizontal"] as const) {
+  test(`rotary selectors step every 24 px of ${direction.toLowerCase()} drag`, async ({
+    page,
+  }) => {
+    const { at, dial } = await selector(page, direction);
+    const [x, y] = at(50, 50);
+    const along = (pixels: number) =>
+      direction === "Vertical"
+        ? ([x, y - pixels] as const)
+        : ([x + pixels, y] as const);
+
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.mouse.move(...along(20), { steps: 4 });
+    await expectIndex(dial, 0);
+    await page.mouse.move(...along(50), { steps: 4 });
+    await expectIndex(dial, 2);
+    // Past the last position it stays there.
+    await page.mouse.move(...along(200), { steps: 8 });
+    await expectIndex(dial, 4);
+    await page.mouse.up();
+    await expect(dial).toHaveAttribute("aria-valuetext", "Step 5");
+  });
+}
+
+test("circled rotary selectors follow the pointer and hold an end in the gap", async ({
+  page,
+}) => {
+  // Positions at -60°, -30°, 0°, 30° and 60°: the gap is the bottom 210°.
+  const { around, dial } = await selector(page, "Circular");
+  await page.mouse.move(...around(0));
+  await page.mouse.down();
+  await circle(page, around, 0, 30);
+  await expectIndex(dial, 3);
+  await circle(page, around, 30, 240);
+  await expectIndex(dial, 4);
+  // Back over the dial from the far side, it waits for the end it holds.
+  await circle(page, around, 240, 300);
+  await expectIndex(dial, 4);
+  await circle(page, around, -60, 60);
+  await circle(page, around, 60, -30);
+  await expectIndex(dial, 1);
+  await page.mouse.up();
+});
+
+test("rotary selectors select a position from its label", async ({ page }) => {
+  const { dial } = await selector(page, "Instrument select");
+  const preview = page
+    .locator('[data-slot="component-preview"]')
+    .filter({ has: dial });
+  await preview
+    .locator('[data-slot="rotary-selector-position-label"]', { hasText: "CB" })
+    .click();
+  await expect(dial).toHaveAttribute("aria-valuetext", "CB Cowbell");
+  await expect(dial).toBeFocused();
+  await dial.click({ modifiers: ["Alt"] });
+  await expect(dial).toHaveAttribute("aria-valuetext", "BD Bass drum");
+});
+
+const scrollY = (page: Page) => page.evaluate(() => window.scrollY);
+
+test("a focused rotary selector steps once per wheel notch and wraps", async ({
+  page,
+}) => {
+  const { at, dial } = await selector(page, "Instrument select");
+  await page.mouse.move(...at(50, 50));
+  await dial.focus();
+  const before = await scrollY(page);
+  await page.mouse.wheel(0, -100);
+  await expectIndex(dial, 2);
+  await page.keyboard.press("Home");
+  await page.mouse.wheel(0, 100);
+  await expectIndex(dial, 11);
+  expect(await scrollY(page)).toBe(before);
+});
+
+test("an unfocused rotary selector lets the wheel scroll the page", async ({
+  page,
+}) => {
+  const { at, dial } = await selector(page, "Instrument select");
+  await page.mouse.move(...at(50, 50));
+  const before = await scrollY(page);
+  await page.mouse.wheel(0, 100);
+  await expect.poll(() => scrollY(page)).toBeGreaterThan(before);
+  await expectIndex(dial, 1);
+});

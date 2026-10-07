@@ -3,6 +3,7 @@ export type SocialPreviewName =
   | "mixer"
   | "meters"
   | "knobs"
+  | "rotary-selector"
   | "waveform"
   | "electric-waveform"
   | "bars"
@@ -124,6 +125,7 @@ export const componentPreviews: Record<string, SocialPreviewName | undefined> =
     mixer: "mixer",
     "pan-control": "pan",
     "parameter-slider": "parameters",
+    "rotary-selector": "rotary-selector",
     "smooth-waveform": "smooth-waveform",
     "sound-pad": "pads",
     spectrum: "spectrum",
@@ -197,6 +199,8 @@ const previewDescriptions: Record<SocialPreviewName, string> = {
   "quick-popover":
     "an open audio popover with microphone and system audio settings",
   readout: "decibel readouts for quiet, normal and hot signal levels",
+  "rotary-selector":
+    "a waveform switch with leaders to wave icons and a brushed metal cap",
   scale: "a decibel scale alongside a console fader",
   "smooth-waveform": "a flowing audio wave and an oscilloscope line",
   soundboard:

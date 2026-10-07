@@ -1,0 +1,311 @@
+---
+title: Rotary Selector
+description: A rotary switch that selects one value from a fixed list, like a waveform or instrument switch.
+seoDescription: Build accessible rotary switches for React, like a synth waveform switch or a drum machine instrument select. Typed positions, drag, keyboard and wheel. Copy and customize the audiocn Rotary Selector.
+---
+
+<ComponentPreview name="rotary-selector-demo" />
+
+## Installation
+
+```npm
+npx shadcn@latest add @audiocn/rotary-selector
+```
+
+## Usage
+
+```tsx
+import { KnobCap } from "@/components/ui/knob";
+import {
+  RotarySelector,
+  RotarySelectorDial,
+  RotarySelectorLabel,
+  RotarySelectorPositionMark,
+  RotarySelectorValue,
+} from "@/components/ui/rotary-selector";
+```
+
+```tsx
+const WAVES = ["sine", "triangle", "saw", "square"] as const;
+
+<RotarySelector values={WAVES} value={wave} onValueChange={setWave}>
+  {({ positions }) => (
+    <>
+      <RotarySelectorDial>
+        {positions.map((position) => (
+          <RotarySelectorPositionMark
+            key={position.value}
+            position={position}
+          />
+        ))}
+        <KnobCap />
+      </RotarySelectorDial>
+      <RotarySelectorValue />
+      <RotarySelectorLabel>Waveform</RotarySelectorLabel>
+    </>
+  )}
+</RotarySelector>;
+```
+
+The selector works like a `<select>`: it always has one value, the first by default. The type of `value` comes from `values`, so `onValueChange` gets `"sine" | "triangle" | "saw" | "square"`.
+
+| Action | Result |
+| --- | --- |
+| Drag the cap | Steps one position for each 24 px |
+| Click a position label | Selects that value |
+| Wheel, while the dial has focus | One position for each notch, or each 30 px of trackpad movement. Coasting after you lift your fingers does nothing |
+| Double-click the cap, Alt+click | Resets to `resetValue` |
+
+## Anatomy
+
+```tsx
+<RotarySelector>
+  {({ positions, position, value }) => (
+    <>
+      <RotarySelectorDial>
+        {positions.map((position) => (
+          <>
+            <RotarySelectorPositionMark position={position} />
+            <RotarySelectorPositionLeader position={position}>
+              <RotarySelectorPositionLabel position={position} />
+            </RotarySelectorPositionLeader>
+          </>
+        ))}
+        <KnobCap />
+      </RotarySelectorDial>
+      <RotarySelectorValue />
+      <RotarySelectorLabel />
+    </>
+  )}
+</RotarySelector>
+```
+
+The children of `RotarySelector` are a function. It gets:
+
+- `positions`: one object per value, in order, with its `value`, `index`, `angle` (degrees clockwise from 12 o'clock), `selected` and `pointAt(radius)`.
+- `position(value)`: the position of one value, for one-off print. TypeScript rejects a value that is not in `values`.
+- `value`: the selected value.
+
+The dial uses the [Knob](/docs/components/knob)'s 100 × 100 view box, with the centre at (50, 50) and the edge of the dial at radius 50. You draw the print (marks, labels, leaders) yourself, at any coordinates. Print outside the dial paints over the space around it and takes no layout space, so give it room with padding or gaps. `KnobCap` and `KnobPointer` turn to the selected position.
+
+## Positions
+
+`startAngle` is the angle of the first value, 0 by default. `stepAngle` is the angle from one value to the next, 30° by default, as on most hardware. A negative `stepAngle` puts the values anticlockwise. To centre the values, move `startAngle` back by half their spread.
+
+The selector wraps from the last value to the first only when the values fill a whole turn (`values.length × |stepAngle|` = 360°). Otherwise it stops at both ends. More than 360° is an error: TypeScript shows it on `stepAngle` when both props are literals, and the selector throws in development.
+
+## Examples
+
+### Leaders
+
+`RotarySelectorPositionLeader` draws a line from a position to its label: a ray out from the dial, then a run across to a column `to={{ x }}` or a row `to={{ y }}`. Its children sit at the end of the line. A function as children gets `{ end, bend, path }` to place them itself.
+
+The waveform switch above puts every label in one column on the left:
+
+```tsx
+<RotarySelectorPositionLeader
+  position={position}
+  from={53}
+  ray={8}
+  to={{ x: -18 }}
+>
+  <RotarySelectorPositionLabel position={position}>
+    <WaveIcon wave={position.value} x={-13} />
+  </RotarySelectorPositionLabel>
+</RotarySelectorPositionLeader>
+```
+
+A leader that cannot work still draws, with `data-invalid` (red and dashed by default), and logs a warning in development. This happens when the ray points away from its column or row, the bend is inside the dial, the ray is too short, or the bend is past its column or row.
+
+### Instrument select
+
+Twelve values 30° apart fill the turn, so this selector wraps. Each position has two labels: a number near the dial and a boxed name. Both select the value.
+
+<ComponentPreview name="rotary-selector-instruments" />
+
+### Measures
+
+Six values over 180° do not wrap. The bracket uses `position(16)` and `position(2)` to find its ends. The mini cap sits on a ring, so `hitRadius={44}` makes the drag circle as large as the ring.
+
+<ComponentPreview name="rotary-selector-measures" />
+
+### Next to a Knob
+
+With the same `size`, a selector and a Knob line up centre to centre and take the same caps.
+
+<ComponentPreview name="rotary-selector-compact" />
+
+### Drag directions
+
+`dragDirection` works as on the Knob:
+
+- `vertical`, the default: drag up to turn clockwise, down to turn anticlockwise.
+- `horizontal`: drag right to turn clockwise, left to turn anticlockwise.
+- `circular`: the selector goes to the position nearest the pointer. When the values do not fill the turn, it stays at the end it reached while the pointer crosses the gap.
+
+Only a circle around the cap starts a drag. It is the size of the cap, or `hitRadius` on `RotarySelectorDial`. The print and the corners of the dial do not start a drag.
+
+<ComponentPreview name="rotary-selector-drag-directions" />
+
+### Sizes and disabled
+
+<ComponentPreview name="rotary-selector-sizes" />
+
+### Click sound
+
+`clickSound` plays a short, low click at each change of position. Pass a `ClickSound` to play a different one, as with the [Knob](/docs/components/knob#custom-click-sound). Give a Knob and a selector the same sound for one consistent click across a panel.
+
+## Theming
+
+| Variable or attribute  | Meaning                                           |
+| ---------------------- | ------------------------------------------------- |
+| `--knob-size`          | Set by `size`, shared with the Knob               |
+| `--knob-angle`         | The selected position's angle, live, on the dial  |
+| `data-dragging`        | On the dial while dragging                        |
+| `data-wraps`           | On the dial when the values fill the turn         |
+| `data-disabled`        | On the root and the dial when disabled            |
+| `data-selected="true"` | On the selected position's mark, label and leader |
+| `data-invalid`         | On a leader with impossible geometry              |
+
+Style the print with `stroke-*`, `fill-*` and `text-*` classes, and the selected position with `data-selected:`. Position labels use `currentColor`. For example, `<RotarySelectorPositionLabel className="text-muted-foreground data-selected:text-primary" />`.
+
+## Accessibility
+
+The dial is a focusable slider over the position indices, from 0 to `values.length − 1`. `aria-valuetext` comes from `format`, and `RotarySelectorLabel` names it. Without a label, pass `aria-label` to `RotarySelectorDial`. The print is hidden from assistive technology, and the position labels are not tab stops.
+
+| Key                    | Result                       |
+| ---------------------- | ---------------------------- |
+| Arrow Up, Arrow Right  | One position clockwise       |
+| Arrow Down, Arrow Left | One position anticlockwise   |
+| Home, End              | The first and the last value |
+
+With a negative `stepAngle`, clockwise goes to a lower index.
+
+## API reference
+
+<PropsTable
+  rows={[
+    [
+      "values",
+      "readonly Value[]",
+      null,
+      "The values, in index order. Value is a string or a number.",
+    ],
+    ["value", "Value", null, null],
+    ["defaultValue", "Value", "values[0]", null],
+    [
+      "onValueChange",
+      "(value, details) => void",
+      null,
+      "details.reason: drag, keyboard, wheel, reset or label.",
+    ],
+    [
+      "onValueCommitted",
+      "(value) => void",
+      null,
+      "At the end of every interaction, also when the value did not change.",
+    ],
+    [
+      "resetValue",
+      "Value",
+      "defaultValue",
+      "Double-click or Alt+click on the cap restores it.",
+    ],
+    [
+      "startAngle",
+      "number",
+      "0",
+      "Angle of the first value, in degrees clockwise from 12 o'clock.",
+    ],
+    [
+      "stepAngle",
+      "number",
+      "30",
+      "Degrees from one value to the next. Negative goes anticlockwise.",
+    ],
+    ["format", "(value: Value) => string", "String", null],
+    [
+      "dragDirection",
+      '"vertical" | "horizontal" | "circular"',
+      '"vertical"',
+      null,
+    ],
+    [
+      "allowWheel",
+      "boolean",
+      "true",
+      "The wheel turns the selector only while it has focus. Otherwise it scrolls the page.",
+    ],
+    [
+      "clickSound",
+      "boolean | ClickSound",
+      "false",
+      "Plays a click at each change of position. true plays the selector's own click; a ClickSound replaces it. At most every 33 ms, through the AudioContextProvider context or the shared one. A silent selector never creates an AudioContext.",
+    ],
+    ["size", '"sm" | "default" | "lg"', '"default"', null],
+    ["disabled", "boolean", "false", null],
+    [
+      "children",
+      "({ positions, position, value }) => ReactNode",
+      null,
+      "Composes the dial and its print.",
+    ],
+  ]}
+/>
+
+### RotarySelectorDial
+
+<PropsTable
+  rows={[
+    [
+      "hitRadius",
+      "number",
+      "the cap's radius",
+      "Radius of the drag circle, in view box units. 50 without a cap.",
+    ],
+  ]}
+/>
+
+### RotarySelectorPositionLeader
+
+<PropsTable
+  rows={[
+    ["position", "RotarySelectorPosition", null, null],
+    ["from", "number", null, "Radius where the line starts."],
+    ["ray", "number", null, "Length of the radial segment."],
+    [
+      "to",
+      "{ x: number } | { y: number }",
+      null,
+      "End of the run: a column x or a row y.",
+    ],
+    [
+      "children",
+      "ReactNode | ((leader) => ReactNode)",
+      null,
+      "Plain children sit at the end of the line. A function gets { end, bend, path }.",
+    ],
+  ]}
+/>
+
+### RotarySelectorPositionMark
+
+<PropsTable
+  rows={[
+    ["position", "RotarySelectorPosition", null, null],
+    ["inner / outer", "number", "52 / 56", "Radii of the tick."],
+  ]}
+/>
+
+### RotarySelectorPositionLabel
+
+<PropsTable
+  rows={[
+    [
+      "position",
+      "RotarySelectorPosition",
+      null,
+      "Clicking the label selects this position.",
+    ],
+  ]}
+/>
