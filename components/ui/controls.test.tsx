@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import type { CSSProperties } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, onTestFinished, vi } from "vitest";
 
 import { AudioDeviceSelect } from "@/components/ui/audio-device-select";
 import { MuteToggle } from "@/components/ui/channel-toggle";
@@ -21,6 +21,9 @@ import {
   ParameterSliderLabel,
 } from "@/components/ui/parameter-slider";
 import { VolumeControl } from "@/components/ui/volume-control";
+import { AudioContextProvider } from "@/hooks/use-audio-context";
+import { createClickSound } from "@/lib/audio/click";
+import { createFakeAudioContext } from "@/test/fake-audio";
 
 /** The shared AudioContext the knob clicks through, null like on the server. */
 const audio = vi.hoisted(() => ({ context: null as unknown }));
@@ -418,6 +421,62 @@ describe("Knob", () => {
       audio.context = null;
       vi.restoreAllMocks();
     }
+  });
+
+  it("clicks through the AudioContextProvider's context", () => {
+    const provided = createFakeAudioContext();
+    render(
+      <AudioContextProvider context={provided.context}>
+        <Knob
+          aria-label="Volume"
+          clickSound={createClickSound()}
+          defaultValue={59}
+        />
+      </AudioContextProvider>
+    );
+    fireEvent.keyDown(screen.getByRole("slider"), { key: "ArrowUp" });
+    expect(provided.sources).toHaveLength(1);
+    expect(provided.sources[0]?.start).toHaveBeenCalledOnce();
+    expect(provided.gains[0]?.connect).toHaveBeenCalledWith(
+      provided.fake.destination
+    );
+  });
+
+  it("plays a custom click sound in place of its own", () => {
+    const provided = createFakeAudioContext();
+    const thud = createClickSound({ tone: { hz: 460 } });
+    const play = vi.spyOn(thud, "play");
+    render(
+      <AudioContextProvider context={provided.context}>
+        <Knob aria-label="Volume" clickSound={thud} defaultValue={59} />
+      </AudioContextProvider>
+    );
+    fireEvent.keyDown(screen.getByRole("slider"), { key: "ArrowUp" });
+    expect(play).toHaveBeenCalledWith(
+      expect.objectContaining({ context: provided.context })
+    );
+    expect(provided.sources).toHaveLength(1);
+  });
+
+  it("clicks at most every 30 ms", () => {
+    const provided = createFakeAudioContext();
+    const now = vi.spyOn(performance, "now").mockReturnValue(0);
+    onTestFinished(() => {
+      now.mockRestore();
+    });
+    render(
+      <AudioContextProvider context={provided.context}>
+        <Knob aria-label="Volume" clickSound={createClickSound()} />
+      </AudioContextProvider>
+    );
+    const dial = screen.getByRole("slider");
+    fireEvent.keyDown(dial, { key: "PageUp" });
+    now.mockReturnValue(10);
+    fireEvent.keyDown(dial, { key: "PageUp" });
+    expect(provided.sources).toHaveLength(1);
+    now.mockReturnValue(40);
+    fireEvent.keyDown(dial, { key: "PageUp" });
+    expect(provided.sources).toHaveLength(2);
   });
 
   it("reads typed values", () => {

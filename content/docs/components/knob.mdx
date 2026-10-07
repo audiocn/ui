@@ -75,6 +75,24 @@ A hi-fi volume dial: `KnobScale` draws numbered ticks around the dial and `KnobC
 
 Ticks between `origin` and the value light up, so a bipolar knob lights from its centre. The ticks are spread evenly along the arc, so they follow `scale="log"` too.
 
+### Custom click sound
+
+`clickSound` plays the knob's own tick. Pass a `ClickSound` to play a different one. Create it once, outside your component, so it keeps its buffer and its rate limit between renders.
+
+```tsx
+import { createClickSound } from "@/lib/audio/click";
+
+const thud = createClickSound({
+  tone: { hz: 460, decayMs: 1.3, gain: 1 },
+  noise: { decayMs: 0.75, gain: 0.21 },
+  volume: 0.18,
+});
+
+<Knob clickSound={thud} />;
+```
+
+A click is a decaying sine (`tone`) over a decaying noise snap (`noise`). Unset fields keep the default tick, and `thud.with({ tone: { hz: 900 } })` makes a variant of `thud`. The knob plays through the context from `AudioContextProvider`, or the shared one.
+
 ### Metal knobs
 
 The same aluminium at everyday sizes: swap `KnobPointer` for `<KnobCap variant="mini" />`. The mini cap fills the inside of `KnobTrack` and marks the value with an engraved line, which still reads at `size="sm"`.
@@ -158,9 +176,9 @@ The dial is a focusable slider with `aria-valuetext` from `format`, named by `Kn
     ["allowWheel", "boolean", "false", null],
     [
       "clickSound",
-      "boolean",
+      "boolean | ClickSound",
       "false",
-      "Plays a soft tick on each graduation: KnobScale's long ticks, or every largeStep without a scale. At most every 30 ms, through the shared AudioContext.",
+      "Plays a click on each graduation: KnobScale's long ticks, or every largeStep without a scale. true plays a soft tick; a ClickSound replaces it. At most every 30 ms, through the AudioContext from useAudioContext.",
     ],
     ["format", "(value: number) => string", "String", null],
     [

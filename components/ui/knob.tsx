@@ -23,7 +23,9 @@ import type {
 
 import { useAudioConfig } from "@/hooks/use-audio-config";
 import type { AudioSize } from "@/hooks/use-audio-config";
-import { getSharedAudioContext } from "@/hooks/use-audio-context";
+import { useAudioContext } from "@/hooks/use-audio-context";
+import { createClickSound } from "@/lib/audio/click";
+import type { ClickSound } from "@/lib/audio/click";
 import { clamp } from "@/lib/audio/decibels";
 import { linearTaper, logTaper } from "@/lib/audio/taper";
 import type { Taper } from "@/lib/audio/types";
@@ -1032,9 +1034,10 @@ export interface KnobProps extends Omit<
   allowWheel?: boolean;
   /**
    * Plays a soft click on each graduation: KnobScale's long ticks, or every
-   * `largeStep` without a scale. Default false.
+   * `largeStep` without a scale. Pass a `ClickSound` to replace the tick.
+   * Default false.
    */
-  clickSound?: boolean;
+  clickSound?: boolean | ClickSound;
   format?: (value: number) => string;
   /** Reads a typed value. Default: the first number, with "k" as thousands. */
   parse?: (text: string) => number | null;
@@ -1044,15 +1047,7 @@ export interface KnobProps extends Omit<
 
 /** Shortest gap between clicks, so a fast turn ticks instead of buzzing. */
 const CLICK_INTERVAL_MS = 30;
-const CLICK_SECONDS = 0.006;
-const CLICK_VOLUME = 0.12;
-/** Each click is pitched a little at random, like a real detent. */
-const CLICK_PITCH_SPREAD = 0.04;
-/** A short noise snap over a high, fast-damped ring: a tick, not a thud. */
-const CLICK_PARTS = [
-  { decay: 0.0004, gain: 0.6, hz: 0 },
-  { decay: 0.0012, gain: 0.4, hz: 4200 },
-] as const;
+const knobClick = createClickSound();
 
 /** Positions this close to a detent count as on it. */
 const DETENT_EPSILON = 1e-9;
@@ -1079,71 +1074,6 @@ const reachesMultiple = (
     : Math.ceil(start) > Math.ceil(end);
 };
 
-const clickBuffers = new WeakMap<BaseAudioContext, AudioBuffer>();
-let lastClickAt = Number.NEGATIVE_INFINITY;
-
-/** One synthesised click, made once per audio context. */
-const clickBuffer = (context: BaseAudioContext) => {
-  const cached = clickBuffers.get(context);
-  if (cached) {
-    return cached;
-  }
-  const { sampleRate } = context;
-  const buffer = context.createBuffer(
-    1,
-    Math.ceil(CLICK_SECONDS * sampleRate),
-    sampleRate
-  );
-  const samples = buffer.getChannelData(0);
-  for (let index = 0; index < samples.length; index += 1) {
-    const time = index / sampleRate;
-    let sample = 0;
-    for (const part of CLICK_PARTS) {
-      const wave =
-        part.hz === 0
-          ? Math.random() * 2 - 1
-          : Math.sin(2 * Math.PI * part.hz * time);
-      sample += part.gain * wave * Math.exp(-time / part.decay);
-    }
-    samples[index] = sample;
-  }
-  clickBuffers.set(context, buffer);
-  return buffer;
-};
-
-const resumeContext = async (context: AudioContext) => {
-  try {
-    await context.resume();
-  } catch {
-    // Without a user gesture the browser refuses; the next one tries again.
-  }
-};
-
-/** Plays a click through the shared audio context, at most every 30 ms. */
-const playClick = () => {
-  const now = performance.now();
-  const context = getSharedAudioContext();
-  if (!context || now - lastClickAt < CLICK_INTERVAL_MS) {
-    return;
-  }
-  lastClickAt = now;
-  if (context.state === "suspended") {
-    resumeContext(context);
-  }
-  const source = context.createBufferSource();
-  source.buffer = clickBuffer(context);
-  source.playbackRate.value =
-    1 + (Math.random() - 0.5) * CLICK_PITCH_SPREAD * 2;
-  const gain = context.createGain();
-  gain.gain.value = CLICK_VOLUME;
-  source.connect(gain).connect(context.destination);
-  source.addEventListener("ended", () => {
-    source.disconnect();
-    gain.disconnect();
-  });
-  source.start();
-};
-
 interface KnobValueOptions {
   value: number | undefined;
   defaultValue: number | undefined;
@@ -1153,6 +1083,7 @@ interface KnobValueOptions {
   onValueChange: KnobProps["onValueChange"];
   /** Whether a change between two values should click; null for silence. */
   clicksBetween: ((from: number, to: number) => boolean) | null;
+  playClick: (() => void) | null;
 }
 
 /** Controlled or uncontrolled value with change notifications. */
@@ -1164,6 +1095,7 @@ const useKnobValue = ({
   max,
   onValueChange,
   clicksBetween,
+  playClick,
 }: KnobValueOptions) => {
   const [uncontrolled, setUncontrolled] = useState(() =>
     clamp(defaultValue ?? resetValue, min, max)
@@ -1184,13 +1116,27 @@ const useKnobValue = ({
       }
       onValueChange?.(next, details);
       if (clicksBetween?.(previous, next)) {
-        playClick();
+        playClick?.();
       }
     },
-    [clicksBetween, controlled, latestRef, onValueChange]
+    [clicksBetween, controlled, latestRef, onValueChange, playClick]
   );
 
   return { change, latestRef, value };
+};
+
+/** Plays the click through the surrounding audio context; null for silence. */
+const useKnobClick = (clickSound: boolean | ClickSound) => {
+  const { context } = useAudioContext();
+  const sound = clickSound === true ? knobClick : clickSound || null;
+  return useMemo(
+    () =>
+      sound &&
+      (() => {
+        sound.play({ context, minIntervalMs: CLICK_INTERVAL_MS });
+      }),
+    [context, sound]
+  );
 };
 
 /** Size and disabled, from props or the surrounding strip. */
@@ -1241,8 +1187,9 @@ export const Knob = ({
 
   // Clicks land on KnobScale's long ticks, or every largeStep without one.
   const [detents, setDetents] = useState<readonly number[] | null>(null);
+  const playClick = useKnobClick(clickSound);
   const clicksBetween = useMemo(() => {
-    if (!clickSound) {
+    if (!playClick) {
       return null;
     }
     if (detents) {
@@ -1251,7 +1198,7 @@ export const Knob = ({
     }
     return (from: number, to: number) =>
       reachesMultiple(from, to, min, largeStep);
-  }, [clickSound, detents, largeStep, min, taper]);
+  }, [detents, largeStep, min, playClick, taper]);
 
   const { change, latestRef, value } = useKnobValue({
     clicksBetween,
@@ -1259,6 +1206,7 @@ export const Knob = ({
     max,
     min,
     onValueChange,
+    playClick,
     resetValue: reset,
     value: valueProp,
   });
