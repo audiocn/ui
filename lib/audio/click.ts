@@ -40,8 +40,8 @@ export type ClickPlayOptions = {
 
 export interface ClickSound {
   /**
-   * Plays once. On a suspended context it resumes first, which needs a user
-   * gesture, and drops the click if the context cannot start in time.
+   * Plays once. A suspended context is resumed, which needs a user gesture,
+   * and holds one click until it runs; more clicks meanwhile are dropped.
    */
   readonly play: (options?: ClickPlayOptions) => void;
   /** A new sound with these parameters deep-merged over this one's. */
@@ -60,8 +60,6 @@ const DEFAULT_PARAMS: ClickSoundParams = {
 };
 
 const MS_PER_SECOND = 1000;
-/** A click that waited longer than this for its context to start is dropped. */
-const STALE_CLICK_MS = 100;
 
 const merge = (
   base: ClickSoundParams,
@@ -119,7 +117,7 @@ const resumeContext = async (context: AudioContext) => {
 const clickSound = (params: ClickSoundParams): ClickSound => {
   const buffers = new WeakMap<BaseAudioContext, AudioBuffer>();
   let lastPlayedAt = Number.NEGATIVE_INFINITY;
-  let resuming = false;
+  const queued = new WeakSet<BaseAudioContext>();
 
   const bufferFor = (context: BaseAudioContext) => {
     const cached = buffers.get(context);
@@ -150,26 +148,6 @@ const clickSound = (params: ClickSoundParams): ClickSound => {
     source.start(when);
   };
 
-  /** Starts once the context runs, so refused clicks never pile up. */
-  const startAfterResume = async (
-    context: AudioContext,
-    options: ClickPlayOptions
-  ) => {
-    const askedAt = performance.now();
-    resuming = true;
-    try {
-      await context.resume();
-    } catch {
-      // Without a user gesture the browser refuses; this click is dropped.
-      return;
-    } finally {
-      resuming = false;
-    }
-    if (performance.now() - askedAt <= STALE_CLICK_MS) {
-      start(context, options);
-    }
-  };
-
   const heldBack = (minIntervalMs = 0) => {
     const now = performance.now();
     if (now - lastPlayedAt < minIntervalMs) {
@@ -179,26 +157,35 @@ const clickSound = (params: ClickSoundParams): ClickSound => {
     return false;
   };
 
+  const releaseWhenResumed = async (
+    context: AudioContext,
+    resumed: Promise<void>
+  ) => {
+    await resumed;
+    queued.delete(context);
+  };
+
   const play = (options: ClickPlayOptions = {}) => {
     const context = options.context ?? getSharedAudioContext();
     if (!context || context.state === "closed") {
       return;
     }
-    if (options.when !== undefined) {
-      if (context.state === "suspended") {
-        resumeContext(context);
+    const scheduled = options.when !== undefined;
+    if (!scheduled && heldBack(options.minIntervalMs)) {
+      return;
+    }
+    if (context.state === "suspended") {
+      // Always ask again: only a resume inside a user gesture starts it.
+      const resumed = resumeContext(context);
+      if (!scheduled) {
+        if (queued.has(context)) {
+          return;
+        }
+        queued.add(context);
+        releaseWhenResumed(context, resumed);
       }
-      start(context, options);
-      return;
     }
-    if (resuming || heldBack(options.minIntervalMs)) {
-      return;
-    }
-    if (context.state === "running") {
-      start(context, options);
-      return;
-    }
-    startAfterResume(context, options);
+    start(context, options);
   };
 
   return {

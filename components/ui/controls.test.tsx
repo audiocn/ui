@@ -26,11 +26,17 @@ import { createClickSound } from "@/lib/audio/click";
 import { createFakeAudioContext } from "@/test/fake-audio";
 
 /** The shared AudioContext the knob clicks through, null like on the server. */
-const audio = vi.hoisted(() => ({ context: null as AudioContext | null }));
+const audio = vi.hoisted(() => {
+  const shared = {
+    context: null as AudioContext | null,
+    getSharedAudioContext: vi.fn((): AudioContext | null => shared.context),
+  };
+  return shared;
+});
 
 vi.mock(import("@/hooks/use-audio-context"), async (importOriginal) => ({
   ...(await importOriginal()),
-  getSharedAudioContext: () => audio.context,
+  getSharedAudioContext: audio.getSharedAudioContext,
 }));
 
 /** A clock that only moves forward, 100 ms per read, past every click limit. */
@@ -406,21 +412,44 @@ describe("Knob", () => {
   });
 
   it("leaves audio alone until it clicks", () => {
-    const AudioContextSpy = vi.fn();
-    vi.stubGlobal("AudioContext", AudioContextSpy);
+    const shared = createFakeAudioContext();
+    audio.context = shared.context;
+    audio.getSharedAudioContext.mockClear();
+    // useAudioContext reaches the real getter, which would build this one.
+    vi.stubGlobal(
+      "AudioContext",
+      class {
+        addEventListener = shared.fake.addEventListener;
+        removeEventListener = shared.fake.removeEventListener;
+        state = "suspended";
+      }
+    );
     const listen = vi.spyOn(document, "addEventListener");
+    spaceClicksApart();
     onTestFinished(() => {
+      audio.context = null;
       vi.unstubAllGlobals();
-      listen.mockRestore();
     });
     render(
       <>
         <Knob aria-label="Quiet" defaultValue={50} />
-        <Knob aria-label="Volume" clickSound defaultValue={50} />
+        <Knob aria-label="Volume" clickSound defaultValue={59} />
       </>
     );
-    expect(AudioContextSpy).not.toHaveBeenCalled();
-    expect(listen).not.toHaveBeenCalled();
+    expect(audio.getSharedAudioContext).not.toHaveBeenCalled();
+    expect(shared.fake.addEventListener).not.toHaveBeenCalled();
+    for (const gesture of ["pointerdown", "keydown", "touchend"]) {
+      expect(listen).not.toHaveBeenCalledWith(
+        gesture,
+        expect.anything(),
+        expect.anything()
+      );
+    }
+
+    const [, clicking] = screen.getAllByRole("slider");
+    fireEvent.keyDown(clicking as HTMLElement, { key: "ArrowUp" });
+    expect(shared.sources).toHaveLength(1);
+    expect(audio.getSharedAudioContext).toHaveBeenCalled();
   });
 
   it("clicks through the AudioContextProvider's context", () => {
