@@ -227,7 +227,7 @@ describe("Knob", () => {
     expect(onValueChange).toHaveBeenCalledTimes(1);
   });
 
-  it("keeps the scroll on a focused dial while a trackpad adds up", () => {
+  it("blocks the page scroll on a focused dial while a trackpad adds up", () => {
     const onValueChange = vi.fn();
     render(
       <Knob aria-label="Gain" defaultValue={50} onValueChange={onValueChange} />
