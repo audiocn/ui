@@ -71,6 +71,8 @@ test("rotary selectors drag only from the circle around the cap", async ({
   await expectIgnored(at(98, 2));
   await expectIgnored(at(2, 98));
   await expectIgnored(at(98, 98));
+  // The sine's leader, where it crosses the dial's box at radius 57.
+  await expectIgnored(at(9.7, 9.7));
   // Down is anticlockwise: the next index, since these positions run anticlockwise.
   await drag(page, at(50, 50), 0, 24);
   await expectIndex(dial, 1);

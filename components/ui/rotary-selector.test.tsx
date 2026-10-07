@@ -299,27 +299,45 @@ describe("RotarySelector", () => {
       vi.unstubAllEnvs();
       logged.mockRestore();
     });
+    const onValueChange = vi.fn();
+    const onValueCommitted = vi.fn();
     render(
-      <RotarySelector values={[]}>
+      <RotarySelector
+        onValueChange={onValueChange}
+        onValueCommitted={onValueCommitted}
+        values={[]}
+      >
         {() => <RotarySelectorDial aria-label="Empty" />}
       </RotarySelector>
     );
     expect(logged).toHaveBeenCalledWith("RotarySelector: values is empty.");
-    press("End");
     expect(dial()).toHaveAttribute("aria-valuemax", "-1");
+    for (const key of ["End", "Home", "ArrowUp", "ArrowDown"]) {
+      press(key);
+    }
+    expect(onValueChange).not.toHaveBeenCalled();
+    expect(onValueCommitted).not.toHaveBeenCalled();
   });
 
-  it("warns in development about a value or reset value missing from values", () => {
+  it("warns in development about a value, default or reset value missing from values", () => {
     const warn = warnings();
     const values: string[] = ["a", "b"];
-    render(
+    const { unmount } = render(
       <RotarySelector resetValue="z" value="y" values={values}>
+        {() => <RotarySelectorDial aria-label="Missing" />}
+      </RotarySelector>
+    );
+    expect(valueNow()).toBe(0);
+    unmount();
+    render(
+      <RotarySelector defaultValue="x" values={values}>
         {() => <RotarySelectorDial aria-label="Missing" />}
       </RotarySelector>
     );
     expect(warn.mock.calls.map(([message]) => message)).toEqual([
       'RotarySelector: value "y" is not in values.',
       'RotarySelector: resetValue "z" is not in values.',
+      'RotarySelector: defaultValue "x" is not in values.',
     ]);
     expect(valueNow()).toBe(0);
   });
@@ -541,23 +559,32 @@ describe("RotarySelector", () => {
     }
   });
 
-  it("holds the end when the first move crosses the gap", () => {
-    // From -150° to 150°: a 30° gap at the bottom.
+  it("holds the end the pointer left when the first move crosses the gap", () => {
+    // From -150° to 150°: a 30° gap at the bottom, around 180°.
     const ELEVEN = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"];
-    render(
-      <RotarySelector
-        defaultValue="k"
-        dragDirection="circular"
-        startAngle={-150}
-        values={ELEVEN}
-      >
-        {() => <RotarySelectorDial aria-label="Eleven" />}
-      </RotarySelector>
-    );
-    const element = draggable();
-    fireEvent.pointerDown(element, { button: 0, ...around(150) });
-    fireEvent.pointerMove(element, around(-150));
-    expect(valueNow()).toBe(10);
+    const moves = [
+      { from: 150, held: 10, to: -150 },
+      // Into the gap, past its middle.
+      { from: 150, held: 10, to: -170 },
+      { from: -150, held: 0, to: 170 },
+    ];
+    for (const { from, held, to } of moves) {
+      const { unmount } = render(
+        <RotarySelector
+          defaultValue="f"
+          dragDirection="circular"
+          startAngle={-150}
+          values={ELEVEN}
+        >
+          {() => <RotarySelectorDial aria-label="Eleven" />}
+        </RotarySelector>
+      );
+      const element = draggable();
+      fireEvent.pointerDown(element, { button: 0, ...around(from) });
+      fireEvent.pointerMove(element, around(to));
+      expect(valueNow()).toBe(held);
+      unmount();
+    }
   });
 
   it("holds the end when a fast flick crosses a narrow gap between two moves", () => {
@@ -616,6 +643,16 @@ describe("RotarySelector", () => {
     expect(objectRef.current).toBeNull();
     expect(callbackRef).toHaveBeenCalledWith(expect.any(HTMLDivElement));
     expect(callbackRef).toHaveBeenLastCalledWith(null);
+  });
+
+  it("runs the cleanup a consumer callback ref returns, once, instead of calling it with null", () => {
+    const cleanup = vi.fn();
+    const ref = vi.fn((_node: HTMLDivElement | null) => cleanup);
+    const { unmount } = render(<Waves dial={{ ref }} />);
+    expect(ref).toHaveBeenCalledExactlyOnceWith(dial());
+    unmount();
+    expect(cleanup).toHaveBeenCalledOnce();
+    expect(ref).toHaveBeenCalledOnce();
   });
 
   it("ignores the wheel when allowWheel is false", () => {

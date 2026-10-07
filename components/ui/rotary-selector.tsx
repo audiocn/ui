@@ -199,7 +199,7 @@ const keyTarget = (key: string, index: number, geometry: Geometry) => {
     return 0;
   }
   if (key === "End") {
-    return geometry.angles.length - 1;
+    return Math.max(0, geometry.angles.length - 1);
   }
   const turn = ARROW_TURNS[key];
   return turn ? (stepFrom(index, turn, geometry) ?? index) : undefined;
@@ -218,10 +218,9 @@ const nearestIndex = (angle: number, angles: readonly number[]) => {
 
 /**
  * On a selector that does not wrap: the index of the end next to the gap the
- * pointer is in, or null while the pointer is over the positions. A fast
- * flick can jump over a narrow gap between two pointer events, so a jump
- * from one side to the other the short way round, from `previous`, counts as
- * entering the gap too.
+ * pointer is in, or null while the pointer is over the positions. The end is
+ * the one the pointer came from: a move from `previous` that passes the
+ * middle of the gap, even in one fast flick, came from the other side.
  */
 const gapEnd = (
   pointer: number,
@@ -233,14 +232,14 @@ const gapEnd = (
   const middle = (first + last) / 2;
   const halfSweep = (Math.abs(last - first) + Math.abs(stepAngle)) / 2;
   const offset = turnBetween(middle, pointer);
+  const before = previous === null ? offset : turnBetween(middle, previous);
+  const passedGapMiddle =
+    before * offset < 0 && Math.abs(before) + Math.abs(offset) > HALF_TURN;
   let side = 0;
-  if (Math.abs(offset) > halfSweep) {
+  if (passedGapMiddle) {
+    side = Math.sign(before);
+  } else if (Math.abs(offset) > halfSweep) {
     side = Math.sign(offset);
-  } else if (previous !== null) {
-    const before = turnBetween(middle, previous);
-    const crossedGap =
-      before * offset < 0 && Math.abs(before) + Math.abs(offset) > HALF_TURN;
-    side = crossedGap ? Math.sign(before) : 0;
   }
   if (side === 0) {
     return null;
@@ -828,7 +827,7 @@ const useGeometryCheck = (error: string | null) => {
 
 /** A development warning for a value the selector cannot show. */
 const useMissingValueWarning = (
-  name: "value" | "resetValue",
+  name: "value" | "defaultValue" | "resetValue",
   value: RotarySelectorItem | undefined,
   values: readonly RotarySelectorItem[]
 ) => {
@@ -860,7 +859,7 @@ const useSelectedIndex = <Value extends RotarySelectorItem>(
 
   const change = useCallback(
     (next: number, details: RotarySelectorChangeDetails) => {
-      if (next === latestRef.current || next < 0 || next >= values.length) {
+      if (next === latestRef.current) {
         return;
       }
       latestRef.current = next;
@@ -913,6 +912,7 @@ export const RotarySelector = <
   useGeometryCheck(geometryError(count, stepAngle));
   useMissingValueWarning("value", valueProp, values);
   useMissingValueWarning("resetValue", resetValue, values);
+  useMissingValueWarning("defaultValue", defaultValue, values);
 
   const labelId = useId();
   const playClick = useDialClick(
