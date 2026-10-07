@@ -263,8 +263,8 @@ test("a focused knob stops early in a dense decaying wheel stream", async ({
     }
   }, deltas);
   const turned = () => dial.getAttribute("aria-valuenow").then(Number);
-  await expect.poll(turned).toBeGreaterThanOrEqual(1);
-  expect(await turned()).toBeLessThan(6);
+  await expect.poll(turned).toBeGreaterThanOrEqual(3);
+  expect(await turned()).toBeLessThanOrEqual(5);
 });
 
 test("an unfocused knob lets the wheel scroll the page", async ({ page }) => {

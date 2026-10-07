@@ -150,7 +150,18 @@ describe("createWheelStepper", () => {
     const tail = [7, 6, 5, 4, 3, 2, 2, 1, 1];
     const steps = play(stream([...swipe, ...tail]));
     expect(turns(steps.slice(swipe.length))).toBe(0);
-    expect(turns(steps)).toBeLessThanOrEqual(6);
+    expect(turns(steps)).toBeGreaterThanOrEqual(3);
+    expect(turns(steps)).toBeLessThanOrEqual(5);
+  });
+
+  it("keeps stepping while deltas shrink but stay above 0.8 × the peak", () => {
+    expect(play(stream([40, 39, 38, 37, 36]))).toEqual(repeat(-1, 5));
+  });
+
+  it("keeps stepping while a steady window falls less than 15 %", () => {
+    // Only the window rule could lock the last delta, at half the peak.
+    const steps = play(stream([...repeat(12, 7), 6]));
+    expect(steps.at(-1)).toBe(-1);
   });
 
   it("ignores the plateaued tail of a real trackpad swipe", () => {
@@ -199,6 +210,10 @@ describe("createWheelStepper", () => {
 
     it("locks after three notches under 25 ms apart", () => {
       expect(play(spin)).toEqual([-1, -1, -1, 0, 0]);
+      const at = (every: number) =>
+        play([0, 1, 2, 3, 4].map((index) => notchAt(index * every)));
+      expect(at(24)).toEqual([-1, -1, -1, 0, 0]);
+      expect(at(25)).toEqual(repeat(-1, 5));
     });
 
     it("unlocks after more than 120 ms of silence", () => {
