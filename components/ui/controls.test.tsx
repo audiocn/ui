@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import type { CSSProperties } from "react";
+import { useState } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { describe, expect, it, onTestFinished, vi } from "vitest";
 
 import { AudioDeviceSelect } from "@/components/ui/audio-device-select";
@@ -527,94 +528,6 @@ describe("Knob", () => {
     expect(parseKnobValue("1.2k")).toBe(1200);
     expect(parseKnobValue("gain")).toBeNull();
   });
-});
-
-describe("DialProvider", () => {
-  it("turns the cap and pointer to the angle of any dial", () => {
-    const { container, rerender } = render(
-      <svg>
-        <DialProvider angle={90} disabled={false}>
-          <KnobCap />
-          <KnobPointer />
-        </DialProvider>
-      </svg>
-    );
-    const grain = container.querySelector("[data-slot='knob-cap-grain']");
-    const dot = () => container.querySelector("[data-slot='knob-cap-dot']");
-    const pointer = () => container.querySelector("[data-slot='knob-pointer']");
-    expect(grain).toHaveAttribute("transform", "rotate(90 50 50)");
-    // At 90 degrees both marks point straight right.
-    expect(Number(dot()?.getAttribute("cx"))).toBeGreaterThan(50);
-    expect(Number(dot()?.getAttribute("cy"))).toBeCloseTo(50);
-    expect(Number(pointer()?.getAttribute("x2"))).toBeGreaterThan(50);
-    expect(Number(pointer()?.getAttribute("y2"))).toBeCloseTo(50);
-    rerender(
-      <svg>
-        <DialProvider angle={-90} disabled={false}>
-          <KnobCap />
-          <KnobPointer />
-        </DialProvider>
-      </svg>
-    );
-    expect(grain).toHaveAttribute("transform", "rotate(-90 50 50)");
-    expect(Number(dot()?.getAttribute("cx"))).toBeLessThan(50);
-    expect(Number(pointer()?.getAttribute("x2"))).toBeLessThan(50);
-  });
-
-  it("reports the outer radius of each cap variant to the dial", () => {
-    const onCapRadiusChange = vi.fn();
-    const { rerender } = render(
-      <svg>
-        <DialProvider
-          angle={0}
-          disabled={false}
-          onCapRadiusChange={onCapRadiusChange}
-        >
-          <KnobCap />
-        </DialProvider>
-      </svg>
-    );
-    expect(onCapRadiusChange).toHaveBeenLastCalledWith(25.5);
-    rerender(
-      <svg>
-        <DialProvider
-          angle={0}
-          disabled={false}
-          onCapRadiusChange={onCapRadiusChange}
-        >
-          <KnobCap variant="mini" />
-        </DialProvider>
-      </svg>
-    );
-    expect(onCapRadiusChange).toHaveBeenLastCalledWith(32);
-  });
-
-  it("clears the reported radius when the cap goes away", () => {
-    const onCapRadiusChange = vi.fn();
-    const { rerender } = render(
-      <svg>
-        <DialProvider
-          angle={0}
-          disabled={false}
-          onCapRadiusChange={onCapRadiusChange}
-        >
-          <KnobCap />
-        </DialProvider>
-      </svg>
-    );
-    rerender(
-      <svg>
-        <DialProvider
-          angle={0}
-          disabled={false}
-          onCapRadiusChange={onCapRadiusChange}
-        >
-          <KnobPointer />
-        </DialProvider>
-      </svg>
-    );
-    expect(onCapRadiusChange).toHaveBeenLastCalledWith(null);
-  });
 
   it("keeps the knob's drag area on the whole dial under a cap", () => {
     const { container } = render(
@@ -627,6 +540,151 @@ describe("DialProvider", () => {
     expect(
       container.querySelector("[data-slot='knob-hit-area']")
     ).toHaveAttribute("r", "50");
+  });
+});
+
+/** A dial of its own, outside any Knob, that keeps the cap's radius in state. */
+const HuggingDial = ({
+  children,
+  onRender,
+}: {
+  children: ReactNode;
+  onRender: () => void;
+}) => {
+  const [geometry, setGeometry] = useState<{ radius: number | null }>({
+    radius: null,
+  });
+  onRender();
+  return (
+    <svg data-cap-radius={geometry.radius ?? undefined}>
+      <DialProvider
+        angle={0}
+        onCapRadiusChange={(radius) => setGeometry({ radius })}
+      >
+        {children}
+      </DialProvider>
+    </svg>
+  );
+};
+
+describe("DialProvider", () => {
+  it("turns the cap and pointer to the angle of any dial", () => {
+    const { container, rerender } = render(
+      <svg>
+        <DialProvider angle={90}>
+          <KnobCap />
+          <KnobPointer />
+        </DialProvider>
+      </svg>
+    );
+    const part = (slot: string) =>
+      container.querySelector(`[data-slot='${slot}']`);
+    const coordinate = (slot: string, name: string) =>
+      Number(part(slot)?.getAttribute(name));
+    expect(part("knob-cap-grain")).toHaveAttribute(
+      "transform",
+      "rotate(90 50 50)"
+    );
+    // At 90 degrees both marks point straight right.
+    expect(coordinate("knob-cap-dot", "cx")).toBeGreaterThan(50);
+    expect(coordinate("knob-cap-dot", "cy")).toBeCloseTo(50);
+    expect(coordinate("knob-pointer", "x2")).toBeGreaterThan(50);
+    expect(coordinate("knob-pointer", "y2")).toBeCloseTo(50);
+    rerender(
+      <svg>
+        <DialProvider angle={-90}>
+          <KnobCap />
+          <KnobPointer />
+        </DialProvider>
+      </svg>
+    );
+    expect(part("knob-cap-grain")).toHaveAttribute(
+      "transform",
+      "rotate(-90 50 50)"
+    );
+    expect(coordinate("knob-cap-dot", "cx")).toBeLessThan(50);
+    expect(coordinate("knob-pointer", "x2")).toBeLessThan(50);
+  });
+
+  it("reports the radius of the bezel each cap variant draws", () => {
+    const onCapRadiusChange = vi.fn();
+    const { container, rerender } = render(
+      <svg>
+        <DialProvider angle={0} onCapRadiusChange={onCapRadiusChange}>
+          <KnobCap />
+        </DialProvider>
+      </svg>
+    );
+    const bezelRadius = () =>
+      Number(
+        container
+          .querySelector("[data-slot='knob-cap'] circle[fill$='-bezel)']")
+          ?.getAttribute("r")
+      );
+    expect(onCapRadiusChange).toHaveBeenLastCalledWith(bezelRadius());
+    expect(onCapRadiusChange).toHaveBeenLastCalledWith(25.5);
+    rerender(
+      <svg>
+        <DialProvider angle={0} onCapRadiusChange={onCapRadiusChange}>
+          <KnobCap variant="mini" />
+        </DialProvider>
+      </svg>
+    );
+    expect(onCapRadiusChange).toHaveBeenLastCalledWith(bezelRadius());
+    expect(onCapRadiusChange).toHaveBeenLastCalledWith(32);
+  });
+
+  it("clears the reported radius when the cap goes away", () => {
+    const onCapRadiusChange = vi.fn();
+    const { rerender } = render(
+      <svg>
+        <DialProvider angle={0} onCapRadiusChange={onCapRadiusChange}>
+          <KnobCap />
+        </DialProvider>
+      </svg>
+    );
+    rerender(
+      <svg>
+        <DialProvider angle={0} onCapRadiusChange={onCapRadiusChange}>
+          <KnobPointer />
+        </DialProvider>
+      </svg>
+    );
+    expect(onCapRadiusChange).toHaveBeenCalledTimes(2);
+    expect(onCapRadiusChange).toHaveBeenLastCalledWith(null);
+  });
+
+  it("reports once while the dial turns, whatever its callback", () => {
+    const report = vi.fn();
+    const { rerender } = render(
+      <svg>
+        <DialProvider angle={0} onCapRadiusChange={(radius) => report(radius)}>
+          <KnobCap />
+        </DialProvider>
+      </svg>
+    );
+    rerender(
+      <svg>
+        <DialProvider angle={90} onCapRadiusChange={(radius) => report(radius)}>
+          <KnobCap />
+        </DialProvider>
+      </svg>
+    );
+    expect(report).toHaveBeenCalledTimes(1);
+  });
+
+  it("lets a dial keep the reported radius in state", () => {
+    const onRender = vi.fn();
+    const { container } = render(
+      <HuggingDial onRender={onRender}>
+        <KnobCap />
+      </HuggingDial>
+    );
+    expect(container.querySelector("svg")).toHaveAttribute(
+      "data-cap-radius",
+      "25.5"
+    );
+    expect(onRender.mock.calls.length).toBeLessThanOrEqual(2);
   });
 
   it("refuses a cap or pointer outside any dial", () => {
