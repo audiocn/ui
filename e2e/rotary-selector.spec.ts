@@ -104,7 +104,7 @@ for (const direction of ["Vertical", "Horizontal"] as const) {
   });
 }
 
-test("circled rotary selectors follow the pointer and hold an end in the gap", async ({
+test("circled rotary selectors follow the pointer and stop at an end", async ({
   page,
 }) => {
   // Positions at -60°, -30°, 0°, 30° and 60°: the gap is the bottom 210°.

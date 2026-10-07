@@ -219,11 +219,17 @@ const unwrappedAngle = (
   return reference + turnBetween(reference, pointer);
 };
 
-/** The index at an unwrapped angle: round the turn when wrapping, else stopped at the ends. */
+/**
+ * The index at an unwrapped angle. A selector that wraps reads the angle
+ * within one turn only, so a rounded step does not drift turn after turn.
+ * One that does not wrap stops at its ends.
+ */
 const indexAt = (angle: number, { angles, stepAngle, wraps }: Geometry) => {
   const count = angles.length;
+  const first = angles[0] ?? 0;
+  const turn = wraps ? turnBetween(first, angle) : angle - first;
   // A step of 0, already reported as an error, gives NaN here.
-  const steps = Math.round((angle - (angles[0] ?? 0)) / stepAngle) || 0;
+  const steps = Math.round(turn / stepAngle) || 0;
   if (wraps) {
     return ((steps % count) + count) % count;
   }

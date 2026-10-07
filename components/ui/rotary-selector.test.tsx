@@ -586,7 +586,7 @@ describe("RotarySelector", () => {
     }
   });
 
-  it("holds the end the pointer left when the first move crosses the gap", () => {
+  it("stops at the end when the first move crosses the gap", () => {
     // From -150° to 150°: a 30° gap at the bottom, around 180°.
     const ELEVEN = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"];
     const moves = [
@@ -614,7 +614,7 @@ describe("RotarySelector", () => {
     }
   });
 
-  it("lets go of the held end once the pointer passes back over it", () => {
+  it("follows again when the pointer comes back over the positions", () => {
     // From -150° to 150°: a 30° gap at the bottom, around 180°.
     const ELEVEN = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"];
     const drags = [
@@ -691,6 +691,29 @@ describe("RotarySelector", () => {
     expect(valueNow()).toBe(8);
     fireEvent.pointerMove(element, around(-130));
     expect(valueNow()).toBe(8);
+  });
+
+  it("gives the same position for the same angle after whole turns, with a rounded step", () => {
+    for (const step of [89.9, -89.9]) {
+      const { unmount } = render(
+        <Waves dragDirection="circular" stepAngle={step} />
+      );
+      const pointer = 134.7 * Math.sign(step);
+      const element = draggable();
+      fireEvent.pointerDown(element, { button: 0, ...around(pointer) });
+      fireEvent.pointerMove(element, around(pointer));
+      expect(valueNow()).toBe(1);
+      for (let turn = 0; turn < 3; turn += 1) {
+        for (let part = 1; part <= 8; part += 1) {
+          fireEvent.pointerMove(
+            element,
+            around(pointer + Math.sign(step) * part * 45)
+          );
+        }
+        expect(valueNow()).toBe(1);
+      }
+      unmount();
+    }
   });
 
   it("circles straight across the gap of a selector that wraps", () => {
