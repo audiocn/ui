@@ -154,14 +154,15 @@ describe("createWheelStepper", () => {
     expect(turns(steps)).toBeLessThanOrEqual(5);
   });
 
-  it("keeps stepping while deltas shrink but stay above 0.8 × the peak", () => {
-    expect(play(stream([40, 39, 38, 37, 36]))).toEqual(repeat(-1, 5));
+  it("keeps stepping while deltas shrink but stay at 0.8 × the peak or more", () => {
+    expect(play(stream([40, 39, 38, 37, 33]))).toEqual(repeat(-1, 5));
   });
 
-  it("keeps stepping while a steady window falls less than 15 %", () => {
-    // Only the window rule could lock the last delta, at half the peak.
-    const steps = play(stream([...repeat(12, 7), 6]));
-    expect(steps.at(-1)).toBe(-1);
+  it("locks when a window at half the peak falls below 0.85 × the one before", () => {
+    const atRatio = play(stream([10, ...repeat(20, 6), 18, 10]));
+    const belowRatio = play(stream([10, ...repeat(20, 6), 17, 10]));
+    expect(atRatio.at(-1)).toBe(-1);
+    expect(belowRatio.at(-1)).toBe(0);
   });
 
   it("ignores the plateaued tail of a real trackpad swipe", () => {
