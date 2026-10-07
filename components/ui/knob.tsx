@@ -310,6 +310,10 @@ const dragPosition = (
   return clamp(last.position + (delta / dial.sensitivity) * fine, 0, 1);
 };
 
+/**
+ * A non-passive wheel listener blocks scrolling, so the dial only holds one
+ * while it has focus. Elsewhere the wheel scrolls the page.
+ */
 const useDialWheel = (
   elementRef: RefObject<HTMLDivElement | null>,
   dial: KnobDialContextValue,
@@ -317,10 +321,7 @@ const useDialWheel = (
 ) => {
   const { allowWheel } = dial;
   const onWheel = useEffectEvent(
-    (event: WheelEvent, element: HTMLDivElement, stepWheel: WheelStepper) => {
-      if (disabled || document.activeElement !== element) {
-        return;
-      }
+    (event: WheelEvent, stepWheel: WheelStepper) => {
       event.preventDefault();
       const turn = stepWheel(event);
       if (turn === 0) {
@@ -337,22 +338,32 @@ const useDialWheel = (
     }
   );
 
-  // A non-passive listener blocks scrolling, so only attach one when the
-  // wheel is allowed.
   useEffect(() => {
     const element = elementRef.current;
-    if (!(element && allowWheel)) {
+    if (!element || disabled || !allowWheel) {
       return;
     }
     const stepWheel = createWheelStepper();
     const listener = (event: WheelEvent) => {
-      onWheel(event, element, stepWheel);
+      onWheel(event, stepWheel);
     };
-    element.addEventListener("wheel", listener, { passive: false });
-    return () => {
+    const attach = () => {
+      element.addEventListener("wheel", listener, { passive: false });
+    };
+    const detach = () => {
       element.removeEventListener("wheel", listener);
     };
-  }, [allowWheel, elementRef]);
+    if (document.activeElement === element) {
+      attach();
+    }
+    element.addEventListener("focus", attach);
+    element.addEventListener("blur", detach);
+    return () => {
+      detach();
+      element.removeEventListener("focus", attach);
+      element.removeEventListener("blur", detach);
+    };
+  }, [allowWheel, disabled, elementRef]);
 };
 
 export const KnobDial = ({
