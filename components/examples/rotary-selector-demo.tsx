@@ -22,7 +22,7 @@ const WAVE_PATHS: Record<Wave, string> = {
 
 const formatWave = (wave: Wave) => `${wave[0]?.toUpperCase()}${wave.slice(1)}`;
 
-/** A wave glyph centred on (x, y), with a box around it to click. */
+/** A wave glyph centred on (x, 0), with a box around it to click. */
 const WaveIcon = ({ wave, x = 0 }: { wave: Wave; x?: number }) => (
   <g transform={`translate(${x} 0)`}>
     <rect fill="transparent" height={14} width={22} x={-11} y={-7} />

@@ -512,7 +512,6 @@
       "registryDependencies": [
         "@audiocn/core",
         "@audiocn/use-audio-config",
-        "@audiocn/use-audio-context",
         "@audiocn/knob"
       ],
       "files": [
