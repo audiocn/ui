@@ -219,21 +219,32 @@ const unwrappedAngle = (
   return reference + turnBetween(reference, pointer);
 };
 
+/** The position nearest an angle around the circle; the lower index on a tie. */
+const nearestIndex = (angle: number, angles: readonly number[]) => {
+  let nearest = 0;
+  let nearestDistance = Number.POSITIVE_INFINITY;
+  for (const [index, candidate] of angles.entries()) {
+    const distance = Math.abs(turnBetween(candidate, angle));
+    if (distance < nearestDistance) {
+      nearest = index;
+      nearestDistance = distance;
+    }
+  }
+  return nearest;
+};
+
 /**
- * The index at an unwrapped angle. A selector that wraps reads the angle
- * within one turn only, so a rounded step does not drift turn after turn.
- * One that does not wrap stops at its ends.
+ * The index at an unwrapped angle. A selector that wraps takes the nearest
+ * position, so a rounded step neither drifts turn after turn nor jumps at
+ * the seam. One that does not wrap stops at its ends.
  */
 const indexAt = (angle: number, { angles, stepAngle, wraps }: Geometry) => {
-  const count = angles.length;
-  const first = angles[0] ?? 0;
-  const turn = wraps ? turnBetween(first, angle) : angle - first;
-  // A step of 0, already reported as an error, gives NaN here.
-  const steps = Math.round(turn / stepAngle) || 0;
   if (wraps) {
-    return ((steps % count) + count) % count;
+    return nearestIndex(angle, angles);
   }
-  return Math.max(0, Math.min(steps, count - 1));
+  // A step of 0, already reported as an error, gives NaN here.
+  const steps = Math.round((angle - (angles[0] ?? 0)) / stepAngle) || 0;
+  return Math.max(0, Math.min(steps, angles.length - 1));
 };
 
 interface DragState {

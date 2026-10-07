@@ -716,6 +716,44 @@ describe("RotarySelector", () => {
     }
   });
 
+  it("picks the nearest position across the seam of a rounded wrapping step", () => {
+    const SEVEN = ["a", "b", "c", "d", "e", "f", "g"];
+    const seams = [
+      // 7 × 51.4°: positions 3 and 4 sit at 154.2° and 205.6°.
+      {
+        count: 7,
+        pointers: [179.85, 179.95, 180.05, 180.15],
+        positions: [3, 4, 4, 4],
+        step: 51.4,
+      },
+      // 4 × 89.9°: 314.9° is nearer the first position, at 360°.
+      { count: 4, pointers: [314.9], positions: [0], step: 89.9 },
+      // 4 × 90.1°: 315.1° is nearer the last position, at 270.3°.
+      { count: 4, pointers: [315.1], positions: [3], step: 90.1 },
+    ];
+    for (const { count, pointers, positions, step } of seams) {
+      for (const sign of [1, -1]) {
+        const { unmount } = render(
+          <RotarySelector
+            dragDirection="circular"
+            stepAngle={sign * step}
+            values={SEVEN.slice(0, count)}
+          >
+            {() => <RotarySelectorDial aria-label="Seam" />}
+          </RotarySelector>
+        );
+        const element = draggable();
+        fireEvent.pointerDown(element, { button: 0, ...around(0) });
+        const reached = pointers.map((pointer) => {
+          fireEvent.pointerMove(element, around(sign * pointer));
+          return valueNow();
+        });
+        expect(reached).toEqual(positions);
+        unmount();
+      }
+    }
+  });
+
   it("circles straight across the gap of a selector that wraps", () => {
     render(<Waves dragDirection="circular" stepAngle={90} />);
     const element = draggable();
