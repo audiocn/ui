@@ -58,7 +58,7 @@ const holdPad = (props: { loading?: boolean; onStop: () => void }) => (
 
 describe("controls", () => {
   it("knob: the wheel doesn't change a disabled dial", () => {
-    render(<Knob allowWheel aria-label="Gain" defaultValue={50} disabled />);
+    render(<Knob aria-label="Gain" defaultValue={50} disabled />);
     const dial = screen.getByRole("slider");
     dial.focus();
     fireEvent.wheel(dial, { deltaY: -100 });
@@ -66,7 +66,7 @@ describe("controls", () => {
   });
 
   it("knob: the wheel still turns an enabled dial", () => {
-    render(<Knob allowWheel aria-label="Gain" defaultValue={50} />);
+    render(<Knob aria-label="Gain" defaultValue={50} />);
     const dial = screen.getByRole("slider");
     dial.focus();
     fireEvent.wheel(dial, { deltaY: -100 });

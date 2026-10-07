@@ -97,15 +97,15 @@ const isDense = (sincePrevious: number | null, notch: boolean) =>
  * slows down is not read as momentum.
  */
 const createMomentumFilter = () => {
-  let direction = 0;
+  let direction: WheelStep = 0;
   let locked = false;
   let peak = 0;
   let sizes: number[] = [];
   let denseNotches = 0;
   let lowRun = 0;
 
-  const restart = (sense: number) => {
-    direction = sense;
+  const restart = (step: WheelStep) => {
+    direction = step;
     locked = false;
     peak = 0;
     sizes = [];
@@ -115,20 +115,20 @@ const createMomentumFilter = () => {
 
   return (
     size: number,
-    sense: number,
+    step: WheelStep,
     sincePrevious: number | null,
     notch: boolean
   ) => {
     const paused = sincePrevious === null || sincePrevious > UNLOCK_MS;
-    if (paused || sense !== direction) {
-      restart(sense);
+    if (paused || step !== direction) {
+      restart(step);
     } else if (locked) {
-      const previous = sizes.at(-1) ?? 0;
-      if (size < PUSH_MIN_PX || size <= previous) {
+      const handPushes = size >= PUSH_MIN_PX && size > (sizes.at(-1) ?? 0);
+      if (!handPushes) {
         sizes = [size];
         return true;
       }
-      restart(sense);
+      restart(step);
     }
     const previous = sizes.at(-1);
     if (previous !== undefined && size < TAIL_UNDER_PEAK * previous) {
@@ -170,11 +170,11 @@ export const createWheelStepper = (): WheelStepper => {
     }
     const sincePrevious = lastAt === null ? null : event.timeStamp - lastAt;
     lastAt = event.timeStamp;
-    const sense = Math.sign(delta);
     const step: WheelStep = delta < 0 ? 1 : -1;
+    const size = Math.abs(delta);
     const legacy = vertical ? event.wheelDeltaY : event.wheelDeltaX;
     const notch = isNotch(deltaMode, delta, legacy, sincePrevious);
-    if (isMomentum(Math.abs(delta), sense, sincePrevious, notch)) {
+    if (isMomentum(size, step, sincePrevious, notch)) {
       accumulated = 0;
       return 0;
     }
@@ -183,15 +183,15 @@ export const createWheelStepper = (): WheelStepper => {
       return step;
     }
     const stale = sincePrevious === null || sincePrevious > SMOOTH_RESET_MS;
-    if (stale || Math.sign(accumulated) !== sense) {
+    if (stale || Math.sign(accumulated) !== step) {
       accumulated = 0;
     }
-    accumulated += delta;
+    accumulated += step * size;
     if (Math.abs(accumulated) < SMOOTH_STEP_PX) {
       return 0;
     }
     const remainder = Math.abs(accumulated) - SMOOTH_STEP_PX;
-    accumulated = sense * Math.min(remainder, SMOOTH_STEP_PX - 1);
+    accumulated = step * Math.min(remainder, SMOOTH_STEP_PX - 1);
     return step;
   };
 };

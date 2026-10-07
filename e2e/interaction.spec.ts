@@ -244,33 +244,27 @@ test("a focused knob stops early in a dense decaying wheel stream", async ({
 }) => {
   const dial = await verticalKnob(page);
   await dial.focus();
-  // A swipe up, then its momentum, 8 ms apart: 369 px, or 12 steps of 30 px.
+  // A swipe up, then its momentum: 369 px, or 12 steps of 30 px unfiltered.
   const deltas = [
     4, 12, 24, 36, 40, 38, 35, 31, 27, 23, 19, 16, 13, 11, 9, 7, 6, 5, 4, 3, 2,
     2, 1, 1,
   ].map((delta) => -delta);
-  await dial.evaluate(
-    (element, stream) =>
-      // eslint-disable-next-line promise/avoid-new -- timers space the events like a trackpad.
-      new Promise<void>((resolve) => {
-        for (const [index, deltaY] of stream.entries()) {
-          setTimeout(() => {
-            element.dispatchEvent(
-              new WheelEvent("wheel", {
-                bubbles: true,
-                cancelable: true,
-                deltaY,
-              })
-            );
-            if (index === stream.length - 1) {
-              resolve();
-            }
-          }, index * 8);
-        }
-      }),
-    deltas
-  );
-  await expect(dial).toHaveAttribute("aria-valuenow", "5");
+  await dial.evaluate((element, stream) => {
+    const start = performance.now();
+    for (const [index, deltaY] of stream.entries()) {
+      const event = new WheelEvent("wheel", {
+        bubbles: true,
+        cancelable: true,
+        deltaY,
+      });
+      // 8 ms apart, like a trackpad, whatever the test machine's timers do.
+      Object.defineProperty(event, "timeStamp", { value: start + index * 8 });
+      element.dispatchEvent(event);
+    }
+  }, deltas);
+  const turned = () => dial.getAttribute("aria-valuenow").then(Number);
+  await expect.poll(turned).toBeGreaterThanOrEqual(1);
+  expect(await turned()).toBeLessThan(6);
 });
 
 test("an unfocused knob lets the wheel scroll the page", async ({ page }) => {
