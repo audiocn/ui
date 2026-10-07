@@ -30,6 +30,8 @@ import type { ClickSound } from "@/lib/audio/click";
 import { clamp } from "@/lib/audio/decibels";
 import { linearTaper, logTaper } from "@/lib/audio/taper";
 import type { Taper } from "@/lib/audio/types";
+import { createWheelStepper } from "@/lib/audio/wheel";
+import type { WheelStepper } from "@/lib/audio/wheel";
 import { cn } from "@/lib/utils";
 
 const VIEWBOX = 100;
@@ -315,18 +317,19 @@ const useDialWheel = (
 ) => {
   const { allowWheel } = dial;
   const onWheel = useEffectEvent(
-    (event: WheelEvent, element: HTMLDivElement) => {
-      // Shift turns the wheel sideways on some systems.
-      const delta = event.deltaY || event.deltaX;
-      if (disabled || document.activeElement !== element || delta === 0) {
+    (event: WheelEvent, element: HTMLDivElement, stepWheel: WheelStepper) => {
+      if (disabled || document.activeElement !== element) {
         return;
       }
       event.preventDefault();
+      const turn = stepWheel(event);
+      if (turn === 0) {
+        return;
+      }
       const fine = event.shiftKey || event.altKey;
       const increment = fine ? dial.fineStep : dial.step;
-      const direction = delta < 0 ? 1 : -1;
       const next = dial.quantize(
-        dial.latestRef.current + direction * increment,
+        dial.latestRef.current + turn * increment,
         increment
       );
       dial.change(next, { event, reason: "wheel" });
@@ -341,8 +344,9 @@ const useDialWheel = (
     if (!(element && allowWheel)) {
       return;
     }
+    const stepWheel = createWheelStepper();
     const listener = (event: WheelEvent) => {
-      onWheel(event, element);
+      onWheel(event, element, stepWheel);
     };
     element.addEventListener("wheel", listener, { passive: false });
     return () => {
@@ -1078,7 +1082,7 @@ export interface KnobProps extends Omit<
   sensitivity?: number;
   /** Default `linear`. */
   scale?: "linear" | "log";
-  /** The wheel adjusts the value while focused. Default false. */
+  /** The wheel adjusts the value while focused. Default true. */
   allowWheel?: boolean;
   /**
    * Plays a soft click on each graduation: KnobScale's long ticks, or every
@@ -1228,7 +1232,7 @@ export const Knob = ({
   dragDirection = "vertical",
   sensitivity = 200,
   scale = "linear",
-  allowWheel = false,
+  allowWheel = true,
   clickSound = false,
   format = String,
   parse = parseKnobValue,
