@@ -6,10 +6,12 @@ import { AudioDeviceSelect } from "@/components/ui/audio-device-select";
 import { MuteToggle } from "@/components/ui/channel-toggle";
 import { Fader } from "@/components/ui/fader";
 import {
+  DialProvider,
   Knob,
   KnobCap,
   KnobDial,
   KnobLabel,
+  KnobPointer,
   KnobScale,
   KnobValue,
   parseKnobValue,
@@ -524,6 +526,128 @@ describe("Knob", () => {
     expect(parseKnobValue("\u221212 dB")).toBe(-12);
     expect(parseKnobValue("1.2k")).toBe(1200);
     expect(parseKnobValue("gain")).toBeNull();
+  });
+});
+
+describe("DialProvider", () => {
+  it("turns the cap and pointer to the angle of any dial", () => {
+    const { container, rerender } = render(
+      <svg>
+        <DialProvider angle={90} disabled={false}>
+          <KnobCap />
+          <KnobPointer />
+        </DialProvider>
+      </svg>
+    );
+    const grain = container.querySelector("[data-slot='knob-cap-grain']");
+    const dot = () => container.querySelector("[data-slot='knob-cap-dot']");
+    const pointer = () => container.querySelector("[data-slot='knob-pointer']");
+    expect(grain).toHaveAttribute("transform", "rotate(90 50 50)");
+    // At 90 degrees both marks point straight right.
+    expect(Number(dot()?.getAttribute("cx"))).toBeGreaterThan(50);
+    expect(Number(dot()?.getAttribute("cy"))).toBeCloseTo(50);
+    expect(Number(pointer()?.getAttribute("x2"))).toBeGreaterThan(50);
+    expect(Number(pointer()?.getAttribute("y2"))).toBeCloseTo(50);
+    rerender(
+      <svg>
+        <DialProvider angle={-90} disabled={false}>
+          <KnobCap />
+          <KnobPointer />
+        </DialProvider>
+      </svg>
+    );
+    expect(grain).toHaveAttribute("transform", "rotate(-90 50 50)");
+    expect(Number(dot()?.getAttribute("cx"))).toBeLessThan(50);
+    expect(Number(pointer()?.getAttribute("x2"))).toBeLessThan(50);
+  });
+
+  it("reports the outer radius of each cap variant to the dial", () => {
+    const onCapRadiusChange = vi.fn();
+    const { rerender } = render(
+      <svg>
+        <DialProvider
+          angle={0}
+          disabled={false}
+          onCapRadiusChange={onCapRadiusChange}
+        >
+          <KnobCap />
+        </DialProvider>
+      </svg>
+    );
+    expect(onCapRadiusChange).toHaveBeenLastCalledWith(25.5);
+    rerender(
+      <svg>
+        <DialProvider
+          angle={0}
+          disabled={false}
+          onCapRadiusChange={onCapRadiusChange}
+        >
+          <KnobCap variant="mini" />
+        </DialProvider>
+      </svg>
+    );
+    expect(onCapRadiusChange).toHaveBeenLastCalledWith(32);
+  });
+
+  it("clears the reported radius when the cap goes away", () => {
+    const onCapRadiusChange = vi.fn();
+    const { rerender } = render(
+      <svg>
+        <DialProvider
+          angle={0}
+          disabled={false}
+          onCapRadiusChange={onCapRadiusChange}
+        >
+          <KnobCap />
+        </DialProvider>
+      </svg>
+    );
+    rerender(
+      <svg>
+        <DialProvider
+          angle={0}
+          disabled={false}
+          onCapRadiusChange={onCapRadiusChange}
+        >
+          <KnobPointer />
+        </DialProvider>
+      </svg>
+    );
+    expect(onCapRadiusChange).toHaveBeenLastCalledWith(null);
+  });
+
+  it("keeps the knob's drag area on the whole dial under a cap", () => {
+    const { container } = render(
+      <Knob aria-label="Volume" defaultValue={50}>
+        <KnobDial>
+          <KnobCap />
+        </KnobDial>
+      </Knob>
+    );
+    expect(
+      container.querySelector("[data-slot='knob-hit-area']")
+    ).toHaveAttribute("r", "50");
+  });
+
+  it("refuses a cap or pointer outside any dial", () => {
+    const quiet = vi.spyOn(console, "error").mockImplementation(() => null);
+    onTestFinished(() => {
+      quiet.mockRestore();
+    });
+    expect(() =>
+      render(
+        <svg>
+          <KnobCap />
+        </svg>
+      )
+    ).toThrow("KnobCap must be used inside a dial, like KnobDial.");
+    expect(() =>
+      render(
+        <svg>
+          <KnobPointer />
+        </svg>
+      )
+    ).toThrow("KnobPointer must be used inside a dial, like KnobDial.");
   });
 });
 
