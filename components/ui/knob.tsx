@@ -284,7 +284,7 @@ const dragAngle = (
     ? pointerAngle(event, event.currentTarget)
     : null;
 
-/** The shortest turn from one angle to another, in -180 up to but not including 180 degrees, across any number of turns. */
+/** The shortest turn from one angle to another, in [-180, 180) degrees, across any number of turns. */
 export const turnBetween = (from: number, to: number) =>
   ((((to - from + HALF_TURN) % FULL_TURN) + FULL_TURN) % FULL_TURN) - HALF_TURN;
 

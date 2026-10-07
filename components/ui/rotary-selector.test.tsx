@@ -303,6 +303,7 @@ describe("RotarySelector", () => {
     const onValueCommitted = vi.fn();
     render(
       <RotarySelector
+        dragDirection="circular"
         onValueChange={onValueChange}
         onValueCommitted={onValueCommitted}
         values={[]}
@@ -315,6 +316,15 @@ describe("RotarySelector", () => {
     for (const key of ["End", "Home", "ArrowUp", "ArrowDown"]) {
       press(key);
     }
+    const element = draggable();
+    fireEvent.pointerDown(element, { button: 0, ...around(0) });
+    for (const angle of [90, 180, 270]) {
+      fireEvent.pointerMove(element, around(angle));
+    }
+    fireEvent.pointerUp(element);
+    fireEvent.doubleClick(element);
+    element.focus();
+    fireEvent.wheel(element, { deltaY: -100 });
     expect(onValueChange).not.toHaveBeenCalled();
     expect(onValueCommitted).not.toHaveBeenCalled();
   });
@@ -532,10 +542,11 @@ describe("RotarySelector", () => {
     fireEvent.pointerMove(element, around(180));
     fireEvent.pointerMove(element, around(270));
     expect(valueNow()).toBe(3);
-    // Back over the dial, it follows again once it meets that end.
+    // Back over the dial, it follows again once it nears that end, even
+    // short of its exact angle.
     fireEvent.pointerMove(element, around(-20));
     expect(valueNow()).toBe(3);
-    fireEvent.pointerMove(element, around(45));
+    fireEvent.pointerMove(element, around(40));
     fireEvent.pointerMove(element, around(-10));
     expect(valueNow()).toBe(1);
   });
@@ -583,6 +594,40 @@ describe("RotarySelector", () => {
       fireEvent.pointerDown(element, { button: 0, ...around(from) });
       fireEvent.pointerMove(element, around(to));
       expect(valueNow()).toBe(held);
+      unmount();
+    }
+  });
+
+  it("lets go of the held end once the pointer passes back over it", () => {
+    // From -150° to 150°: a 30° gap at the bottom, around 180°.
+    const ELEVEN = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"];
+    const drags = [
+      { from: 150, gap: 170, path: [120, 90], positions: [9, 8], step: 30 },
+      { from: -150, gap: -170, path: [-120, -90], positions: [1, 2], step: 30 },
+      // Anticlockwise: the first value sits at 150°.
+      { from: 150, gap: 170, path: [120, 90], positions: [1, 2], step: -30 },
+    ];
+    for (const { from, gap, path, positions, step } of drags) {
+      const { unmount } = render(
+        <RotarySelector
+          defaultValue="f"
+          dragDirection="circular"
+          startAngle={-150 * Math.sign(step)}
+          stepAngle={step}
+          values={ELEVEN}
+        >
+          {() => <RotarySelectorDial aria-label="Eleven" />}
+        </RotarySelector>
+      );
+      const element = draggable();
+      fireEvent.pointerDown(element, { button: 0, ...around(from) });
+      fireEvent.pointerMove(element, around(gap));
+      const held = valueNow();
+      expect(held).toBe(step > 0 === from > 0 ? 10 : 0);
+      fireEvent.pointerMove(element, around(path[0] ?? 0));
+      expect(valueNow()).toBe(positions[0]);
+      fireEvent.pointerMove(element, around(path[1] ?? 0));
+      expect(valueNow()).toBe(positions[1]);
       unmount();
     }
   });

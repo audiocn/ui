@@ -216,6 +216,16 @@ const nearestIndex = (angle: number, angles: readonly number[]) => {
   return nearest;
 };
 
+/** Whether a move between two angles, the short way round, reaches or passes `angle`. */
+const passes = (from: number, to: number, angle: number) => {
+  const start = turnBetween(angle, from);
+  const end = turnBetween(angle, to);
+  return (
+    Math.sign(start) !== Math.sign(end) &&
+    Math.abs(start) + Math.abs(end) <= HALF_TURN
+  );
+};
+
 /**
  * On a selector that does not wrap: the index of the end next to the gap the
  * pointer is in, or null while the pointer is over the positions. The end is
@@ -227,17 +237,17 @@ const gapEnd = (
   previous: number | null,
   { angles, stepAngle }: Geometry
 ) => {
-  const first = angles[0] ?? 0;
-  const last = angles.at(-1) ?? first;
+  const [first] = angles;
+  const last = angles.at(-1);
+  if (first === undefined || last === undefined) {
+    return null;
+  }
   const middle = (first + last) / 2;
   const halfSweep = (Math.abs(last - first) + Math.abs(stepAngle)) / 2;
   const offset = turnBetween(middle, pointer);
-  const before = previous === null ? offset : turnBetween(middle, previous);
-  const passedGapMiddle =
-    before * offset < 0 && Math.abs(before) + Math.abs(offset) > HALF_TURN;
   let side = 0;
-  if (passedGapMiddle) {
-    side = Math.sign(before);
+  if (previous !== null && passes(previous, pointer, middle + HALF_TURN)) {
+    side = Math.sign(turnBetween(middle, previous));
   } else if (Math.abs(offset) > halfSweep) {
     side = Math.sign(offset);
   }
@@ -280,7 +290,7 @@ const linearDrag = (
 /**
  * The nearest position to the pointer. On a selector that does not wrap, the
  * pointer can pass through the gap: the value holds the end it reached until
- * the pointer comes back over that end.
+ * the pointer comes near that end again, or passes it in one move.
  */
 const circularDrag = (pointer: number, drag: DragState, geometry: Geometry) => {
   const nearest = nearestIndex(pointer, geometry.angles);
@@ -288,8 +298,11 @@ const circularDrag = (pointer: number, drag: DragState, geometry: Geometry) => {
   let { held } = drag;
   if (end !== null) {
     held ??= end;
-  } else if (held === nearest) {
-    held = null;
+  } else if (held !== null) {
+    const passed =
+      drag.pointer !== null &&
+      passes(drag.pointer, pointer, geometry.angles[held] ?? 0);
+    held = passed || nearest === held ? null : held;
   }
   return { held, next: held ?? nearest };
 };
