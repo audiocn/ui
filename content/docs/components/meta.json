@@ -18,6 +18,7 @@
     "fader",
     "parameter-slider",
     "knob",
+    "rotary-selector",
     "pan-control",
     "channel-toggle",
     "volume-control",

@@ -3,6 +3,7 @@
 import { HeadphonesIcon } from "@phosphor-icons/react";
 
 import PanControlDemo from "@/components/examples/pan-control-demo";
+import RotarySelectorDemo from "@/components/examples/rotary-selector-demo";
 import TrackListDemo from "@/components/examples/track-list-demo";
 import VolumeControlDemo from "@/components/examples/volume-control-demo";
 import EqTile from "@/components/home/tiles/eq-tile";
@@ -77,6 +78,11 @@ export const FadersPreview = () => (
 );
 
 export const PanPreview = () => <PanControlDemo />;
+export const RotarySelectorPreview = () => (
+  <div className="scale-150">
+    <RotarySelectorDemo />
+  </div>
+);
 export const VolumePreview = () => <VolumeControlDemo />;
 export const ParametersPreview = () => (
   <div className="w-96">

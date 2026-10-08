@@ -1,5 +1,5 @@
 import { createEvent, fireEvent, render, screen } from "@testing-library/react";
-import { useState } from "react";
+import { createRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { describe, expect, it, onTestFinished, vi } from "vitest";
 
@@ -175,6 +175,20 @@ describe("Knob", () => {
       reason: "wheel",
     });
     expect(wheel.defaultPrevented).toBe(true);
+  });
+
+  it("takes the wheel with a ref of its own on the dial", () => {
+    const ref = createRef<HTMLDivElement>();
+    const onValueChange = vi.fn();
+    render(
+      <Knob aria-label="Gain" defaultValue={50} onValueChange={onValueChange}>
+        <KnobDial ref={ref} />
+      </Knob>
+    );
+    expect(ref.current).toBe(screen.getByRole("slider"));
+    ref.current?.focus();
+    fireEvent.wheel(screen.getByRole("slider"), { deltaY: -100 });
+    expect(onValueChange).toHaveBeenLastCalledWith(51, expect.anything());
   });
 
   it("leaves the wheel to the page while unfocused", () => {
