@@ -3,7 +3,7 @@ title: useDemoSignal
 description: A synthetic speech, music, tone or noise signal as frame sources, for previews, prototypes and tests.
 ---
 
-`useDemoSignal` makes meters and visualizers move without a microphone. Every preview on this site runs on it. The signal is repeatable for a given `seed`, and it only runs while something is subscribed.
+`useDemoSignal` makes meters and visualizers move without a microphone. Every preview on this site runs on it; turn on **Mic** in the navbar to drive them with your own microphone instead. The signal is repeatable for a given `seed`, and it only runs while something is subscribed.
 
 ```npm
 npx shadcn@latest add @audiocn/use-demo-signal
@@ -24,6 +24,30 @@ export const Preview = () => {
 <ComponentPreview name="frame-source-demo" />
 
 Pass a fader's value as `gainDb` to meter the signal after gain. Set `playing: false` to mute it. Gain changes preserve the signal's timing and subscriptions, and boosted readings can exceed 0 dBFS.
+
+## Live input
+
+Wrap previews in `DemoSignalProvider` to swap every demo signal below it for live audio, such as a microphone. Subscribers stay attached while the audio behind them switches, and `gainDb`, `playing`, `channels`, `bands` and the history options still apply. A mono input fills both sides of a stereo meter.
+
+```tsx
+import { useMemo } from "react";
+
+import { useAudioContext } from "@/hooks/use-audio-context";
+import { DemoSignalProvider } from "@/hooks/use-demo-signal";
+import { useMicrophone } from "@/hooks/use-microphone";
+
+export const LivePreviews = ({ children }: { children: React.ReactNode }) => {
+  const { stream } = useMicrophone({ enabled: true });
+  const { context } = useAudioContext();
+  const input = useMemo(
+    () => (context && stream ? context.createMediaStreamSource(stream) : null),
+    [context, stream]
+  );
+  return <DemoSignalProvider input={input}>{children}</DemoSignalProvider>;
+};
+```
+
+Each signal connects its own gain stage and analysers to the input only while something is subscribed. Pass `input: null` to `useDemoSignal` to keep one preview synthetic inside a provider, or an `AudioNode` to meter that node instead. `useDemoSignalInput()` returns the provider's input, for custom sources built on `createDemoSignal`.
 
 ## Options
 
@@ -51,6 +75,12 @@ Pass a fader's value as `gainDb` to meter the signal after gain. Set `playing: f
       "boolean",
       "true",
       "When false the signal falls silent, so meters fall.",
+    ],
+    [
+      "input",
+      "AudioNode | null",
+      null,
+      "Live audio to meter in place of the synthetic signal. Defaults to the DemoSignalProvider input; null keeps the signal synthetic.",
     ],
   ]}
 />
@@ -80,4 +110,18 @@ Pass a fader's value as `gainDb` to meter the signal after gain. Set `playing: f
   ]}
 />
 
-Outside React, `createDemoSignal(options)` returns the same object.
+Outside React, `createDemoSignal(options)` returns the same object. Its `input` defaults to null.
+
+## DemoSignalProvider
+
+<PropsTable
+  rows={[
+    [
+      "input",
+      "AudioNode | null",
+      null,
+      "Live audio that every useDemoSignal below meters. null keeps the synthetic signals.",
+    ],
+    ["children", "ReactNode", null, "The previews to feed."],
+  ]}
+/>
