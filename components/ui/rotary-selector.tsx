@@ -47,8 +47,6 @@ const WRAP_TOLERANCE = 0.5;
 const DRAG_STEP_PX = 24;
 /** Shortest gap between clicks, so a fast turn ticks instead of buzzing. */
 const CLICK_INTERVAL_MS = 33;
-/** Shortest radial segment of a leader that still reads as one. */
-const MIN_RAY = 2;
 const EPSILON = 1e-6;
 
 const rotarySelectorClick = createClickSound({
@@ -581,16 +579,6 @@ const leaderGeometry = (
   const line = column ? "column" : "row";
 
   const problems: string[] = [];
-  const bendRadius = from + ray;
-  if (bendRadius < DIAL_RADIUS) {
-    problems.push(
-      `the bend is inside the dial (radius ${roundForMessage(bendRadius)} < ${DIAL_RADIUS})`
-    );
-  } else if (ray < MIN_RAY) {
-    problems.push(
-      `the ray is too short (${roundForMessage(ray)} < ${MIN_RAY})`
-    );
-  }
   if (rayHeading * towardTarget < -EPSILON) {
     problems.push(`the ray points away from its ${line} (${axis} = ${target})`);
   }

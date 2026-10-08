@@ -973,10 +973,9 @@ describe("RotarySelectorPositionLeader", () => {
     });
   });
 
-  it("draws impossible geometry as invalid, with one warning per problem", () => {
+  it("draws impossible geometry as invalid, and warns only once", () => {
     const warn = warnings();
-    // At 3 o'clock the ray points right, away from a column on the left, and
-    // ends inside the dial.
+    // At 3 o'clock the ray points right, away from a column on the left.
     const { container, rerender } = leaderAt(90, {
       from: 40,
       ray: 5,
@@ -988,7 +987,6 @@ describe("RotarySelectorPositionLeader", () => {
       "M 90 50 L 95 50 L -18 50"
     );
     expect(warn.mock.calls.map(([message]) => message)).toEqual([
-      'RotarySelectorPositionLeader for "only": the bend is inside the dial (radius 45 < 50).',
       'RotarySelectorPositionLeader for "only": the ray points away from its column (x = -18).',
     ]);
     rerender(
@@ -1008,15 +1006,7 @@ describe("RotarySelectorPositionLeader", () => {
         )}
       </RotarySelector>
     );
-    expect(warn).toHaveBeenCalledTimes(2);
-  });
-
-  it("warns when the ray is too short to read", () => {
-    const warn = warnings();
-    leaderAt(90, { from: 53, ray: 1, to: { x: 120 } });
-    expect(warn).toHaveBeenCalledExactlyOnceWith(
-      'RotarySelectorPositionLeader for "only": the ray is too short (1 < 2).'
-    );
+    expect(warn).toHaveBeenCalledTimes(1);
   });
 
   it("stays quiet about impossible geometry in production", () => {
