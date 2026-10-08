@@ -50,11 +50,11 @@ const RotarySelectorDemo = () => (
         <RotarySelectorDial>
           {positions.map((position) => (
             <RotarySelectorPositionLeader
-              from={53}
+              from={32}
               key={position.value}
               position={position}
-              ray={8}
-              to={{ x: -18 }}
+              ray={16}
+              to={{ x: -8 }}
             >
               <RotarySelectorPositionLabel position={position}>
                 <WaveIcon wave={position.value} x={-13} />

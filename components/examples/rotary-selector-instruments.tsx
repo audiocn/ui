@@ -42,11 +42,11 @@ const VALUES = [
   "CH",
 ] as const satisfies readonly Instrument[];
 
-const BOX = { gap: 20, height: 10, width: 20 } as const;
+const BOX = { gap: 14, height: 12, width: 22 } as const;
 
 /** Boxes sit in a row above or below the dial, or in a column beside it. */
 const boxCenter = ({ angle, pointAt }: RotarySelectorPosition<Instrument>) => {
-  const { x, y } = pointAt(80);
+  const { x, y } = pointAt(66);
   const turn = ((angle % 360) + 360) % 360;
   if (turn <= 30 || turn >= 330) {
     return { x, y: -BOX.gap };
@@ -69,13 +69,13 @@ const RotarySelectorInstruments = () => (
       <>
         <RotarySelectorDial>
           {positions.map((position) => {
-            const number = position.pointAt(60);
+            const number = position.pointAt(47);
             const box = boxCenter(position);
             return (
               <g key={position.value}>
                 <RotarySelectorPositionMark
-                  inner={51}
-                  outer={54}
+                  inner={37}
+                  outer={41}
                   position={position}
                 />
                 <RotarySelectorPositionLabel position={position}>
@@ -83,11 +83,11 @@ const RotarySelectorInstruments = () => (
                     cx={number.x}
                     cy={number.y}
                     fill="transparent"
-                    r={4}
+                    r={5}
                   />
                   <text
                     dominantBaseline="central"
-                    fontSize={5}
+                    fontSize={7}
                     textAnchor="middle"
                     {...number}
                   >
@@ -111,7 +111,7 @@ const RotarySelectorInstruments = () => (
                   <text
                     className="group-data-selected/box:fill-primary-foreground font-semibold"
                     dominantBaseline="central"
-                    fontSize={5}
+                    fontSize={7}
                     textAnchor="middle"
                     {...box}
                   >
