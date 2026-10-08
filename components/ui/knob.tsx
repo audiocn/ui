@@ -18,6 +18,7 @@ import type {
   CSSProperties,
   KeyboardEvent,
   PointerEvent,
+  ReactNode,
   RefObject,
 } from "react";
 
@@ -73,6 +74,42 @@ const useKnob = (part: string) => {
   const context = useContext(KnobContext);
   if (!context) {
     throw new Error(`${part} must be used inside Knob.`);
+  }
+  return context;
+};
+
+export interface DialProviderProps {
+  /** The turn shown by the cap and pointer: degrees clockwise from 12 o'clock. */
+  angle: number;
+  /** The cap inside reports its outer radius, or null when it goes away. */
+  onCapRadiusChange?: (radius: number | null) => void;
+  children?: ReactNode;
+}
+
+type DialContextValue = Omit<DialProviderProps, "children">;
+
+const DialContext = createContext<DialContextValue | null>(null);
+
+/**
+ * Lets KnobCap and KnobPointer turn inside any dial, not only a Knob. A dial
+ * that hugs its cap sizes its drag area from `onCapRadiusChange`.
+ */
+export const DialProvider = ({
+  angle,
+  onCapRadiusChange,
+  children,
+}: DialProviderProps) => {
+  const value = useMemo(
+    () => ({ angle, onCapRadiusChange }),
+    [angle, onCapRadiusChange]
+  );
+  return <DialContext.Provider value={value}>{children}</DialContext.Provider>;
+};
+
+const useDial = (part: string) => {
+  const context = useContext(DialContext);
+  if (!context) {
+    throw new Error(`${part} must be used inside a dial, like KnobDial.`);
   }
   return context;
 };
@@ -327,6 +364,7 @@ export const KnobDial = ({
   const dragRef = useRef<DragState | null>(null);
   const [dragging, setDragging] = useState(false);
   useDialWheel(dialRef, dial, disabled);
+  const dialAngle = angleFor(position, arc);
 
   const reset = () => {
     dial.change(dial.resetValue, { reason: "reset" });
@@ -438,7 +476,7 @@ export const KnobDial = ({
       role="slider"
       style={
         {
-          "--knob-angle": `${angleFor(position, arc)}deg`,
+          "--knob-angle": `${dialAngle}deg`,
           ...style,
         } as CSSProperties
       }
@@ -450,7 +488,7 @@ export const KnobDial = ({
         className="size-full overflow-visible"
         viewBox={`0 0 ${VIEWBOX} ${VIEWBOX}`}
       >
-        {children}
+        <DialProvider angle={dialAngle}>{children}</DialProvider>
         <circle
           className="[pointer-events:all] cursor-grab touch-none group-aria-disabled/knob-dial:cursor-default group-data-dragging/knob-dial:cursor-[inherit]"
           cx={CENTER}
@@ -498,8 +536,7 @@ export const KnobPointer = ({
   className,
   ...props
 }: ComponentProps<"line">) => {
-  const { arc, position } = useKnob("KnobPointer");
-  const angle = angleFor(position, arc);
+  const { angle } = useDial("KnobPointer");
   const inner = pointAt(angle, RADIUS * 0.3);
   const outer = pointAt(angle, RADIUS * 0.72);
   return (
@@ -746,10 +783,21 @@ export const KnobCap = ({
   className,
   ...props
 }: KnobCapProps) => {
-  const { arc, position } = useKnob("KnobCap");
+  const { angle, onCapRadiusChange } = useDial("KnobCap");
   const id = useSvgId();
-  const angle = angleFor(position, arc);
   const cap = CAP[variant];
+
+  // Reported before paint, so a dial sizes its drag area from the first frame.
+  const reportRadius = useEffectEvent((radius: number | null) => {
+    onCapRadiusChange?.(radius);
+  });
+  useLayoutEffect(() => {
+    reportRadius(cap.bezel);
+    return () => {
+      reportRadius(null);
+    };
+  }, [cap.bezel]);
+
   return (
     <g
       className={cn(knobCapVariants({ variant }), className)}
