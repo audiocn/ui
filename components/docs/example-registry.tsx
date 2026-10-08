@@ -194,6 +194,9 @@ export const examples: Record<string, ComponentType | undefined> = {
   "rotary-selector-drag-directions": dynamic(
     () => import("@/components/examples/rotary-selector-drag-directions")
   ),
+  "rotary-selector-filter-type": dynamic(
+    () => import("@/components/examples/rotary-selector-filter-type")
+  ),
   "rotary-selector-instruments": dynamic(
     () => import("@/components/examples/rotary-selector-instruments")
   ),

@@ -117,6 +117,12 @@ The waveform switch above puts every label in one column on the left:
 
 A leader that cannot work still draws, with `data-invalid` (red and dashed by default), and logs a warning in development. This happens when the ray points away from its column or row, or the bend is past it.
 
+### Knob pointer
+
+The selector also takes the plain Knob look: `KnobPointer` in place of the metal cap. With no `KnobCap` to report its size, `hitRadius={32}` makes the drag circle as large as the pointer's disc.
+
+<ComponentPreview name="rotary-selector-filter-type" />
+
 ### Instrument select
 
 Twelve values 30° apart fill the turn, so this selector wraps. Each position has two labels: a number near the dial and a boxed code. Both select the value.
