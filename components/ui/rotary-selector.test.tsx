@@ -116,6 +116,8 @@ const Controlled = () => {
 
 const hitArea = (container: HTMLElement) =>
   container.querySelector("[data-slot='rotary-selector-hit-area']");
+const focusRing = (container: HTMLElement) =>
+  container.querySelector("[data-slot='rotary-selector-focus-ring']");
 
 /** Waves that click through a fake context, with clicks 100 ms apart. */
 const clicking = (props: SelectorProps = {}) => {
@@ -856,9 +858,10 @@ describe("RotarySelector", () => {
     );
   });
 
-  it("hugs the cap with its drag circle, unless given a radius", () => {
+  it("hugs the cap with its drag circle and focus ring, unless given a radius", () => {
     const { container, unmount } = render(<Waves />);
     expect(hitArea(container)).toHaveAttribute("r", "25.5");
+    expect(focusRing(container)).toHaveAttribute("r", "27.5");
     unmount();
     const bare = render(
       <RotarySelector values={WAVES}>
@@ -869,6 +872,7 @@ describe("RotarySelector", () => {
     bare.unmount();
     const ringed = render(<Waves dial={{ hitRadius: 44 }} />);
     expect(hitArea(ringed.container)).toHaveAttribute("r", "44");
+    expect(focusRing(ringed.container)).toHaveAttribute("r", "46");
   });
 
   it("turns the cap to the selected position", () => {

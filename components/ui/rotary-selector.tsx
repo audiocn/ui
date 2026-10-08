@@ -40,6 +40,8 @@ const VIEWBOX = 100;
 const CENTER = 50;
 /** The dial's edge, in view box units. */
 const DIAL_RADIUS = 50;
+/** Space between the drag circle and the focus ring around it. */
+const FOCUS_RING_GAP = 2;
 const FULL_TURN = 360;
 /** Sweeps within half a degree of a turn wrap, so a rounded step like 51.4 (360 / 7) works. */
 const WRAP_TOLERANCE = 0.5;
@@ -297,6 +299,7 @@ export const RotarySelectorDial = ({
   const dragRef = useRef<DragState | null>(null);
   const [dragging, setDragging] = useState(false);
   const [capRadius, setCapRadius] = useState<number | null>(null);
+  const dragRadius = hitRadius ?? capRadius ?? DIAL_RADIUS;
   const angle = angles[selector.index] ?? 0;
 
   const dialRef = useDialWheel(
@@ -396,7 +399,7 @@ export const RotarySelectorDial = ({
       aria-valuenow={selector.index}
       aria-valuetext={selector.valueText}
       className={cn(
-        "group/rotary-selector-dial focus-visible:ring-ring/50 pointer-events-none relative size-(--knob-size) touch-none rounded-full outline-none focus-visible:ring-3 data-dragging:pointer-events-auto",
+        "group/rotary-selector-dial pointer-events-none relative size-(--knob-size) touch-none rounded-full outline-none data-dragging:pointer-events-auto",
         {
           "data-dragging:cursor-ew-resize": dragDirection === "horizontal",
           "data-dragging:cursor-grabbing": dragDirection === "circular",
@@ -438,7 +441,17 @@ export const RotarySelectorDial = ({
           cy={CENTER}
           data-slot="rotary-selector-hit-area"
           fill="none"
-          r={hitRadius ?? capRadius ?? DIAL_RADIUS}
+          r={dragRadius}
+        />
+        <circle
+          className="group-focus-visible/rotary-selector-dial:stroke-ring/50 pointer-events-none stroke-transparent"
+          cx={CENTER}
+          cy={CENTER}
+          data-slot="rotary-selector-focus-ring"
+          fill="none"
+          r={dragRadius + FOCUS_RING_GAP}
+          strokeWidth={3}
+          vectorEffect="non-scaling-stroke"
         />
       </svg>
     </div>
