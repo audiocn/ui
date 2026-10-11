@@ -511,6 +511,35 @@ describe("Knob", () => {
     expect(end("y")).toBeGreaterThan(50);
   });
 
+  it("turns the knurled cap's grip and line together with the value", () => {
+    const { container } = render(
+      <Knob aria-label="Drive" defaultValue={50}>
+        <KnobDial>
+          <KnobCap variant="knurled" />
+        </KnobDial>
+      </Knob>
+    );
+    const cap = container.querySelector("[data-slot='knob-cap']");
+    const turn = () =>
+      container
+        .querySelector<SVGGElement>("[data-slot='knob-cap-turn']")
+        ?.style.getPropertyValue("--knob-cap-turn");
+    expect(cap).toHaveAttribute("data-variant", "knurled");
+    expect(container.querySelector("[data-slot='knob-cap-dot']")).toBeNull();
+    expect(
+      container.querySelector("[data-slot='knob-cap-knurl']")?.children
+    ).toHaveLength(60);
+    // The line is drawn pointing up, then turned with the grip.
+    const pointer = container.querySelector("[data-slot='knob-cap-pointer']");
+    expect(Number(pointer?.getAttribute("x2"))).toBeCloseTo(50);
+    expect(Number(pointer?.getAttribute("y2"))).toBeLessThan(50);
+    expect(turn()).toBe("0deg");
+    fireEvent.keyDown(screen.getByRole("slider"), { key: "ArrowUp" });
+    expect(turn()).toBe(`${(1 / 100) * 270}deg`);
+    fireEvent.keyDown(screen.getByRole("slider"), { key: "PageUp" });
+    expect(turn()).toBe(`${(11 / 100) * 270}deg`);
+  });
+
   it("clicks on graduations only with clickSound", () => {
     const shared = createFakeAudioContext();
     audio.context = shared.context;
@@ -707,6 +736,14 @@ const HuggingDial = ({
   );
 };
 
+const knurledAt = (angle: number) => (
+  <svg>
+    <DialProvider angle={angle}>
+      <KnobCap variant="knurled" />
+    </DialProvider>
+  </svg>
+);
+
 describe("DialProvider", () => {
   it("turns the cap and pointer to the angle of any dial", () => {
     const { container, rerender } = render(
@@ -772,6 +809,29 @@ describe("DialProvider", () => {
     );
     expect(onCapRadiusChange).toHaveBeenLastCalledWith(bezelRadius());
     expect(onCapRadiusChange).toHaveBeenLastCalledWith(32);
+    rerender(
+      <svg>
+        <DialProvider angle={0} onCapRadiusChange={onCapRadiusChange}>
+          <KnobCap variant="knurled" />
+        </DialProvider>
+      </svg>
+    );
+    expect(onCapRadiusChange).toHaveBeenLastCalledWith(bezelRadius());
+    expect(onCapRadiusChange).toHaveBeenLastCalledWith(33);
+  });
+
+  it("turns the knurled cap the short way across a wrap", () => {
+    const { container, rerender } = render(knurledAt(150));
+    const turn = () =>
+      container
+        .querySelector<SVGGElement>("[data-slot='knob-cap-turn']")
+        ?.style.getPropertyValue("--knob-cap-turn");
+    expect(turn()).toBe("150deg");
+    // From the last position of a full turn to the first, forward.
+    rerender(knurledAt(-150));
+    expect(turn()).toBe("210deg");
+    rerender(knurledAt(150));
+    expect(turn()).toBe("150deg");
   });
 
   it("clears the reported radius when the cap goes away", () => {
