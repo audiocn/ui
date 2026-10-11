@@ -48,7 +48,7 @@ The value keeps one width across the whole range, so the layout never moves whil
 </Knob>
 ```
 
-`KnobTrack`, `KnobRange` and `KnobPointer` are SVG elements inside a 100 × 100 view box, so you can add your own shapes next to them. `KnobScale` and `KnobCap` are another set of parts for the same dial, shown in the [volume dial](#volume-dial) and the [metal knobs](#metal-knobs).
+`KnobTrack`, `KnobRange` and `KnobPointer` are SVG elements inside a 100 × 100 view box, so you can add your own shapes next to them. `KnobScale` and `KnobCap` are another set of parts for the same dial, shown in the [volume dial](#volume-dial), the [metal knobs](#metal-knobs) and the [knurled cap](#knurled-cap).
 
 ## Examples
 
@@ -108,6 +108,21 @@ The same aluminium at everyday sizes: swap `KnobPointer` for `<KnobCap variant="
 </KnobDial>
 ```
 
+### Knurled cap
+
+A dark cap with a ridged grip and a white painted line, for stepped controls: `<KnobCap variant="knurled" />`. It fits inside `KnobScale`, like the default cap. The grip and the line snap to each new value with a short overshoot, follow the pointer exactly while dragging, and skip the animation under `prefers-reduced-motion`. It is dark in both themes; the scale follows the theme. The [rotary selector](/docs/components/rotary-selector#effort-selector) uses it for a labelled effort switch.
+
+<ComponentPreview name="knob-knurled" />
+
+```tsx
+<Knob className="[--knob-size:10rem]" max={10} step={1}>
+  <KnobDial>
+    <KnobScale labelEvery={1} majorEvery={1} ticks={10} />
+    <KnobCap variant="knurled" />
+  </KnobDial>
+</Knob>
+```
+
 ## Theming
 
 | Variable or attribute | Meaning                                   |
@@ -119,6 +134,7 @@ The same aluminium at everyday sizes: swap `KnobPointer` for `<KnobCap variant="
 | `--knob-cap-metal`    | `KnobCap`'s metal, white by default       |
 | `--knob-cap-shade`    | `KnobCap`'s shading, black by default     |
 | `--knob-cap-pitch`    | Spacing of `KnobCap`'s brushed rings      |
+| `--knob-cap-pointer`  | The knurled cap's line, white by default  |
 | `data-active`         | On `KnobScale` ticks inside the lit range |
 | `data-major`          | On `KnobScale`'s long ticks               |
 
@@ -238,9 +254,9 @@ The dial is a focusable slider with `aria-valuetext` from `format`, named by `Kn
   rows={[
     [
       "variant",
-      '"default" | "mini"',
+      '"default" | "mini" | "knurled"',
       '"default"',
-      "default sits inside KnobScale with an indicator dot. mini fills the inside of KnobTrack with an engraved line, for small knobs.",
+      "default sits inside KnobScale with an indicator dot. mini fills the inside of KnobTrack with an engraved line, for small knobs. knurled is a dark ridged cap with a painted line that snaps between values, for selectors.",
     ],
   ]}
 />

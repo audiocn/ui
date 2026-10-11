@@ -113,6 +113,7 @@ export const examples: Record<string, ComponentType | undefined> = {
   "knob-drag-directions": dynamic(
     () => import("@/components/examples/knob-drag-directions")
   ),
+  "knob-knurled": dynamic(() => import("@/components/examples/knob-knurled")),
   "knob-metal": dynamic(() => import("@/components/examples/knob-metal")),
   "knob-sizes": dynamic(() => import("@/components/examples/knob-sizes")),
   "knob-volume": dynamic(() => import("@/components/examples/knob-volume")),
@@ -193,6 +194,9 @@ export const examples: Record<string, ComponentType | undefined> = {
   ),
   "rotary-selector-drag-directions": dynamic(
     () => import("@/components/examples/rotary-selector-drag-directions")
+  ),
+  "rotary-selector-effort": dynamic(
+    () => import("@/components/examples/rotary-selector-effort")
   ),
   "rotary-selector-filter-type": dynamic(
     () => import("@/components/examples/rotary-selector-filter-type")
