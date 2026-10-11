@@ -1,0 +1,433 @@
+"use client";
+
+import { Select as SelectPrimitive } from "@base-ui/react/select";
+import { cva } from "class-variance-authority";
+import {
+  createContext,
+  useContext,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+} from "react";
+import type { ComponentProps, ReactNode, RefObject } from "react";
+
+import { cn } from "@/lib/utils";
+
+type LcdDisplayVariant = "amber" | "green" | "cyan" | "red";
+type LcdDisplaySize = "sm" | "default" | "lg";
+
+/**
+ * The hardware colours, the ink and the dot grid. The other inks are mixed
+ * from `--lcd-display-ink`, so a custom colour needs only that one variable.
+ */
+const lcdDisplayVariants = cva(
+  "[--lcd-display-bezel-edge:oklch(0.24_0.004_250)] [--lcd-display-bezel:oklch(0.33_0.004_250)] [--lcd-display-font:var(--font-mono)] [--lcd-display-glass:oklch(0.15_0.004_200)] [--lcd-display-glow:color-mix(in_oklab,var(--lcd-display-ink)_60%,transparent)] [--lcd-display-ink-dim:color-mix(in_oklab,var(--lcd-display-ink)_38%,transparent)] [--lcd-display-ink-unlit:color-mix(in_oklab,var(--lcd-display-ink)_7%,transparent)] [--lcd-display-pitch:2px]",
+  {
+    defaultVariants: { size: "default", variant: "amber" },
+    variants: {
+      size: {
+        default: "text-lg",
+        lg: "text-2xl",
+        sm: "text-sm",
+      },
+      variant: {
+        amber: "[--lcd-display-ink:oklch(0.76_0.13_52)]",
+        cyan: "[--lcd-display-ink:oklch(0.84_0.12_205)]",
+        green: "[--lcd-display-ink:oklch(0.85_0.19_142)]",
+        red: "[--lcd-display-ink:oklch(0.68_0.2_27)]",
+      },
+    },
+  }
+);
+
+interface LcdDisplayContextValue {
+  variant: LcdDisplayVariant;
+  size: LcdDisplaySize;
+  matrix: boolean;
+  scanlines: boolean;
+}
+
+const LcdDisplayContext = createContext<LcdDisplayContextValue>({
+  matrix: true,
+  scanlines: true,
+  size: "default",
+  variant: "amber",
+});
+
+const RowContext = createContext<{ labelId: string } | null>(null);
+
+/**
+ * Dims a part for a moment when its text changes, like segments redrawing.
+ * Writes the attribute straight to the DOM, so it costs no render.
+ */
+const useChangeFlicker = (ref: RefObject<HTMLElement | null>) => {
+  const textRef = useRef<string | null>(null);
+  useLayoutEffect(() => {
+    const element = ref.current;
+    if (!element) {
+      return;
+    }
+    const text = element.textContent;
+    const previous = textRef.current;
+    textRef.current = text;
+    if (previous === null || previous === text) {
+      return;
+    }
+    element.dataset.changed = "";
+    // Two frames: one to paint dimmed, one to start the fade back.
+    let frame = requestAnimationFrame(() => {
+      frame = requestAnimationFrame(() => {
+        delete element.dataset.changed;
+      });
+    });
+    return () => {
+      cancelAnimationFrame(frame);
+      delete element.dataset.changed;
+    };
+  });
+};
+
+const FLICKER =
+  "transition-opacity duration-150 data-changed:opacity-35 data-changed:duration-0 motion-reduce:transition-none motion-reduce:data-changed:opacity-100";
+
+/** The glass: unlit dots behind, scanlines in front, glowing dotted ink between. */
+const LcdScreen = ({
+  matrix,
+  scanlines,
+  className,
+  contentClassName,
+  children,
+}: {
+  matrix: boolean;
+  scanlines: boolean;
+  className?: string;
+  contentClassName?: string;
+  children: ReactNode;
+}) => (
+  <div
+    className={cn(
+      "relative isolate overflow-hidden rounded-md bg-(--lcd-display-glass) shadow-[inset_0_2px_10px_rgb(0_0_0/0.9),inset_0_0_0_1px_rgb(0_0_0/0.8)]",
+      matrix &&
+        "before:pointer-events-none before:absolute before:inset-0 before:bg-[radial-gradient(circle,var(--lcd-display-ink-unlit)_45%,transparent_55%)] before:bg-size-[var(--lcd-display-pitch)_var(--lcd-display-pitch)]",
+      "after:pointer-events-none after:absolute after:inset-0 after:bg-[linear-gradient(to_bottom,rgb(255_255_255/0.05),transparent_45%)]",
+      scanlines &&
+        "after:bg-[linear-gradient(to_bottom,rgb(255_255_255/0.05),transparent_45%),repeating-linear-gradient(to_bottom,transparent_0_2px,rgb(0_0_0/0.22)_2px_3px)]",
+      className
+    )}
+    data-slot="lcd-display-screen"
+  >
+    <div className="drop-shadow-[0_0_3px_var(--lcd-display-glow)]">
+      <div
+        className={cn(
+          "relative",
+          matrix &&
+            "mask-[radial-gradient(circle,#000_58%,transparent_64%)] mask-size-[var(--lcd-display-pitch)_var(--lcd-display-pitch)]",
+          contentClassName
+        )}
+        data-slot="lcd-display-content"
+      >
+        {children}
+      </div>
+    </div>
+  </div>
+);
+
+export interface LcdDisplayProps extends ComponentProps<"div"> {
+  /** The ink colour. Default `amber`. */
+  variant?: LcdDisplayVariant;
+  /** The text size; rows, separator and status follow it. Default `default`. */
+  size?: LcdDisplaySize;
+  /** Break the text into dots on a `--lcd-display-pitch` grid. Default true. */
+  matrix?: boolean;
+  /** Faint horizontal scanlines over the glass. Default true. */
+  scanlines?: boolean;
+}
+
+/**
+ * A dark LCD screen in a bezel. The screen is dark in both themes, and its
+ * ink is `--lcd-display-ink`.
+ */
+export const LcdDisplay = ({
+  variant = "amber",
+  size = "default",
+  matrix = true,
+  scanlines = true,
+  className,
+  children,
+  ...props
+}: LcdDisplayProps) => {
+  const context = useMemo(
+    () => ({ matrix, scanlines, size, variant }),
+    [matrix, scanlines, size, variant]
+  );
+  return (
+    <LcdDisplayContext.Provider value={context}>
+      <div
+        className={cn(
+          lcdDisplayVariants({ size, variant }),
+          "rounded-lg bg-linear-to-b from-(--lcd-display-bezel) to-(--lcd-display-bezel-edge) p-1.5 font-(family-name:--lcd-display-font) leading-none tracking-[0.12em] uppercase shadow-[0_1px_0_rgb(255_255_255/0.06)_inset,0_2px_6px_rgb(0_0_0/0.5)] ring-1 ring-black/70",
+          className
+        )}
+        data-matrix={matrix ? "" : undefined}
+        data-slot="lcd-display"
+        data-size={size}
+        data-variant={variant}
+        role="group"
+        {...props}
+      >
+        <LcdScreen
+          contentClassName="flex flex-col px-4 py-2"
+          matrix={matrix}
+          scanlines={scanlines}
+        >
+          {children}
+        </LcdScreen>
+      </div>
+    </LcdDisplayContext.Provider>
+  );
+};
+
+/** One line of the screen: a label on the left, a value on the right. */
+export const LcdDisplayRow = ({
+  className,
+  children,
+  ...props
+}: ComponentProps<"div">) => {
+  const labelId = useId();
+  const row = useMemo(() => ({ labelId }), [labelId]);
+  return (
+    <RowContext.Provider value={row}>
+      <div
+        className={cn(
+          "flex items-center justify-between gap-8 py-3",
+          className
+        )}
+        data-slot="lcd-display-row"
+        {...props}
+      >
+        {children}
+      </div>
+    </RowContext.Provider>
+  );
+};
+
+/** Dim text that names a row, and the select in it. */
+export const LcdDisplayLabel = ({
+  className,
+  id,
+  ...props
+}: ComponentProps<"span">) => {
+  const row = useContext(RowContext);
+  return (
+    <span
+      className={cn("text-(--lcd-display-ink-dim)", className)}
+      data-slot="lcd-display-label"
+      id={id ?? row?.labelId}
+      {...props}
+    />
+  );
+};
+
+export interface LcdDisplayValueProps extends ComponentProps<"span"> {
+  /** Announce changes to screen readers (`aria-live="polite"`). Default false. */
+  live?: boolean;
+}
+
+/** Bright, glowing text that flickers when it changes. */
+export const LcdDisplayValue = ({
+  live = false,
+  className,
+  ...props
+}: LcdDisplayValueProps) => {
+  const ref = useRef<HTMLSpanElement>(null);
+  useChangeFlicker(ref);
+  return (
+    <span
+      aria-live={live ? "polite" : undefined}
+      className={cn(
+        "text-(--lcd-display-ink) tabular-nums",
+        FLICKER,
+        className
+      )}
+      data-slot="lcd-display-value"
+      ref={ref}
+      {...props}
+    />
+  );
+};
+
+/** A dotted rule between rows. */
+export const LcdDisplaySeparator = ({
+  className,
+  ...props
+}: ComponentProps<"div">) => (
+  <div
+    className={cn(
+      "h-(--lcd-display-pitch) shrink-0 bg-[radial-gradient(circle,var(--lcd-display-ink-dim)_45%,transparent_55%)] bg-size-[calc(var(--lcd-display-pitch)*2)_var(--lcd-display-pitch)]",
+      className
+    )}
+    data-slot="lcd-display-separator"
+    role="separator"
+    {...props}
+  />
+);
+
+export interface LcdDisplayStatusProps extends ComponentProps<"span"> {
+  /** `idle` blinks slowly, `busy` quickly, `off` shows nothing lit. Default `idle`. */
+  state?: "idle" | "busy" | "off";
+}
+
+/** The blinking pixel in the bottom-right corner of the screen. */
+export const LcdDisplayStatus = ({
+  state = "idle",
+  className,
+  ...props
+}: LcdDisplayStatusProps) => (
+  <span
+    aria-hidden
+    className={cn(
+      "absolute right-2 bottom-2 size-1.5 animate-pulse bg-(--lcd-display-ink) data-[state=busy]:[animation-duration:0.6s] data-[state=off]:animate-none data-[state=off]:bg-(--lcd-display-ink-unlit) motion-reduce:animate-none",
+      className
+    )}
+    data-slot="lcd-display-status"
+    data-state={state}
+    {...props}
+  />
+);
+
+/** A row value the user can change, built on Base UI's Select. */
+export const LcdDisplaySelect = <Value,>(
+  props: SelectPrimitive.Root.Props<Value>
+) => <SelectPrimitive.Root {...props} />;
+
+/** A 5 × 3 pixel chevron. */
+const PixelChevron = () => (
+  <svg
+    aria-hidden
+    className="h-1.5 w-2.5 shrink-0"
+    fill="currentColor"
+    shapeRendering="crispEdges"
+    viewBox="0 0 5 3"
+  >
+    <path d="M0 0h1v1H0zM4 0h1v1H4zM1 1h1v1H1zM3 1h1v1H3zM2 2h1v1H2z" />
+  </svg>
+);
+
+export interface LcdDisplaySelectTriggerProps
+  extends SelectPrimitive.Trigger.Props {
+  /** Shown while nothing is selected. */
+  placeholder?: ReactNode;
+}
+
+/** The selected value and a pixel chevron. Named by the row's label. */
+export const LcdDisplaySelectTrigger = ({
+  placeholder,
+  className,
+  children,
+  ...props
+}: LcdDisplaySelectTriggerProps) => {
+  const row = useContext(RowContext);
+  const ref = useRef<HTMLButtonElement>(null);
+  useChangeFlicker(ref);
+  return (
+    <SelectPrimitive.Trigger
+      aria-labelledby={row?.labelId}
+      className={cn(
+        "-mx-1 inline-flex cursor-pointer items-center gap-3 rounded-sm px-1 py-0.5 text-(--lcd-display-ink) uppercase tabular-nums outline-none focus-visible:ring-1 focus-visible:ring-(--lcd-display-ink) disabled:cursor-default disabled:text-(--lcd-display-ink-dim) data-placeholder:text-(--lcd-display-ink-dim)",
+        FLICKER,
+        className
+      )}
+      data-slot="lcd-display-select-trigger"
+      ref={ref}
+      {...props}
+    >
+      {children ?? <SelectPrimitive.Value placeholder={placeholder} />}
+      <SelectPrimitive.Icon className="transition-transform duration-150 data-popup-open:rotate-180 motion-reduce:transition-none">
+        <PixelChevron />
+      </SelectPrimitive.Icon>
+    </SelectPrimitive.Trigger>
+  );
+};
+
+export interface LcdDisplaySelectContentProps
+  extends
+    SelectPrimitive.Popup.Props,
+    Pick<
+      SelectPrimitive.Positioner.Props,
+      "align" | "alignOffset" | "side" | "sideOffset"
+    > {}
+
+/** The list of choices, drawn as a small screen in the display's ink. */
+export const LcdDisplaySelectContent = ({
+  align = "end",
+  alignOffset = 0,
+  side = "bottom",
+  sideOffset = 8,
+  className,
+  children,
+  ...props
+}: LcdDisplaySelectContentProps) => {
+  const { matrix, scanlines, size, variant } = useContext(LcdDisplayContext);
+  return (
+    <SelectPrimitive.Portal>
+      <SelectPrimitive.Positioner
+        align={align}
+        alignItemWithTrigger={false}
+        alignOffset={alignOffset}
+        className="isolate z-50"
+        side={side}
+        sideOffset={sideOffset}
+      >
+        <SelectPrimitive.Popup
+          className={cn(
+            lcdDisplayVariants({ size, variant }),
+            "max-h-(--available-height) min-w-(--anchor-width) origin-(--transform-origin) overflow-y-auto rounded-md bg-(--lcd-display-bezel-edge) p-1 font-(family-name:--lcd-display-font) leading-none tracking-[0.12em] uppercase shadow-xl ring-1 ring-black/70 transition-[opacity,scale] duration-100 outline-none data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0 motion-reduce:transition-none",
+            className
+          )}
+          data-slot="lcd-display-select-content"
+          data-variant={variant}
+          {...props}
+        >
+          <LcdScreen
+            contentClassName="p-1"
+            matrix={matrix}
+            scanlines={scanlines}
+          >
+            <SelectPrimitive.List>{children}</SelectPrimitive.List>
+          </LcdScreen>
+        </SelectPrimitive.Popup>
+      </SelectPrimitive.Positioner>
+    </SelectPrimitive.Portal>
+  );
+};
+
+/** One choice. Highlighted choices invert, like an LCD menu. */
+export const LcdDisplaySelectItem = ({
+  className,
+  children,
+  ...props
+}: SelectPrimitive.Item.Props) => (
+  <SelectPrimitive.Item
+    className={cn(
+      "flex cursor-default items-center gap-2 rounded-sm px-2 py-2 text-(--lcd-display-ink-dim) outline-none select-none data-disabled:opacity-40 data-highlighted:bg-(--lcd-display-ink) data-highlighted:text-(--lcd-display-glass) data-selected:text-(--lcd-display-ink) data-selected:data-highlighted:text-(--lcd-display-glass)",
+      className
+    )}
+    data-slot="lcd-display-select-item"
+    {...props}
+  >
+    {/* Keeps its width when hidden, so the choices stay aligned. */}
+    <span className="size-1.5 shrink-0">
+      <SelectPrimitive.ItemIndicator
+        className="block size-full"
+        data-slot="lcd-display-select-indicator"
+      >
+        {/* A lit pixel instead of Base UI's default check mark. */}
+        <span className="block size-full bg-current" />
+      </SelectPrimitive.ItemIndicator>
+    </span>
+    <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
+  </SelectPrimitive.Item>
+);
+
+export { lcdDisplayVariants };
