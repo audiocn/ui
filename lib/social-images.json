@@ -87,6 +87,10 @@
     "alt": "audiocn Knob: gain, pan and frequency rotary controls with value labels and range arcs.",
     "url": "/og/knob-d3e4fb48b37f.png"
   },
+  "/docs/components/lcd-display": {
+    "alt": "LCD Display — audiocn: an amber dot-matrix screen with model and effort settings.",
+    "url": "/og/components-lcd-display-c10395f35ae0.png"
+  },
   "/docs/components/level-meter": {
     "alt": "audiocn Level Meter: solid and segmented stereo meters with green and yellow zones, scales and peak hold.",
     "url": "/og/level-meter-b1bd067dc6a2.png"
