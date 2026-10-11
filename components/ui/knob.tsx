@@ -644,6 +644,25 @@ const CAP = {
     rim: 29.2,
   },
 } as const;
+/**
+ * Radii of the knurled cap, in view box units: a dark bezel, a ridged grip
+ * from `knurlInner` to `knurlOuter`, a groove and a smooth dished face. It
+ * sits inside a KnobScale, with room for selector print around it.
+ */
+const KNURLED_CAP = {
+  bezel: 33,
+  face: 25.4,
+  groove: 26.6,
+  halo: 41,
+  haloFrom: 0.72,
+  knurlInner: 27,
+  knurlOuter: 31.4,
+} as const;
+/** Ridges around the knurled grip, and the turn between a ridge's two walls. */
+const KNURL_RIDGES = 60;
+const KNURL_WALL_DEGREES = 1.8;
+/** The knurled cap's painted pointer line, drawn pointing up before it turns. */
+const KNURLED_POINTER = { inner: 6, outer: 22, width: 2.8 } as const;
 /** The default cap's indicator dot. */
 const CAP_DOT = { distance: 17, radius: 1.6 } as const;
 /** The mini cap's engraved indicator line, which reads at small sizes. */
@@ -752,20 +771,19 @@ export const KnobScale = ({
 /** An id that is safe inside `url(#…)`. */
 const useSvgId = () => `knob${useId().replaceAll(/[^\w-]/gu, "")}`;
 
-const knobCapVariants = cva(
-  "[--knob-cap-metal:var(--color-white)] [--knob-cap-shade:var(--color-black)]",
-  {
-    defaultVariants: { variant: "default" },
-    variants: {
-      variant: {
-        default: "[--knob-cap-pitch:0.3px]",
-        mini: "[--knob-cap-pitch:0.9px]",
-      },
+const knobCapVariants = cva("[--knob-cap-shade:var(--color-black)]", {
+  defaultVariants: { variant: "default" },
+  variants: {
+    variant: {
+      default: "[--knob-cap-metal:var(--color-white)] [--knob-cap-pitch:0.3px]",
+      knurled:
+        "[--knob-cap-metal:var(--color-zinc-700)] [--knob-cap-pointer:var(--color-white)]",
+      mini: "[--knob-cap-metal:var(--color-white)] [--knob-cap-pitch:0.9px]",
     },
-  }
-);
+  },
+});
 
-type KnobCapVariant = "default" | "mini";
+type KnobCapVariant = "default" | "mini" | "knurled";
 
 /** The value marker: a dot on the default cap, an engraved line on the mini one. */
 const KnobCapIndicator = ({
@@ -773,7 +791,7 @@ const KnobCapIndicator = ({
   variant,
 }: {
   angle: number;
-  variant: KnobCapVariant;
+  variant: Exclude<KnobCapVariant, "knurled">;
 }) => {
   if (variant === "default") {
     const dot = pointAt(angle, CAP_DOT.distance);
@@ -816,18 +834,228 @@ const KnobCapIndicator = ({
   );
 };
 
+/**
+ * The angle to draw, carried across whole turns, so a selector that wraps
+ * from its last position to its first animates the short way round.
+ */
+const useContinuousAngle = (angle: number) => {
+  const [turn, setTurn] = useState({ angle, shown: angle });
+  if (turn.angle === angle) {
+    return turn.shown;
+  }
+  const next = { angle, shown: turn.shown + turnBetween(turn.angle, angle) };
+  setTurn(next);
+  return next.shown;
+};
+
+/** Each ridge of the grip: a lit wall and a shaded wall, a little apart. */
+const KNURL_WALLS = Array.from({ length: KNURL_RIDGES }, (_, index) => {
+  const angle = (index * FULL_TURN) / KNURL_RIDGES;
+  return {
+    index,
+    lit: [
+      pointAt(angle, KNURLED_CAP.knurlInner),
+      pointAt(angle, KNURLED_CAP.knurlOuter),
+    ],
+    shaded: [
+      pointAt(angle + KNURL_WALL_DEGREES, KNURLED_CAP.knurlInner),
+      pointAt(angle + KNURL_WALL_DEGREES, KNURLED_CAP.knurlOuter),
+    ],
+  };
+});
+
+/** A short snap with a little overshoot, held still while dragging. */
+const KNURLED_TURN =
+  "origin-[50px_50px] rotate-(--knob-cap-turn) [transform-box:view-box] transition-transform duration-150 ease-[cubic-bezier(0.34,1.56,0.64,1)] in-data-dragging:transition-none motion-reduce:transition-none";
+
+/**
+ * A dark cap with a ridged grip and a painted pointer line. The grip and the
+ * line turn together and snap between positions; the lighting stays still.
+ */
+const KnurledCap = ({
+  angle,
+  className,
+  ...props
+}: ComponentProps<"g"> & { angle: number }) => {
+  const id = useSvgId();
+  const shown = useContinuousAngle(angle);
+  const turn = {
+    "--knob-cap-turn": `${roundCoordinate(shown)}deg`,
+  } as CSSProperties;
+  return (
+    <g
+      className={cn(knobCapVariants({ variant: "knurled" }), className)}
+      data-slot="knob-cap"
+      data-variant="knurled"
+      {...props}
+    >
+      <defs>
+        <radialGradient id={`${id}-halo`}>
+          <stop
+            className="[stop-color:var(--knob-cap-shade)]"
+            offset={KNURLED_CAP.haloFrom}
+            stopOpacity={0.6}
+          />
+          <stop
+            className="[stop-color:var(--knob-cap-shade)]"
+            offset="1"
+            stopOpacity={0}
+          />
+        </radialGradient>
+        {/* Light from above: bright at the top of the bezel and grip, dark below. */}
+        <linearGradient id={`${id}-bezel`} x1="0" x2="0" y1="0" y2="1">
+          <stop
+            className="[stop-color:var(--knob-cap-pointer)]"
+            offset="0"
+            stopOpacity={0.14}
+          />
+          <stop
+            className="[stop-color:var(--knob-cap-pointer)]"
+            offset="1"
+            stopOpacity={0}
+          />
+        </linearGradient>
+        <linearGradient id={`${id}-knurl`} x1="0" x2="0" y1="0" y2="1">
+          <stop
+            className="[stop-color:var(--knob-cap-pointer)]"
+            offset="0"
+            stopOpacity={0.18}
+          />
+          <stop
+            className="[stop-color:var(--knob-cap-shade)]"
+            offset="0.55"
+            stopOpacity={0.1}
+          />
+          <stop
+            className="[stop-color:var(--knob-cap-shade)]"
+            offset="1"
+            stopOpacity={0.55}
+          />
+        </linearGradient>
+        {/* The dished face catches the light at its upper left. */}
+        <radialGradient cx="0.38" cy="0.3" id={`${id}-face`} r="0.85">
+          <stop
+            className="[stop-color:color-mix(in_oklab,var(--knob-cap-metal),var(--knob-cap-pointer)_16%)]"
+            offset="0"
+          />
+          <stop className="[stop-color:var(--knob-cap-metal)]" offset="0.45" />
+          <stop
+            className="[stop-color:color-mix(in_oklab,var(--knob-cap-metal),var(--knob-cap-shade)_70%)]"
+            offset="1"
+          />
+        </radialGradient>
+      </defs>
+      <circle
+        cx={CENTER}
+        cy={CENTER}
+        fill={`url(#${id}-halo)`}
+        r={KNURLED_CAP.halo}
+      />
+      <circle
+        className="fill-(--knob-cap-shade)/90 stroke-(--knob-cap-pointer)/20"
+        cx={CENTER}
+        cy={CENTER}
+        r={KNURLED_CAP.bezel}
+        strokeWidth={0.4}
+      />
+      <circle
+        cx={CENTER}
+        cy={CENTER}
+        fill={`url(#${id}-bezel)`}
+        r={KNURLED_CAP.bezel}
+      />
+      <circle
+        className="fill-(--knob-cap-metal)"
+        cx={CENTER}
+        cy={CENTER}
+        r={KNURLED_CAP.knurlOuter}
+      />
+      <g className={KNURLED_TURN} data-slot="knob-cap-turn" style={turn}>
+        <g data-slot="knob-cap-knurl" strokeLinecap="round">
+          {KNURL_WALLS.map(({ index, lit, shaded }) => (
+            <g key={index}>
+              <line
+                className="stroke-(--knob-cap-pointer)/25"
+                strokeWidth={0.9}
+                x1={lit[0]?.x}
+                x2={lit[1]?.x}
+                y1={lit[0]?.y}
+                y2={lit[1]?.y}
+              />
+              <line
+                className="stroke-(--knob-cap-shade)/70"
+                strokeWidth={1.3}
+                x1={shaded[0]?.x}
+                x2={shaded[1]?.x}
+                y1={shaded[0]?.y}
+                y2={shaded[1]?.y}
+              />
+            </g>
+          ))}
+        </g>
+      </g>
+      <circle
+        cx={CENTER}
+        cy={CENTER}
+        fill={`url(#${id}-knurl)`}
+        pointerEvents="none"
+        r={KNURLED_CAP.knurlOuter}
+      />
+      <circle
+        className="fill-(--knob-cap-shade)/85"
+        cx={CENTER}
+        cy={CENTER}
+        r={KNURLED_CAP.groove}
+      />
+      <circle
+        className="stroke-(--knob-cap-pointer)/15"
+        cx={CENTER}
+        cy={CENTER}
+        data-slot="knob-cap-face"
+        fill={`url(#${id}-face)`}
+        r={KNURLED_CAP.face}
+        strokeWidth={0.35}
+      />
+      <g className={KNURLED_TURN} style={turn}>
+        {/* A soft glow under the paint, so the line reads on the dark face. */}
+        <line
+          className="stroke-(--knob-cap-pointer)/15"
+          strokeLinecap="round"
+          strokeWidth={KNURLED_POINTER.width * 2.2}
+          x1={CENTER}
+          x2={CENTER}
+          y1={CENTER - KNURLED_POINTER.inner}
+          y2={CENTER - KNURLED_POINTER.outer}
+        />
+        <line
+          className="stroke-(--knob-cap-pointer)"
+          data-slot="knob-cap-pointer"
+          strokeLinecap="round"
+          strokeWidth={KNURLED_POINTER.width}
+          x1={CENTER}
+          x2={CENTER}
+          y1={CENTER - KNURLED_POINTER.inner}
+          y2={CENTER - KNURLED_POINTER.outer}
+        />
+      </g>
+    </g>
+  );
+};
+
 export interface KnobCapProps extends ComponentProps<"g"> {
   /**
    * `default` sits inside a KnobScale and marks the value with a dot. `mini`
    * fills the inside of a KnobTrack and marks it with an engraved line, for
-   * small knobs. Default `default`.
+   * small knobs. `knurled` is a dark cap with a ridged grip and a painted
+   * line that snaps between positions, for selectors. Default `default`.
    */
   variant?: KnobCapVariant;
 }
 
 /**
  * A brushed aluminium cap in a dark bezel, with a marker that turns with the
- * value. The metal is `--knob-cap-metal` shaded by `--knob-cap-shade`.
+ * value, or a dark knurled one. The metal is `--knob-cap-metal` shaded by
+ * `--knob-cap-shade`; the knurled cap's pointer is `--knob-cap-pointer`.
  */
 export const KnobCap = ({
   variant = "default",
@@ -836,19 +1064,23 @@ export const KnobCap = ({
 }: KnobCapProps) => {
   const { angle, onCapRadiusChange } = useDial("KnobCap");
   const id = useSvgId();
-  const cap = CAP[variant];
+  const radius = variant === "knurled" ? KNURLED_CAP.bezel : CAP[variant].bezel;
 
   // Reported before paint, so a dial sizes its drag area from the first frame.
-  const reportRadius = useEffectEvent((radius: number | null) => {
-    onCapRadiusChange?.(radius);
+  const reportRadius = useEffectEvent((next: number | null) => {
+    onCapRadiusChange?.(next);
   });
   useLayoutEffect(() => {
-    reportRadius(cap.bezel);
+    reportRadius(radius);
     return () => {
       reportRadius(null);
     };
-  }, [cap.bezel]);
+  }, [radius]);
 
+  if (variant === "knurled") {
+    return <KnurledCap angle={angle} className={className} {...props} />;
+  }
+  const cap = CAP[variant];
   return (
     <g
       className={cn(knobCapVariants({ variant }), className)}
