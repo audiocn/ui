@@ -2,7 +2,7 @@
 
 Status: IMPLEMENTED (2026-10-12).
 
-A dark dot-matrix screen from a hardware panel reference: rows of dim labels and glowing amber values (`MODEL  OPUS 5.5 ⌄`, `EFFORT  HIGH ⌄`), dotted dividers and a blinking status pixel. A value can be a dropdown. It stands alone: no audio core, no dependency on the knob. The selector knob from the same reference is plan 019.
+A dot-matrix screen from a hardware panel reference: rows of dim labels and glowing amber values (`MODEL  OPUS 5.5 ⌄`, `EFFORT  HIGH ⌄`), dotted dividers and a blinking status pixel. A value can be a dropdown. It stands alone: no audio core, no dependency on the knob. The selector knob from the same reference is plan 019.
 
 ## Anatomy
 
@@ -38,8 +38,9 @@ A dark dot-matrix screen from a hardware panel reference: rows of dim labels and
 
 ## Look
 
-- **Dark in both themes**, like hardware. The bezel and glass colours are component variables (`--lcd-display-bezel`, `--lcd-display-bezel-edge`, `--lcd-display-glass`), not the raw palette.
-- **Ink**: `variant` sets `--lcd-display-ink` to amber (default), green, cyan or red. `--lcd-display-ink-dim` (labels), `--lcd-display-ink-unlit` (background dots) and `--lcd-display-glow` are mixed from it, so a custom colour is one variable.
+- **Follows the theme** (`appearance`, default `auto`). Light is a backlit LCD: pale glass tinted by the ink (`--lcd-display-glass`, the ink at 32% in a warm white) with dark pixels (`--lcd-display-lit`, the ink mixed 62% toward black) and a faint shadow instead of a glow. Dark is near-black glass where the ink itself glows. `appearance="light"` or `"dark"` pins one look; `auto` writes the dark set out again behind `dark:` so Tailwind sees it. The popup carries the same appearance through context.
+- The hardware colours and shadows are component variables (`--lcd-display-bezel`, `--lcd-display-bezel-edge`, `--lcd-display-bezel-ring`, `--lcd-display-bezel-shadow`, `--lcd-display-recess`, `--lcd-display-sheen`, `--lcd-display-scanline`), not the raw palette.
+- **Ink**: `variant` sets `--lcd-display-ink` to amber (default), green, cyan or red. `--lcd-display-lit` (lit pixels), `--lcd-display-ink-dim` (labels), `--lcd-display-ink-unlit` (background dots), the light glass and `--lcd-display-glow` are mixed from it, so a custom colour is one variable.
 - **Dot-matrix without shipping a font**: the content is masked with a dot grid (`--lcd-display-pitch`, 2px), so any mono font breaks into dots. The glass tiles the same grid faintly, like unlit pixels. The glow is a `drop-shadow` on a wrapper outside the mask, so it bleeds past the dots.
 - **A real dot-matrix font** is opt-in: set `--lcd-display-font` (default `var(--font-mono)`) and turn the mask off with `matrix={false}`. The docs site loads Google's Doto at weight 900, not preloaded, for its font example.
 - Scanlines and a glass sheen over the top, off with `scanlines={false}`.

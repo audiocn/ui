@@ -1,6 +1,6 @@
 ---
 title: LCD Display
-description: A dark dot-matrix screen for labelled readouts and settings, with a glowing ink and dropdown values.
+description: A dot-matrix screen for labelled readouts and settings, backlit in the light theme and glowing in the dark one, with dropdown values.
 seoDescription: Build a hardware-style LCD screen in React with dot-matrix text, a glowing amber, green, cyan or red ink and dropdown rows. Copy and customize the audiocn LCD Display.
 ---
 
@@ -32,7 +32,9 @@ import {
 </LcdDisplay>
 ```
 
-The screen is dark in both themes, like a piece of hardware. Labels are dim, values are bright and glow, and a value dims for a moment when its text changes, like segments redrawing.
+The screen follows the theme. In the light theme it is a backlit LCD: pale glass tinted by the ink, with dark pixels, like a calculator. In the dark theme it is dark glass where the ink itself glows. Labels are dim, values are bright, and a value dims for a moment when its text changes, like segments redrawing.
+
+Set `appearance="light"` or `appearance="dark"` to keep one look in both themes, for example a dark screen on a light page.
 
 ## Anatomy
 
@@ -66,7 +68,7 @@ A row holds a label and either a read-only `LcdDisplayValue` or an `LcdDisplaySe
 
 <ComponentPreview name="lcd-display-variants" />
 
-For any other colour, set `--lcd-display-ink`. The dim, unlit and glow inks are mixed from it.
+For any other colour, set `--lcd-display-ink`. The glass, the lit, dim and unlit pixels and the glow are mixed from it, in both themes.
 
 ```tsx
 <LcdDisplay className="[--lcd-display-ink:var(--color-violet-400)]" />
@@ -99,12 +101,16 @@ const fontDoto = Doto({
 
 | Variable or attribute | Meaning |
 | --- | --- |
-| `--lcd-display-ink` | The lit ink, set by `variant` |
-| `--lcd-display-ink-dim` | Labels and the separator. Default: the ink at 38% |
-| `--lcd-display-ink-unlit` | The unlit dots behind the text. Default: the ink at 7% |
-| `--lcd-display-glow` | The glow around lit text. Default: the ink at 60% |
+| `--lcd-display-ink` | The display's colour, set by `variant` |
+| `--lcd-display-lit` | Lit pixels. Light: the ink darkened. Dark: the ink |
+| `--lcd-display-ink-dim` | Labels and the separator. Default: the lit pixels at 40% |
+| `--lcd-display-ink-unlit` | The unlit dots behind the text. Default: the lit pixels at 7% |
+| `--lcd-display-glass` | The screen. Light: the ink mixed into a pale glass. Dark: near black |
+| `--lcd-display-glow` | The halo around lit text. Light: a faint shadow. Dark: the ink at 60% |
+| `--lcd-display-bezel`, `--lcd-display-bezel-edge` | The frame's gradient, top to bottom |
 | `--lcd-display-font` | The font. Default `var(--font-mono)` |
 | `--lcd-display-pitch` | The dot grid's spacing. Default `2px` |
+| `data-appearance` | On the display and the select's popup: `auto`, `light` or `dark` |
 | `data-size` | On the display, set by `size` |
 | `data-variant` | On the display and the select's popup |
 | `data-matrix` | On the display while the dot mask is on |
@@ -128,6 +134,12 @@ The display is a `group`. Each select's trigger is named by its row's `LcdDispla
       '"amber" | "green" | "cyan" | "red"',
       '"amber"',
       "The ink colour.",
+    ],
+    [
+      "appearance",
+      '"auto" | "light" | "dark"',
+      '"auto"',
+      "light is a backlit screen with dark pixels, dark is dark glass with glowing ink, auto follows the theme.",
     ],
     [
       "matrix",
