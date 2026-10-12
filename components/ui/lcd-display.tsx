@@ -14,16 +14,16 @@ import type { ComponentProps, ReactNode, RefObject } from "react";
 
 import { cn } from "@/lib/utils";
 
-type LcdDisplayVariant = "amber" | "green" | "cyan" | "red";
+type LcdDisplayVariant = "amber" | "green" | "cyan" | "red" | "primary";
 type LcdDisplaySize = "sm" | "default" | "lg";
 type LcdDisplayAppearance = "auto" | "light" | "dark";
 
 /**
- * A backlit screen: pale glass tinted by the ink, with dark pixels and no
- * glow, like a calculator or a pager.
+ * A reflective screen: the grey-green glass of a calculator or a pager, with
+ * a hint of the ink in it and dark pixels tinted by the ink.
  */
 const LIGHT_SCREEN =
-  "[--lcd-display-bezel-edge:oklch(0.85_0.004_250)] [--lcd-display-bezel-ring:rgb(0_0_0/0.14)] [--lcd-display-bezel-shadow:inset_0_1px_0_rgb(255_255_255/0.8),0_1px_3px_rgb(0_0_0/0.18)] [--lcd-display-bezel:oklch(0.95_0.003_250)] [--lcd-display-glass:color-mix(in_oklab,var(--lcd-display-ink)_32%,oklch(0.97_0.008_95))] [--lcd-display-glow:color-mix(in_oklab,var(--lcd-display-lit)_22%,transparent)] [--lcd-display-lit:color-mix(in_oklab,var(--lcd-display-ink),black_62%)] [--lcd-display-recess:inset_0_1px_4px_rgb(0_0_0/0.28),inset_0_0_0_1px_rgb(0_0_0/0.2)] [--lcd-display-scanline:rgb(0_0_0/0.04)] [--lcd-display-sheen:rgb(255_255_255/0.35)]";
+  "[--lcd-display-bezel-edge:oklch(0.85_0.004_250)] [--lcd-display-bezel-ring:rgb(0_0_0/0.14)] [--lcd-display-bezel-shadow:inset_0_1px_0_rgb(255_255_255/0.8),0_1px_3px_rgb(0_0_0/0.18)] [--lcd-display-bezel:oklch(0.95_0.003_250)] [--lcd-display-glass:color-mix(in_oklab,var(--lcd-display-ink)_8%,oklch(0.84_0.03_118))] [--lcd-display-glow:color-mix(in_oklab,var(--lcd-display-lit)_22%,transparent)] [--lcd-display-lit:color-mix(in_oklab,var(--lcd-display-ink)_30%,oklch(0.24_0.02_150))] [--lcd-display-recess:inset_0_1px_4px_rgb(0_0_0/0.28),inset_0_0_0_1px_rgb(0_0_0/0.2)] [--lcd-display-scanline:rgb(0_0_0/0.04)] [--lcd-display-sheen:rgb(255_255_255/0.22)]";
 
 /** An unlit dark glass where the ink itself glows. */
 const DARK_SCREEN =
@@ -57,6 +57,7 @@ const lcdDisplayVariants = cva(
         amber: "[--lcd-display-ink:oklch(0.76_0.13_52)]",
         cyan: "[--lcd-display-ink:oklch(0.84_0.12_205)]",
         green: "[--lcd-display-ink:oklch(0.85_0.19_142)]",
+        primary: "[--lcd-display-ink:var(--primary)]",
         red: "[--lcd-display-ink:oklch(0.68_0.2_27)]",
       },
     },
@@ -158,10 +159,10 @@ const LcdScreen = ({
 );
 
 export interface LcdDisplayProps extends ComponentProps<"div"> {
-  /** The ink colour. Default `amber`. */
+  /** The ink colour. `primary` follows the theme. Default `amber`. */
   variant?: LcdDisplayVariant;
   /**
-   * `light` is a backlit screen with dark pixels, `dark` an unlit screen with
+   * `light` is a grey-green screen with dark pixels, `dark` an unlit screen with
    * glowing ink, and `auto` follows the theme. Default `auto`.
    */
   appearance?: LcdDisplayAppearance;
@@ -174,7 +175,7 @@ export interface LcdDisplayProps extends ComponentProps<"div"> {
 }
 
 /**
- * An LCD screen in a bezel: backlit with dark pixels in the light theme, and
+ * An LCD screen in a bezel: grey-green with dark pixels in the light theme, and
  * glowing ink on dark glass in the dark one. Its ink is `--lcd-display-ink`.
  */
 export const LcdDisplay = ({
