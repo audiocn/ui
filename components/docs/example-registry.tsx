@@ -122,9 +122,6 @@ export const examples: Record<string, ComponentType | undefined> = {
   "lcd-display-font": dynamic(
     () => import("@/components/examples/lcd-display-font")
   ),
-  "lcd-display-theme": dynamic(
-    () => import("@/components/examples/lcd-display-theme")
-  ),
   "lcd-display-variants": dynamic(
     () => import("@/components/examples/lcd-display-variants")
   ),
