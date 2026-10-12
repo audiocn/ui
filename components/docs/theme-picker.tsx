@@ -90,7 +90,7 @@ export const ThemePicker = () => {
             <SelectItem key={option.value} value={option.value}>
               <span
                 aria-hidden
-                className="size-3 rounded-full bg-(--swatch)"
+                className="size-3 shrink-0 rounded-full bg-(--swatch)"
                 style={{ "--swatch": option.swatch } as CSSProperties}
               />
               {option.label}
