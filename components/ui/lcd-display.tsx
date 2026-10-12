@@ -23,7 +23,7 @@ type LcdDisplayAppearance = "auto" | "light" | "dark";
  * glow, like a calculator or a pager.
  */
 const LIGHT_SCREEN =
-  "[--lcd-display-bezel-edge:oklch(0.85_0.004_250)] [--lcd-display-bezel-ring:rgb(0_0_0/0.14)] [--lcd-display-bezel-shadow:inset_0_1px_0_rgb(255_255_255/0.8),0_1px_3px_rgb(0_0_0/0.18)] [--lcd-display-bezel:oklch(0.95_0.003_250)] [--lcd-display-glass:color-mix(in_oklab,var(--lcd-display-ink)_32%,oklch(0.97_0.008_95))] [--lcd-display-glow:color-mix(in_oklab,var(--lcd-display-lit)_22%,transparent)] [--lcd-display-lit:color-mix(in_oklab,var(--lcd-display-ink),black_62%)] [--lcd-display-recess:inset_0_1px_4px_rgb(0_0_0/0.28),inset_0_0_0_1px_rgb(0_0_0/0.2)] [--lcd-display-scanline:rgb(0_0_0/0.04)] [--lcd-display-sheen:rgb(255_255_255/0.35)]";
+  "[--lcd-display-bezel-edge:oklch(0.85_0.004_250)] [--lcd-display-bezel-ring:rgb(0_0_0/0.14)] [--lcd-display-bezel-shadow:inset_0_1px_0_rgb(255_255_255/0.8),0_1px_3px_rgb(0_0_0/0.18)] [--lcd-display-bezel:oklch(0.95_0.003_250)] [--lcd-display-glass:oklch(from_var(--lcd-display-ink)_0.93_calc(c*0.35)_h)] [--lcd-display-glow:color-mix(in_oklab,var(--lcd-display-lit)_22%,transparent)] [--lcd-display-lit:color-mix(in_oklab,var(--lcd-display-ink),black_62%)] [--lcd-display-recess:inset_0_1px_4px_rgb(0_0_0/0.28),inset_0_0_0_1px_rgb(0_0_0/0.2)] [--lcd-display-scanline:rgb(0_0_0/0.04)] [--lcd-display-sheen:rgb(255_255_255/0.35)]";
 
 /** An unlit dark glass where the ink itself glows. */
 const DARK_SCREEN =
