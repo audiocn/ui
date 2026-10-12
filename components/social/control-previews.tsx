@@ -24,6 +24,14 @@ import {
   FaderTrack,
   FaderValue,
 } from "@/components/ui/fader";
+import {
+  LcdDisplay,
+  LcdDisplayLabel,
+  LcdDisplayRow,
+  LcdDisplaySeparator,
+  LcdDisplayStatus,
+  LcdDisplayValue,
+} from "@/components/ui/lcd-display";
 import { LevelMeter } from "@/components/ui/level-meter";
 import { LiveWaveform } from "@/components/ui/live-waveform";
 import {
@@ -126,6 +134,21 @@ export const ReadoutPreview = () => (
       </div>
     ))}
   </div>
+);
+
+export const LcdPreview = () => (
+  <LcdDisplay className="w-[30rem]" size="lg" variant="amber">
+    <LcdDisplayRow>
+      <LcdDisplayLabel>Model</LcdDisplayLabel>
+      <LcdDisplayValue>Opus 5.5</LcdDisplayValue>
+    </LcdDisplayRow>
+    <LcdDisplaySeparator />
+    <LcdDisplayRow>
+      <LcdDisplayLabel>Effort</LcdDisplayLabel>
+      <LcdDisplayValue>High</LcdDisplayValue>
+    </LcdDisplayRow>
+    <LcdDisplayStatus state="off" />
+  </LcdDisplay>
 );
 
 export const ScalePreview = () => (

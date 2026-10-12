@@ -495,6 +495,19 @@
       ]
     },
     {
+      "name": "lcd-display",
+      "type": "registry:ui",
+      "title": "LCD Display",
+      "description": "A dot-matrix screen in a bezel, backlit in the light theme and glowing in the dark one: rows of dim labels and bright values in the theme colour or amber, green, cyan or red, dotted separators, a blinking status pixel and dropdown values built on Base UI's Select.",
+      "dependencies": ["@base-ui/react", "class-variance-authority"],
+      "files": [
+        {
+          "path": "components/ui/lcd-display.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
       "name": "pan-control",
       "type": "registry:ui",
       "title": "Pan Control",

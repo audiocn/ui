@@ -95,6 +95,7 @@ Copy, paste, make them yours.</p>
 | [Fader](https://audiocn.dev/docs/components/fader) | A volume fader in decibels, with tapers, detents, a scale, reset and an editable value |
 | [Parameter Slider](https://audiocn.dev/docs/components/parameter-slider) | A labelled slider with a numeric input, unit, marks and reset |
 | [Knob](https://audiocn.dev/docs/components/knob) | A rotary control for dense layouts, drawn in SVG |
+| [LCD Display](https://audiocn.dev/docs/components/lcd-display) | A themeable dot-matrix screen, backlit or glowing, with dropdown rows |
 | [Pan Control](https://audiocn.dev/docs/components/pan-control) | Left and right balance with a fill from the centre and a centre detent |
 | [Channel Toggle](https://audiocn.dev/docs/components/channel-toggle) | Mute, solo and monitor buttons with their own pressed colours |
 | [Volume Control](https://audiocn.dev/docs/components/volume-control) | A simple volume slider with a mute button, for players |

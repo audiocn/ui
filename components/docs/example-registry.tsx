@@ -116,6 +116,15 @@ export const examples: Record<string, ComponentType | undefined> = {
   "knob-metal": dynamic(() => import("@/components/examples/knob-metal")),
   "knob-sizes": dynamic(() => import("@/components/examples/knob-sizes")),
   "knob-volume": dynamic(() => import("@/components/examples/knob-volume")),
+  "lcd-display-demo": dynamic(
+    () => import("@/components/examples/lcd-display-demo")
+  ),
+  "lcd-display-font": dynamic(
+    () => import("@/components/examples/lcd-display-font")
+  ),
+  "lcd-display-variants": dynamic(
+    () => import("@/components/examples/lcd-display-variants")
+  ),
   "level-meter-ballistics": dynamic(
     () => import("@/components/examples/level-meter-ballistics")
   ),

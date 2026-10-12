@@ -1,0 +1,203 @@
+---
+title: LCD Display
+description: A dot-matrix screen for labelled readouts and settings, backlit in the light theme and glowing in the dark one, with dropdown values.
+seoDescription: Build a hardware-style LCD screen in React with dot-matrix text, an ink that follows your theme or a fixed amber, green, cyan or red, and dropdown rows. Copy and customize the audiocn LCD Display.
+---
+
+<ComponentPreview name="lcd-display-demo" />
+
+## Installation
+
+```npm
+npx shadcn@latest add @audiocn/lcd-display
+```
+
+## Usage
+
+```tsx
+import {
+  LcdDisplay,
+  LcdDisplayLabel,
+  LcdDisplayRow,
+  LcdDisplayValue,
+} from "@/components/ui/lcd-display";
+```
+
+```tsx
+<LcdDisplay>
+  <LcdDisplayRow>
+    <LcdDisplayLabel>Tempo</LcdDisplayLabel>
+    <LcdDisplayValue>128.0</LcdDisplayValue>
+  </LcdDisplayRow>
+</LcdDisplay>
+```
+
+The screen follows your theme. Its ink is the theme's `--primary`, so it takes the colour of any theme. In light mode it is a backlit LCD: pale glass tinted by the ink, with dark pixels, like a calculator. In dark mode it is dark glass where the ink itself glows. Labels are dim, values are bright, and a value dims for a moment when its text changes, like segments redrawing.
+
+Set `appearance="light"` or `appearance="dark"` to keep one look in both modes, for example a dark screen on a light page.
+
+## Anatomy
+
+```tsx
+<LcdDisplay>
+  <LcdDisplayRow>
+    <LcdDisplayLabel />
+    <LcdDisplaySelect>
+      <LcdDisplaySelectTrigger />
+      <LcdDisplaySelectContent>
+        <LcdDisplaySelectItem />
+      </LcdDisplaySelectContent>
+    </LcdDisplaySelect>
+  </LcdDisplayRow>
+  <LcdDisplaySeparator />
+  <LcdDisplayRow>
+    <LcdDisplayLabel />
+    <LcdDisplayValue />
+  </LcdDisplayRow>
+  <LcdDisplayStatus />
+</LcdDisplay>
+```
+
+A row holds a label and either a read-only `LcdDisplayValue` or an `LcdDisplaySelect`. `LcdDisplaySelect` is [Base UI's Select](https://base-ui.com/react/components/select), so it takes the same props: `value`, `defaultValue`, `onValueChange` and `items`. Pass `items` to show each value's label in the trigger.
+
+## Examples
+
+### Inks
+
+The ink is the theme's `--primary` by default (`variant="primary"`), so the screen changes with your theme. Switch the theme in the sidebar to see the demo above follow it. For a fixed hardware look, `variant` also takes `amber`, `green`, `cyan` or `red`.
+
+<ComponentPreview name="lcd-display-variants" />
+
+For any other colour, set `--lcd-display-ink`. The glass, the lit, dim and unlit pixels and the glow are mixed from it, in both themes. The select's popup copies the display's variables when it opens, so it takes the same colour.
+
+```tsx
+<LcdDisplay className="[--lcd-display-ink:var(--color-violet-400)]" />
+```
+
+### A dot-matrix font
+
+The screen breaks any font into dots with a CSS mask, so it looks like an LCD with the font you already have. For true 5 × 7 characters, load a dot-matrix face such as [Doto](https://fonts.google.com/specimen/Doto), point `--lcd-display-font` at it and turn the mask off with `matrix={false}`.
+
+<ComponentPreview name="lcd-display-font" />
+
+```tsx title="app/layout.tsx"
+import { Doto } from "next/font/google";
+
+// The heaviest weight, so the dots fill out.
+const fontDoto = Doto({
+  subsets: ["latin"],
+  variable: "--font-doto",
+  weight: "900",
+});
+
+// Add fontDoto.variable to the <html> className.
+```
+
+```tsx
+<LcdDisplay className="[--lcd-display-font:var(--font-doto)]" matrix={false} />
+```
+
+## Theming
+
+| Variable or attribute | Meaning |
+| --- | --- |
+| `--lcd-display-ink` | The display's colour, set by `variant`. Default: `var(--primary)` |
+| `--lcd-display-lit` | Lit pixels. Light: the ink darkened. Dark: the ink |
+| `--lcd-display-ink-dim` | Labels and the separator. Default: the lit pixels at 40% |
+| `--lcd-display-ink-unlit` | The unlit dots behind the text. Default: the lit pixels at 7% |
+| `--lcd-display-glass` | The screen. Light: a pale glass in the ink's hue. Dark: near black |
+| `--lcd-display-glow` | The halo around lit text. Light: a faint shadow. Dark: the ink at 60% |
+| `--lcd-display-bezel`, `--lcd-display-bezel-edge` | The frame's gradient, top to bottom |
+| `--lcd-display-font` | The font. Default `var(--font-mono)` |
+| `--lcd-display-pitch` | The dot grid's spacing. Default `2px` |
+| `data-appearance` | On the display and the select's popup: `auto`, `light` or `dark` |
+| `data-size` | On the display, set by `size` |
+| `data-variant` | On the display and the select's popup |
+| `data-matrix` | On the display while the dot mask is on |
+| `data-changed` | On a value or trigger for a moment after its text changes |
+| `data-state` | On `LcdDisplayStatus`: `idle`, `busy` or `off` |
+
+`size` sets the text size: `sm`, `default` or `lg`. The rows and the select's popup follow it.
+
+## Accessibility
+
+The display is a `group`. Each select's trigger is named by its row's `LcdDisplayLabel`, including one with its own `id`, and Base UI handles the keyboard and the listbox semantics. Give a value `live` to announce its changes to screen readers. The status pixel is decorative. Blinking and the change flicker stop when the user prefers reduced motion.
+
+## API reference
+
+### LcdDisplay
+
+<PropsTable
+  rows={[
+    [
+      "variant",
+      '"primary" | "amber" | "green" | "cyan" | "red"',
+      '"primary"',
+      "The ink colour. primary follows the theme's --primary; the others are fixed hardware inks.",
+    ],
+    [
+      "appearance",
+      '"auto" | "light" | "dark"',
+      '"auto"',
+      "light is a backlit screen with dark pixels, dark is dark glass with glowing ink, auto follows the theme.",
+    ],
+    [
+      "matrix",
+      "boolean",
+      "true",
+      "Breaks the text into dots on a --lcd-display-pitch grid.",
+    ],
+    ["scanlines", "boolean", "true", "Faint horizontal lines over the glass."],
+    ["size", '"sm" | "default" | "lg"', '"default"', "The text size."],
+  ]}
+/>
+
+### LcdDisplayValue
+
+<PropsTable
+  rows={[
+    [
+      "live",
+      "boolean",
+      "false",
+      'Announces changes to screen readers with aria-live="polite".',
+    ],
+  ]}
+/>
+
+### LcdDisplayStatus
+
+<PropsTable
+  rows={[
+    [
+      "state",
+      '"idle" | "busy" | "off"',
+      '"idle"',
+      "idle blinks slowly, busy quickly, off stays unlit.",
+    ],
+  ]}
+/>
+
+### LcdDisplaySelectTrigger
+
+<PropsTable
+  rows={[
+    [
+      "placeholder",
+      "ReactNode",
+      null,
+      "Shown while nothing is selected. Children replace the value text.",
+    ],
+  ]}
+/>
+
+### LcdDisplaySelectContent
+
+<PropsTable
+  rows={[
+    ["side", '"top" | "bottom" | "left" | "right"', '"bottom"', null],
+    ["sideOffset", "number", "8", null],
+    ["align", '"start" | "center" | "end"', '"end"', null],
+    ["alignOffset", "number", "0", null],
+  ]}
+/>
