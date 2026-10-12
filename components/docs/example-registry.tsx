@@ -185,6 +185,27 @@ export const examples: Record<string, ComponentType | undefined> = {
   "quick-audio-popover-demo": dynamic(
     () => import("@/components/examples/quick-audio-popover-demo")
   ),
+  "rotary-selector-compact": dynamic(
+    () => import("@/components/examples/rotary-selector-compact")
+  ),
+  "rotary-selector-demo": dynamic(
+    () => import("@/components/examples/rotary-selector-demo")
+  ),
+  "rotary-selector-drag-directions": dynamic(
+    () => import("@/components/examples/rotary-selector-drag-directions")
+  ),
+  "rotary-selector-filter-type": dynamic(
+    () => import("@/components/examples/rotary-selector-filter-type")
+  ),
+  "rotary-selector-instruments": dynamic(
+    () => import("@/components/examples/rotary-selector-instruments")
+  ),
+  "rotary-selector-measures": dynamic(
+    () => import("@/components/examples/rotary-selector-measures")
+  ),
+  "rotary-selector-sizes": dynamic(
+    () => import("@/components/examples/rotary-selector-sizes")
+  ),
   "smooth-waveform-demo": dynamic(
     () => import("@/components/examples/smooth-waveform-demo")
   ),

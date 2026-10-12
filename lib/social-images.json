@@ -103,6 +103,10 @@
     "alt": "Pan Control — audiocn: a pan slider with a centre detent and a left balance value.",
     "url": "/og/components-pan-control-3fd3aad083ee.png"
   },
+  "/docs/components/rotary-selector": {
+    "alt": "Rotary Selector — audiocn: a waveform switch with leaders to wave icons and a brushed metal cap.",
+    "url": "/og/components-rotary-selector-a17393b3eae9.png"
+  },
   "/docs/components/parameter-slider": {
     "alt": "Parameter Slider — audiocn: frequency, Q and gain parameter sliders.",
     "url": "/og/components-parameter-slider-e2e9758dd415.png"

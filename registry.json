@@ -504,6 +504,24 @@
       ]
     },
     {
+      "name": "rotary-selector",
+      "type": "registry:ui",
+      "title": "Rotary Selector",
+      "description": "A rotary switch that selects one value from a fixed list, like a synth waveform or drum machine instrument switch. Typed positions for marks, labels and leaders, with drag, keyboard, wheel, reset and an optional click sound.",
+      "dependencies": ["class-variance-authority"],
+      "registryDependencies": [
+        "@audiocn/core",
+        "@audiocn/use-audio-config",
+        "@audiocn/knob"
+      ],
+      "files": [
+        {
+          "path": "components/ui/rotary-selector.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
       "name": "pan-control",
       "type": "registry:ui",
       "title": "Pan Control",
