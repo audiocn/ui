@@ -31,6 +31,8 @@ const context = new AudioContext({ sampleRate: 48_000 });
 </AudioContextProvider>;
 ```
 
+Components that only sometimes play, such as a knob's click, read the provided context with `useProvidedAudioContext()`. It returns null without a provider and never creates the shared context, so a silent component leaves audio alone.
+
 ## Returns
 
 <PropsTable
