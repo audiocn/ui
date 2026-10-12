@@ -137,7 +137,7 @@ export const ReadoutPreview = () => (
 );
 
 export const LcdPreview = () => (
-  <LcdDisplay className="w-[30rem]" size="lg">
+  <LcdDisplay className="w-[30rem]" size="lg" variant="amber">
     <LcdDisplayRow>
       <LcdDisplayLabel>Model</LcdDisplayLabel>
       <LcdDisplayValue>Opus 5.5</LcdDisplayValue>

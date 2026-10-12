@@ -90,10 +90,10 @@ describe("LcdDisplay", () => {
   it("follows the theme unless an appearance is pinned", () => {
     const { container, rerender } = render(<LcdDisplay />);
     const root = () => container.querySelector("[data-slot='lcd-display']");
-    // Grey-green with dark pixels by default, and the glowing set under `.dark`.
+    // Backlit with dark pixels by default, and the glowing set under `.dark`.
     expect(root()).toHaveAttribute("data-appearance", "auto");
     expect(root()?.className).toContain(
-      "[--lcd-display-lit:color-mix(in_oklab,var(--lcd-display-ink)_30%,oklch(0.24_0.02_150))]"
+      "[--lcd-display-lit:color-mix(in_oklab,var(--lcd-display-ink),black_62%)]"
     );
     expect(root()?.className).toContain(
       "dark:[--lcd-display-lit:var(--lcd-display-ink)]"
@@ -104,14 +104,14 @@ describe("LcdDisplay", () => {
       "[--lcd-display-lit:var(--lcd-display-ink)]"
     );
     expect(root()?.className).not.toContain("dark:");
-    expect(root()?.className).not.toContain("oklch(0.24_0.02_150)");
+    expect(root()?.className).not.toContain("black_62%");
     rerender(<LcdDisplay appearance="light" />);
-    expect(root()?.className).toContain("oklch(0.24_0.02_150)");
+    expect(root()?.className).toContain("black_62%");
     expect(root()?.className).not.toContain("dark:");
   });
 
-  it("takes the ink from the theme's primary colour", () => {
-    const { container } = render(<LcdDisplay variant="primary" />);
+  it("takes the ink from the theme's primary colour by default", () => {
+    const { container } = render(<LcdDisplay />);
     const root = container.querySelector("[data-slot='lcd-display']");
     expect(root).toHaveAttribute("data-variant", "primary");
     expect(root?.className).toContain("[--lcd-display-ink:var(--primary)]");
@@ -179,7 +179,7 @@ describe("LcdDisplaySelect", () => {
     await user.click(screen.getByRole("combobox"));
     const option = await screen.findByRole("option", { name: "Low" });
     const popup = option.closest("[data-slot='lcd-display-select-content']");
-    expect(popup).toHaveAttribute("data-variant", "amber");
+    expect(popup).toHaveAttribute("data-variant", "primary");
     // The popup is portalled, so it carries the display's look itself.
     expect(popup).toHaveAttribute("data-appearance", "auto");
     await user.click(option);
