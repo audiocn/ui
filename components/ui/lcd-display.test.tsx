@@ -87,6 +87,29 @@ describe("LcdDisplay", () => {
     expect(root?.className).toContain("--lcd-display-ink:oklch(0.85_0.19_142)");
   });
 
+  it("follows the theme unless an appearance is pinned", () => {
+    const { container, rerender } = render(<LcdDisplay />);
+    const root = () => container.querySelector("[data-slot='lcd-display']");
+    // Backlit with dark pixels by default, and the glowing set under `.dark`.
+    expect(root()).toHaveAttribute("data-appearance", "auto");
+    expect(root()?.className).toContain(
+      "[--lcd-display-lit:color-mix(in_oklab,var(--lcd-display-ink),black_62%)]"
+    );
+    expect(root()?.className).toContain(
+      "dark:[--lcd-display-lit:var(--lcd-display-ink)]"
+    );
+    rerender(<LcdDisplay appearance="dark" />);
+    expect(root()).toHaveAttribute("data-appearance", "dark");
+    expect(root()?.className).toContain(
+      "[--lcd-display-lit:var(--lcd-display-ink)]"
+    );
+    expect(root()?.className).not.toContain("dark:");
+    expect(root()?.className).not.toContain("black_62%");
+    rerender(<LcdDisplay appearance="light" />);
+    expect(root()?.className).toContain("black_62%");
+    expect(root()?.className).not.toContain("dark:");
+  });
+
   it("drops the dot mask and scanlines when asked", () => {
     const { container } = render(
       <LcdDisplay matrix={false} scanlines={false} />
@@ -148,9 +171,10 @@ describe("LcdDisplaySelect", () => {
     render(<EffortRow onValueChange={onValueChange} />);
     await user.click(screen.getByRole("combobox"));
     const option = await screen.findByRole("option", { name: "Low" });
-    expect(
-      option.closest("[data-slot='lcd-display-select-content']")
-    ).toHaveAttribute("data-variant", "amber");
+    const popup = option.closest("[data-slot='lcd-display-select-content']");
+    expect(popup).toHaveAttribute("data-variant", "amber");
+    // The popup is portalled, so it carries the display's look itself.
+    expect(popup).toHaveAttribute("data-appearance", "auto");
     await user.click(option);
     expect(onValueChange).toHaveBeenLastCalledWith("low", expect.anything());
     expect(screen.getByRole("combobox")).toHaveTextContent("Low");

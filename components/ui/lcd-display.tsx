@@ -16,16 +16,38 @@ import { cn } from "@/lib/utils";
 
 type LcdDisplayVariant = "amber" | "green" | "cyan" | "red";
 type LcdDisplaySize = "sm" | "default" | "lg";
+type LcdDisplayAppearance = "auto" | "light" | "dark";
 
 /**
- * The hardware colours, the ink and the dot grid. The other inks are mixed
- * from `--lcd-display-ink`, so a custom colour needs only that one variable.
+ * A backlit screen: pale glass tinted by the ink, with dark pixels and no
+ * glow, like a calculator or a pager.
+ */
+const LIGHT_SCREEN =
+  "[--lcd-display-bezel-edge:oklch(0.85_0.004_250)] [--lcd-display-bezel-ring:rgb(0_0_0/0.14)] [--lcd-display-bezel-shadow:inset_0_1px_0_rgb(255_255_255/0.8),0_1px_3px_rgb(0_0_0/0.18)] [--lcd-display-bezel:oklch(0.95_0.003_250)] [--lcd-display-glass:color-mix(in_oklab,var(--lcd-display-ink)_32%,oklch(0.97_0.008_95))] [--lcd-display-glow:color-mix(in_oklab,var(--lcd-display-lit)_22%,transparent)] [--lcd-display-lit:color-mix(in_oklab,var(--lcd-display-ink),black_62%)] [--lcd-display-recess:inset_0_1px_4px_rgb(0_0_0/0.28),inset_0_0_0_1px_rgb(0_0_0/0.2)] [--lcd-display-scanline:rgb(0_0_0/0.04)] [--lcd-display-sheen:rgb(255_255_255/0.35)]";
+
+/** An unlit dark glass where the ink itself glows. */
+const DARK_SCREEN =
+  "[--lcd-display-bezel-edge:oklch(0.24_0.004_250)] [--lcd-display-bezel-ring:rgb(0_0_0/0.7)] [--lcd-display-bezel-shadow:inset_0_1px_0_rgb(255_255_255/0.06),0_2px_6px_rgb(0_0_0/0.5)] [--lcd-display-bezel:oklch(0.33_0.004_250)] [--lcd-display-glass:oklch(0.15_0.004_200)] [--lcd-display-glow:color-mix(in_oklab,var(--lcd-display-lit)_60%,transparent)] [--lcd-display-lit:var(--lcd-display-ink)] [--lcd-display-recess:inset_0_2px_10px_rgb(0_0_0/0.9),inset_0_0_0_1px_rgb(0_0_0/0.8)] [--lcd-display-scanline:rgb(0_0_0/0.22)] [--lcd-display-sheen:rgb(255_255_255/0.05)]";
+
+/** The dark screen under the site's `.dark` class, written out for Tailwind. */
+const DARK_SCREEN_IN_DARK_THEME =
+  "dark:[--lcd-display-bezel-edge:oklch(0.24_0.004_250)] dark:[--lcd-display-bezel-ring:rgb(0_0_0/0.7)] dark:[--lcd-display-bezel-shadow:inset_0_1px_0_rgb(255_255_255/0.06),0_2px_6px_rgb(0_0_0/0.5)] dark:[--lcd-display-bezel:oklch(0.33_0.004_250)] dark:[--lcd-display-glass:oklch(0.15_0.004_200)] dark:[--lcd-display-glow:color-mix(in_oklab,var(--lcd-display-lit)_60%,transparent)] dark:[--lcd-display-lit:var(--lcd-display-ink)] dark:[--lcd-display-recess:inset_0_2px_10px_rgb(0_0_0/0.9),inset_0_0_0_1px_rgb(0_0_0/0.8)] dark:[--lcd-display-scanline:rgb(0_0_0/0.22)] dark:[--lcd-display-sheen:rgb(255_255_255/0.05)]";
+
+/**
+ * The hardware colours, the ink and the dot grid. The lit, dim and unlit
+ * pixels are mixed from `--lcd-display-ink`, so a custom colour needs only
+ * that one variable, in both appearances.
  */
 const lcdDisplayVariants = cva(
-  "[--lcd-display-bezel-edge:oklch(0.24_0.004_250)] [--lcd-display-bezel:oklch(0.33_0.004_250)] [--lcd-display-font:var(--font-mono)] [--lcd-display-glass:oklch(0.15_0.004_200)] [--lcd-display-glow:color-mix(in_oklab,var(--lcd-display-ink)_60%,transparent)] [--lcd-display-ink-dim:color-mix(in_oklab,var(--lcd-display-ink)_38%,transparent)] [--lcd-display-ink-unlit:color-mix(in_oklab,var(--lcd-display-ink)_7%,transparent)] [--lcd-display-pitch:2px]",
+  "[--lcd-display-font:var(--font-mono)] [--lcd-display-ink-dim:color-mix(in_oklab,var(--lcd-display-lit)_40%,transparent)] [--lcd-display-ink-unlit:color-mix(in_oklab,var(--lcd-display-lit)_7%,transparent)] [--lcd-display-pitch:2px]",
   {
-    defaultVariants: { size: "default", variant: "amber" },
+    defaultVariants: { appearance: "auto", size: "default", variant: "amber" },
     variants: {
+      appearance: {
+        auto: `${LIGHT_SCREEN} ${DARK_SCREEN_IN_DARK_THEME}`,
+        dark: DARK_SCREEN,
+        light: LIGHT_SCREEN,
+      },
       size: {
         default: "text-lg",
         lg: "text-2xl",
@@ -42,6 +64,7 @@ const lcdDisplayVariants = cva(
 );
 
 interface LcdDisplayContextValue {
+  appearance: LcdDisplayAppearance;
   variant: LcdDisplayVariant;
   size: LcdDisplaySize;
   matrix: boolean;
@@ -49,6 +72,7 @@ interface LcdDisplayContextValue {
 }
 
 const LcdDisplayContext = createContext<LcdDisplayContextValue>({
+  appearance: "auto",
   matrix: true,
   scanlines: true,
   size: "default",
@@ -107,12 +131,12 @@ const LcdScreen = ({
 }) => (
   <div
     className={cn(
-      "relative isolate overflow-hidden rounded-md bg-(--lcd-display-glass) shadow-[inset_0_2px_10px_rgb(0_0_0/0.9),inset_0_0_0_1px_rgb(0_0_0/0.8)]",
+      "relative isolate overflow-hidden rounded-md bg-(--lcd-display-glass) shadow-(--lcd-display-recess)",
       matrix &&
         "before:pointer-events-none before:absolute before:inset-0 before:bg-[radial-gradient(circle,var(--lcd-display-ink-unlit)_45%,transparent_55%)] before:bg-size-[var(--lcd-display-pitch)_var(--lcd-display-pitch)]",
-      "after:pointer-events-none after:absolute after:inset-0 after:bg-[linear-gradient(to_bottom,rgb(255_255_255/0.05),transparent_45%)]",
+      "after:pointer-events-none after:absolute after:inset-0 after:bg-[linear-gradient(to_bottom,var(--lcd-display-sheen),transparent_45%)]",
       scanlines &&
-        "after:bg-[linear-gradient(to_bottom,rgb(255_255_255/0.05),transparent_45%),repeating-linear-gradient(to_bottom,transparent_0_2px,rgb(0_0_0/0.22)_2px_3px)]",
+        "after:bg-[linear-gradient(to_bottom,var(--lcd-display-sheen),transparent_45%),repeating-linear-gradient(to_bottom,transparent_0_2px,var(--lcd-display-scanline)_2px_3px)]",
       className
     )}
     data-slot="lcd-display-screen"
@@ -136,6 +160,11 @@ const LcdScreen = ({
 export interface LcdDisplayProps extends ComponentProps<"div"> {
   /** The ink colour. Default `amber`. */
   variant?: LcdDisplayVariant;
+  /**
+   * `light` is a backlit screen with dark pixels, `dark` an unlit screen with
+   * glowing ink, and `auto` follows the theme. Default `auto`.
+   */
+  appearance?: LcdDisplayAppearance;
   /** The text size; rows, separator and status follow it. Default `default`. */
   size?: LcdDisplaySize;
   /** Break the text into dots on a `--lcd-display-pitch` grid. Default true. */
@@ -145,11 +174,12 @@ export interface LcdDisplayProps extends ComponentProps<"div"> {
 }
 
 /**
- * A dark LCD screen in a bezel. The screen is dark in both themes, and its
- * ink is `--lcd-display-ink`.
+ * An LCD screen in a bezel: backlit with dark pixels in the light theme, and
+ * glowing ink on dark glass in the dark one. Its ink is `--lcd-display-ink`.
  */
 export const LcdDisplay = ({
   variant = "amber",
+  appearance = "auto",
   size = "default",
   matrix = true,
   scanlines = true,
@@ -158,17 +188,18 @@ export const LcdDisplay = ({
   ...props
 }: LcdDisplayProps) => {
   const context = useMemo(
-    () => ({ matrix, scanlines, size, variant }),
-    [matrix, scanlines, size, variant]
+    () => ({ appearance, matrix, scanlines, size, variant }),
+    [appearance, matrix, scanlines, size, variant]
   );
   return (
     <LcdDisplayContext.Provider value={context}>
       <div
         className={cn(
-          lcdDisplayVariants({ size, variant }),
-          "rounded-lg bg-linear-to-b from-(--lcd-display-bezel) to-(--lcd-display-bezel-edge) p-1.5 font-(family-name:--lcd-display-font) leading-none tracking-[0.12em] uppercase shadow-[0_1px_0_rgb(255_255_255/0.06)_inset,0_2px_6px_rgb(0_0_0/0.5)] ring-1 ring-black/70",
+          lcdDisplayVariants({ appearance, size, variant }),
+          "rounded-lg bg-linear-to-b from-(--lcd-display-bezel) to-(--lcd-display-bezel-edge) p-1.5 font-(family-name:--lcd-display-font) leading-none tracking-[0.12em] uppercase shadow-(--lcd-display-bezel-shadow) ring-1 ring-(--lcd-display-bezel-ring)",
           className
         )}
+        data-appearance={appearance}
         data-matrix={matrix ? "" : undefined}
         data-slot="lcd-display"
         data-size={size}
@@ -246,7 +277,7 @@ export const LcdDisplayValue = ({
     <span
       aria-live={live ? "polite" : undefined}
       className={cn(
-        "text-(--lcd-display-ink) tabular-nums",
+        "text-(--lcd-display-lit) tabular-nums",
         FLICKER,
         className
       )}
@@ -287,7 +318,7 @@ export const LcdDisplayStatus = ({
   <span
     aria-hidden
     className={cn(
-      "absolute right-2 bottom-2 size-1.5 animate-pulse bg-(--lcd-display-ink) data-[state=busy]:[animation-duration:0.6s] data-[state=off]:animate-none data-[state=off]:bg-(--lcd-display-ink-unlit) motion-reduce:animate-none",
+      "absolute right-2 bottom-2 size-1.5 animate-pulse bg-(--lcd-display-lit) data-[state=busy]:[animation-duration:0.6s] data-[state=off]:animate-none data-[state=off]:bg-(--lcd-display-ink-unlit) motion-reduce:animate-none",
       className
     )}
     data-slot="lcd-display-status"
@@ -334,7 +365,7 @@ export const LcdDisplaySelectTrigger = ({
     <SelectPrimitive.Trigger
       aria-labelledby={row?.labelId}
       className={cn(
-        "-mx-1 inline-flex cursor-pointer items-center gap-3 rounded-sm px-1 py-0.5 text-(--lcd-display-ink) uppercase tabular-nums outline-none focus-visible:ring-1 focus-visible:ring-(--lcd-display-ink) disabled:cursor-default disabled:text-(--lcd-display-ink-dim) data-placeholder:text-(--lcd-display-ink-dim)",
+        "-mx-1 inline-flex cursor-pointer items-center gap-3 rounded-sm px-1 py-0.5 text-(--lcd-display-lit) uppercase tabular-nums outline-none focus-visible:ring-1 focus-visible:ring-(--lcd-display-lit) disabled:cursor-default disabled:text-(--lcd-display-ink-dim) data-placeholder:text-(--lcd-display-ink-dim)",
         FLICKER,
         className
       )}
@@ -368,7 +399,8 @@ export const LcdDisplaySelectContent = ({
   children,
   ...props
 }: LcdDisplaySelectContentProps) => {
-  const { matrix, scanlines, size, variant } = useContext(LcdDisplayContext);
+  const { appearance, matrix, scanlines, size, variant } =
+    useContext(LcdDisplayContext);
   return (
     <SelectPrimitive.Portal>
       <SelectPrimitive.Positioner
@@ -381,10 +413,11 @@ export const LcdDisplaySelectContent = ({
       >
         <SelectPrimitive.Popup
           className={cn(
-            lcdDisplayVariants({ size, variant }),
-            "max-h-(--available-height) min-w-(--anchor-width) origin-(--transform-origin) overflow-y-auto rounded-md bg-(--lcd-display-bezel-edge) p-1 font-(family-name:--lcd-display-font) leading-none tracking-[0.12em] uppercase shadow-xl ring-1 ring-black/70 transition-[opacity,scale] duration-100 outline-none data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0 motion-reduce:transition-none",
+            lcdDisplayVariants({ appearance, size, variant }),
+            "max-h-(--available-height) min-w-(--anchor-width) origin-(--transform-origin) overflow-y-auto rounded-md bg-(--lcd-display-bezel-edge) p-1 font-(family-name:--lcd-display-font) leading-none tracking-[0.12em] uppercase shadow-xl ring-1 ring-(--lcd-display-bezel-ring) transition-[opacity,scale] duration-100 outline-none data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0 motion-reduce:transition-none",
             className
           )}
+          data-appearance={appearance}
           data-slot="lcd-display-select-content"
           data-variant={variant}
           {...props}
@@ -410,7 +443,7 @@ export const LcdDisplaySelectItem = ({
 }: SelectPrimitive.Item.Props) => (
   <SelectPrimitive.Item
     className={cn(
-      "flex cursor-default items-center gap-2 rounded-sm px-2 py-2 text-(--lcd-display-ink-dim) outline-none select-none data-disabled:opacity-40 data-highlighted:bg-(--lcd-display-ink) data-highlighted:text-(--lcd-display-glass) data-selected:text-(--lcd-display-ink) data-selected:data-highlighted:text-(--lcd-display-glass)",
+      "flex cursor-default items-center gap-2 rounded-sm px-2 py-2 text-(--lcd-display-ink-dim) outline-none select-none data-disabled:opacity-40 data-highlighted:bg-(--lcd-display-lit) data-highlighted:text-(--lcd-display-glass) data-selected:text-(--lcd-display-lit) data-selected:data-highlighted:text-(--lcd-display-glass)",
       className
     )}
     data-slot="lcd-display-select-item"
