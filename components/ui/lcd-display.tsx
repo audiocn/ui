@@ -4,13 +4,16 @@ import { Select as SelectPrimitive } from "@base-ui/react/select";
 import { cva } from "class-variance-authority";
 import {
   createContext,
+  useCallback,
   useContext,
+  useEffect,
   useId,
   useLayoutEffect,
   useMemo,
   useRef,
+  useState,
 } from "react";
-import type { ComponentProps, ReactNode, RefObject } from "react";
+import type { ComponentProps, ReactNode, Ref, RefObject } from "react";
 
 import { cn } from "@/lib/utils";
 
@@ -69,6 +72,8 @@ const lcdDisplayVariants = cva(
 );
 
 interface LcdDisplayContextValue {
+  /** The display itself, whose variables the portalled popup copies. */
+  rootRef: RefObject<HTMLDivElement | null> | null;
   appearance: LcdDisplayAppearance;
   variant: LcdDisplayVariant;
   size: LcdDisplaySize;
@@ -79,42 +84,96 @@ interface LcdDisplayContextValue {
 const LcdDisplayContext = createContext<LcdDisplayContextValue>({
   appearance: "auto",
   matrix: true,
+  rootRef: null,
   scanlines: true,
   size: "default",
   variant: "primary",
 });
 
-const RowContext = createContext<{ labelId: string } | null>(null);
+const RowContext = createContext<{
+  labelId: string;
+  setCustomLabelId: (id: string | undefined) => void;
+} | null>(null);
+
+/**
+ * The variables a caller may set on the display. The popup is portalled out
+ * of it, so it copies them instead of inheriting them.
+ */
+const SHARED_VARIABLES = [
+  "--lcd-display-bezel",
+  "--lcd-display-bezel-edge",
+  "--lcd-display-font",
+  "--lcd-display-glass",
+  "--lcd-display-glow",
+  "--lcd-display-ink",
+  "--lcd-display-ink-dim",
+  "--lcd-display-ink-unlit",
+  "--lcd-display-lit",
+  "--lcd-display-pitch",
+] as const;
+
+/** Points every ref at the element, so a caller's ref works beside ours. */
+const mergeRefs =
+  <T,>(...refs: (Ref<T> | undefined)[]) =>
+  (node: T) => {
+    const cleanups = refs.map((ref) => {
+      if (typeof ref === "function") {
+        const cleanup = ref(node);
+        return typeof cleanup === "function" ? cleanup : () => ref(null);
+      }
+      if (ref) {
+        ref.current = node;
+        return () => {
+          ref.current = null;
+        };
+      }
+      return null;
+    });
+    return () => {
+      for (const cleanup of cleanups) {
+        cleanup?.();
+      }
+    };
+  };
 
 /**
  * Dims a part for a moment when its text changes, like segments redrawing.
- * Writes the attribute straight to the DOM, so it costs no render.
+ * Watches the DOM rather than renders, so it also catches text that a child
+ * updates on its own, like a select's value, and costs no render.
  */
 const useChangeFlicker = (ref: RefObject<HTMLElement | null>) => {
-  const textRef = useRef<string | null>(null);
-  useLayoutEffect(() => {
+  useEffect(() => {
     const element = ref.current;
     if (!element) {
       return;
     }
-    const text = element.textContent;
-    const previous = textRef.current;
-    textRef.current = text;
-    if (previous === null || previous === text) {
-      return;
-    }
-    element.dataset.changed = "";
-    // Two frames: one to paint dimmed, one to start the fade back.
-    let frame = requestAnimationFrame(() => {
+    let text = element.textContent;
+    let frame = 0;
+    const observer = new MutationObserver(() => {
+      if (element.textContent === text) {
+        return;
+      }
+      text = element.textContent;
+      cancelAnimationFrame(frame);
+      element.dataset.changed = "";
+      // Two frames: one to paint dimmed, one to start the fade back.
       frame = requestAnimationFrame(() => {
-        delete element.dataset.changed;
+        frame = requestAnimationFrame(() => {
+          delete element.dataset.changed;
+        });
       });
     });
+    observer.observe(element, {
+      characterData: true,
+      childList: true,
+      subtree: true,
+    });
     return () => {
+      observer.disconnect();
       cancelAnimationFrame(frame);
       delete element.dataset.changed;
     };
-  });
+  }, [ref]);
 };
 
 const FLICKER =
@@ -193,10 +252,13 @@ export const LcdDisplay = ({
   scanlines = true,
   className,
   children,
+  ref,
   ...props
 }: LcdDisplayProps) => {
+  const rootRef = useRef<HTMLDivElement>(null);
+  const mergedRef = useMemo(() => mergeRefs(rootRef, ref), [ref]);
   const context = useMemo(
-    () => ({ appearance, matrix, scanlines, size, variant }),
+    () => ({ appearance, matrix, rootRef, scanlines, size, variant }),
     [appearance, matrix, scanlines, size, variant]
   );
   return (
@@ -212,6 +274,7 @@ export const LcdDisplay = ({
         data-slot="lcd-display"
         data-size={size}
         data-variant={variant}
+        ref={mergedRef}
         role="group"
         {...props}
       >
@@ -233,8 +296,10 @@ export const LcdDisplayRow = ({
   children,
   ...props
 }: ComponentProps<"div">) => {
-  const labelId = useId();
-  const row = useMemo(() => ({ labelId }), [labelId]);
+  const generatedId = useId();
+  const [customLabelId, setCustomLabelId] = useState<string>();
+  const labelId = customLabelId ?? generatedId;
+  const row = useMemo(() => ({ labelId, setCustomLabelId }), [labelId]);
   return (
     <RowContext.Provider value={row}>
       <div
@@ -258,6 +323,15 @@ export const LcdDisplayLabel = ({
   ...props
 }: ComponentProps<"span">) => {
   const row = useContext(RowContext);
+  const setCustomLabelId = row?.setCustomLabelId;
+  // A caller's id replaces the generated one, so the row's select points at it.
+  useLayoutEffect(() => {
+    if (!setCustomLabelId || id === undefined) {
+      return;
+    }
+    setCustomLabelId(id);
+    return () => setCustomLabelId(undefined);
+  }, [id, setCustomLabelId]);
   return (
     <span
       className={cn("text-(--lcd-display-ink-dim)", className)}
@@ -277,10 +351,12 @@ export interface LcdDisplayValueProps extends ComponentProps<"span"> {
 export const LcdDisplayValue = ({
   live = false,
   className,
+  ref,
   ...props
 }: LcdDisplayValueProps) => {
-  const ref = useRef<HTMLSpanElement>(null);
-  useChangeFlicker(ref);
+  const ownRef = useRef<HTMLSpanElement>(null);
+  const mergedRef = useMemo(() => mergeRefs(ownRef, ref), [ref]);
+  useChangeFlicker(ownRef);
   return (
     <span
       aria-live={live ? "polite" : undefined}
@@ -290,7 +366,7 @@ export const LcdDisplayValue = ({
         className
       )}
       data-slot="lcd-display-value"
-      ref={ref}
+      ref={mergedRef}
       {...props}
     />
   );
@@ -364,11 +440,13 @@ export const LcdDisplaySelectTrigger = ({
   placeholder,
   className,
   children,
+  ref,
   ...props
 }: LcdDisplaySelectTriggerProps) => {
   const row = useContext(RowContext);
-  const ref = useRef<HTMLButtonElement>(null);
-  useChangeFlicker(ref);
+  const ownRef = useRef<HTMLButtonElement>(null);
+  const mergedRef = useMemo(() => mergeRefs(ownRef, ref), [ref]);
+  useChangeFlicker(ownRef);
   return (
     <SelectPrimitive.Trigger
       aria-labelledby={row?.labelId}
@@ -378,7 +456,7 @@ export const LcdDisplaySelectTrigger = ({
         className
       )}
       data-slot="lcd-display-select-trigger"
-      ref={ref}
+      ref={mergedRef}
       {...props}
     >
       {children ?? <SelectPrimitive.Value placeholder={placeholder} />}
@@ -405,10 +483,32 @@ export const LcdDisplaySelectContent = ({
   sideOffset = 8,
   className,
   children,
+  ref,
   ...props
 }: LcdDisplaySelectContentProps) => {
-  const { appearance, matrix, scanlines, size, variant } =
+  const { appearance, matrix, rootRef, scanlines, size, variant } =
     useContext(LcdDisplayContext);
+  // Copies the display's variables, so a custom ink or font reaches the popup.
+  const shareVariables = useCallback(
+    (popup: HTMLDivElement | null) => {
+      const root = rootRef?.current;
+      if (!(popup && root)) {
+        return;
+      }
+      const style = getComputedStyle(root);
+      for (const name of SHARED_VARIABLES) {
+        const value = style.getPropertyValue(name);
+        if (value) {
+          popup.style.setProperty(name, value);
+        }
+      }
+    },
+    [rootRef]
+  );
+  const mergedRef = useMemo(
+    () => mergeRefs(shareVariables, ref),
+    [shareVariables, ref]
+  );
   return (
     <SelectPrimitive.Portal>
       <SelectPrimitive.Positioner
@@ -428,6 +528,7 @@ export const LcdDisplaySelectContent = ({
           data-appearance={appearance}
           data-slot="lcd-display-select-content"
           data-variant={variant}
+          ref={mergedRef}
           {...props}
         >
           <LcdScreen
@@ -472,3 +573,4 @@ export const LcdDisplaySelectItem = ({
 );
 
 export { lcdDisplayVariants };
+export type { LcdDisplayAppearance, LcdDisplaySize, LcdDisplayVariant };

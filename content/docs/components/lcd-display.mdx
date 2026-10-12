@@ -68,7 +68,7 @@ The ink is the theme's `--primary` by default (`variant="primary"`), so the scre
 
 <ComponentPreview name="lcd-display-variants" />
 
-For any other colour, set `--lcd-display-ink`. The glass, the lit, dim and unlit pixels and the glow are mixed from it, in both themes.
+For any other colour, set `--lcd-display-ink`. The glass, the lit, dim and unlit pixels and the glow are mixed from it, in both themes. The select's popup copies the display's variables when it opens, so it takes the same colour.
 
 ```tsx
 <LcdDisplay className="[--lcd-display-ink:var(--color-violet-400)]" />
@@ -105,7 +105,7 @@ const fontDoto = Doto({
 | `--lcd-display-lit` | Lit pixels. Light: the ink darkened. Dark: the ink |
 | `--lcd-display-ink-dim` | Labels and the separator. Default: the lit pixels at 40% |
 | `--lcd-display-ink-unlit` | The unlit dots behind the text. Default: the lit pixels at 7% |
-| `--lcd-display-glass` | The screen. Light: the ink mixed into a pale glass. Dark: near black |
+| `--lcd-display-glass` | The screen. Light: a pale glass in the ink's hue. Dark: near black |
 | `--lcd-display-glow` | The halo around lit text. Light: a faint shadow. Dark: the ink at 60% |
 | `--lcd-display-bezel`, `--lcd-display-bezel-edge` | The frame's gradient, top to bottom |
 | `--lcd-display-font` | The font. Default `var(--font-mono)` |
@@ -121,7 +121,7 @@ const fontDoto = Doto({
 
 ## Accessibility
 
-The display is a `group`. Each select's trigger is named by its row's `LcdDisplayLabel`, and Base UI handles the keyboard and the listbox semantics. Give a value `live` to announce its changes to screen readers. The status pixel is decorative. Blinking and the change flicker stop when the user prefers reduced motion.
+The display is a `group`. Each select's trigger is named by its row's `LcdDisplayLabel`, including one with its own `id`, and Base UI handles the keyboard and the listbox semantics. Give a value `live` to announce its changes to screen readers. The status pixel is decorative. Blinking and the change flicker stop when the user prefers reduced motion.
 
 ## API reference
 

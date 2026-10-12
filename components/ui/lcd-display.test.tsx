@@ -1,6 +1,8 @@
 import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { createRef } from "react";
+import type { CSSProperties } from "react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   LcdDisplay,
@@ -45,6 +47,11 @@ const EffortRow = ({
     </LcdDisplayRow>
   </LcdDisplay>
 );
+
+// A failed test mustn't leave its fake animation frames to the next one.
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 describe("LcdDisplay", () => {
   it("marks every part with a slot and merges className last", () => {
@@ -142,18 +149,35 @@ describe("LcdDisplay", () => {
     expect(screen.getByText("Loud")).toHaveAttribute("aria-live", "polite");
   });
 
-  it("flickers a value when its text changes", () => {
+  it("flickers a value when its text changes", async () => {
     vi.useFakeTimers({ toFake: ["requestAnimationFrame"] });
     const { rerender } = render(<LcdDisplayValue>Low</LcdDisplayValue>);
     const value = screen.getByText("Low");
     expect(value).not.toHaveAttribute("data-changed");
-    rerender(<LcdDisplayValue>High</LcdDisplayValue>);
+    // The flicker watches the DOM, and mutation records arrive as a microtask.
+    await act(async () => {
+      rerender(<LcdDisplayValue>High</LcdDisplayValue>);
+      await Promise.resolve();
+    });
     expect(value).toHaveAttribute("data-changed");
     act(() => {
       vi.advanceTimersByTime(100);
     });
     expect(value).not.toHaveAttribute("data-changed");
-    vi.useRealTimers();
+  });
+
+  it("keeps a caller's ref beside its own", async () => {
+    vi.useFakeTimers({ toFake: ["requestAnimationFrame"] });
+    const ref = createRef<HTMLSpanElement>();
+    const { rerender } = render(
+      <LcdDisplayValue ref={ref}>Low</LcdDisplayValue>
+    );
+    expect(ref.current).toBe(screen.getByText("Low"));
+    await act(async () => {
+      rerender(<LcdDisplayValue ref={ref}>High</LcdDisplayValue>);
+      await Promise.resolve();
+    });
+    expect(ref.current).toHaveAttribute("data-changed");
   });
 
   it("blinks the status pixel by state", () => {
@@ -185,5 +209,62 @@ describe("LcdDisplaySelect", () => {
     await user.click(option);
     expect(onValueChange).toHaveBeenLastCalledWith("low", expect.anything());
     expect(screen.getByRole("combobox")).toHaveTextContent("Low");
+  });
+
+  it("flickers the trigger when the choice changes", async () => {
+    const user = userEvent.setup();
+    render(<EffortRow />);
+    const trigger = screen.getByRole("combobox");
+    await user.click(trigger);
+    await user.click(await screen.findByRole("option", { name: "Low" }));
+    // Base UI redraws the value on its own, outside the trigger's render.
+    expect(trigger).toHaveAttribute("data-changed");
+  });
+
+  it("names the trigger by a label with its own id", () => {
+    render(
+      <LcdDisplay>
+        <LcdDisplayRow>
+          <LcdDisplayLabel id="effort-label">Effort</LcdDisplayLabel>
+          <LcdDisplaySelect defaultValue="high" items={EFFORTS}>
+            <LcdDisplaySelectTrigger />
+          </LcdDisplaySelect>
+        </LcdDisplayRow>
+      </LcdDisplay>
+    );
+    const trigger = screen.getByRole("combobox");
+    expect(trigger).toHaveAttribute("aria-labelledby", "effort-label");
+    expect(trigger).toHaveAccessibleName("Effort");
+  });
+
+  it("carries a custom ink into the portalled popup", async () => {
+    const user = userEvent.setup();
+    render(
+      <LcdDisplay
+        style={{ "--lcd-display-ink": "var(--chart-1)" } as CSSProperties}
+      >
+        <LcdDisplayRow>
+          <LcdDisplayLabel>Effort</LcdDisplayLabel>
+          <LcdDisplaySelect defaultValue="high" items={EFFORTS}>
+            <LcdDisplaySelectTrigger />
+            <LcdDisplaySelectContent>
+              {EFFORTS.map((item) => (
+                <LcdDisplaySelectItem key={item.value} value={item.value}>
+                  {item.label}
+                </LcdDisplaySelectItem>
+              ))}
+            </LcdDisplaySelectContent>
+          </LcdDisplaySelect>
+        </LcdDisplayRow>
+      </LcdDisplay>
+    );
+    await user.click(screen.getByRole("combobox"));
+    const option = await screen.findByRole("option", { name: "Low" });
+    const popup = option.closest<HTMLElement>(
+      "[data-slot='lcd-display-select-content']"
+    );
+    expect(popup?.style.getPropertyValue("--lcd-display-ink")).toBe(
+      "var(--chart-1)"
+    );
   });
 });
