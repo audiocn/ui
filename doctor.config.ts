@@ -41,8 +41,9 @@ export default defineConfig({
         rules: ["react-doctor/js-index-maps"],
       },
       {
-        // A <meter> element can't hold the channel, bar and scale parts.
-        files: ["components/ui/level-meter.tsx"],
+        // A <meter> element can't hold the channel, bar and scale parts, or
+        // the VU meter's face, scale and needle.
+        files: ["components/ui/level-meter.tsx", "components/ui/vu-meter.tsx"],
         rules: ["react-doctor/prefer-tag-over-role"],
       },
       {

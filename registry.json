@@ -7,7 +7,7 @@
       "name": "core",
       "type": "registry:lib",
       "title": "Audio core",
-      "description": "Decibel maths, meter ballistics, zones, fader tapers, band resampling, bar level smoothing, wave line shapes, time formatting, the shared frame loop, frame emitters, shared types and the audio theme tokens. Every audiocn component depends on it.",
+      "description": "Decibel maths, meter and needle ballistics, zones, fader and VU tapers, band resampling, bar level smoothing, wave line shapes, time formatting, the shared frame loop, frame emitters, shared types and the audio theme tokens. Every audiocn component depends on it.",
       "files": [
         {
           "path": "lib/audio/types.ts",
@@ -19,6 +19,10 @@
         },
         {
           "path": "lib/audio/ballistics.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "lib/audio/needle.ts",
           "type": "registry:lib"
         },
         {
@@ -333,6 +337,27 @@
       "files": [
         {
           "path": "components/ui/level-meter.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "vu-meter",
+      "type": "registry:ui",
+      "title": "VU Meter",
+      "description": "An analog VU meter: a backlit face in a dark bezel, a needle with real VU ballistics (99% in 300 ms, 1.5% overshoot) that pivots from the bottom or hangs from the top, a calibrated scale linear in amplitude, and slots for a badge, legend and channel label. Classic and flat variants.",
+      "dependencies": ["class-variance-authority"],
+      "registryDependencies": [
+        "@audiocn/core",
+        "@audiocn/use-audio-config",
+        "@audiocn/use-frame-source",
+        "@audiocn/use-reduced-motion",
+        "@audiocn/db-readout",
+        "@audiocn/use-visibility"
+      ],
+      "files": [
+        {
+          "path": "components/ui/vu-meter.tsx",
           "type": "registry:ui"
         }
       ]

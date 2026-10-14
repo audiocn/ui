@@ -2,6 +2,7 @@ export type SocialPreviewName =
   | "home"
   | "mixer"
   | "meters"
+  | "vu"
   | "knobs"
   | "lcd"
   | "waveform"
@@ -131,6 +132,7 @@ export const componentPreviews: Record<string, SocialPreviewName | undefined> =
     spectrum: "spectrum",
     "track-list": "tracks",
     "volume-control": "volume",
+    "vu-meter": "vu",
     waveform: "waveform",
   };
 
@@ -212,6 +214,7 @@ const previewDescriptions: Record<SocialPreviewName, string> = {
   toggles: "mute, solo and monitor controls with their pressed states",
   tracks: "a track list with active and playing states",
   volume: "a volume slider with a mute control and numeric value",
+  vu: "a stereo pair of analog VU meters with backlit faces and needles",
   waveform: "a mirrored waveform with a playhead, selected region and marker",
 };
 
