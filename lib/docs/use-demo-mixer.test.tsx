@@ -1,11 +1,14 @@
 import { act, renderHook } from "@testing-library/react";
+import type { ReactNode } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { Mock } from "vitest";
 
+import { DemoSignalProvider } from "@/hooks/use-demo-signal";
 import { useMixer } from "@/hooks/use-mixer";
 import { dbToGain, gainToDb } from "@/lib/audio/decibels";
 import type { MeterFrame } from "@/lib/audio/types";
 import { createDemoMixer, useDemoMixer } from "@/lib/docs/use-demo-mixer";
+import { createFakeInput } from "@/test/fake-audio";
 import { advance, useFakeFrames } from "@/test/fake-frames";
 
 const CHANNELS = [
@@ -133,4 +136,45 @@ it("emits stereo silence for an empty mixer", () => {
   } finally {
     stop();
   }
+});
+
+it("meters the provider's live input on the mic channel and mixes it into the master", () => {
+  const { input, node } = createFakeInput(0.5);
+  const channels = [
+    { id: "mic", kind: "tone" },
+    { id: "music", kind: "tone", seed: 3 },
+  ] as const;
+  const wrapper = ({ children }: { children: ReactNode }) => (
+    <DemoSignalProvider input={node}>{children}</DemoSignalProvider>
+  );
+  const { result, unmount } = renderHook(
+    () => {
+      const mixer = useMixer({ channels: [{ id: "mic" }, { id: "music" }] });
+      return useDemoMixer(channels, mixer.state);
+    },
+    { wrapper }
+  );
+  const master = vi.fn<(frame: MeterFrame) => void>();
+  const mic = vi.fn<(frame: MeterFrame) => void>();
+  const music = vi.fn<(frame: MeterFrame) => void>();
+  const stops = [
+    result.current.master.subscribe(master),
+    result.current.sources.mic.subscribe(mic),
+    result.current.sources.music.subscribe(music),
+  ];
+  try {
+    advance(16);
+    expect(input.connect).toHaveBeenCalledTimes(1);
+    expect(latest(mic).channels[0].peakDb).toBeCloseTo(gainToDb(0.5));
+    expect(latest(music).channels[0].peakDb).toBeCloseTo(-12);
+    expect(latest(master).channels[0].peakDb).toBeCloseTo(
+      gainToDb(0.5 + dbToGain(-12))
+    );
+  } finally {
+    for (const stop of stops) {
+      stop();
+    }
+    unmount();
+  }
+  expect(input.disconnect).toHaveBeenCalledTimes(1);
 });
