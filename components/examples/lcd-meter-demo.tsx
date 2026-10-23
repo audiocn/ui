@@ -4,7 +4,6 @@ import {
   LcdDisplay,
   LcdDisplayLabel,
   LcdDisplayRow,
-  LcdDisplayStatus,
 } from "@/components/ui/lcd-display";
 import {
   LcdMeter,
@@ -33,7 +32,6 @@ const LcdMeterDemo = () => {
           <LcdMeterClip />
         </LcdMeter>
       </LcdDisplayRow>
-      <LcdDisplayStatus state="busy" />
     </LcdDisplay>
   );
 };

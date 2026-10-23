@@ -128,11 +128,20 @@ export const examples: Record<string, ComponentType | undefined> = {
   "lcd-meter-demo": dynamic(
     () => import("@/components/examples/lcd-meter-demo")
   ),
+  "lcd-meter-dual": dynamic(
+    () => import("@/components/examples/lcd-meter-dual")
+  ),
   "lcd-meter-inks": dynamic(
     () => import("@/components/examples/lcd-meter-inks")
   ),
+  "lcd-meter-microphone": dynamic(
+    () => import("@/components/examples/lcd-meter-microphone")
+  ),
   "lcd-meter-modes": dynamic(
     () => import("@/components/examples/lcd-meter-modes")
+  ),
+  "lcd-meter-values": dynamic(
+    () => import("@/components/examples/lcd-meter-values")
   ),
   "lcd-meter-vertical": dynamic(
     () => import("@/components/examples/lcd-meter-vertical")

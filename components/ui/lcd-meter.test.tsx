@@ -8,10 +8,13 @@ import {
 } from "@/components/ui/lcd-display";
 import {
   LcdMeter,
+  LcdMeterBar,
   LcdMeterChannel,
   LcdMeterChannels,
   LcdMeterClip,
+  LcdMeterHold,
   LcdMeterScale,
+  LcdMeterTrack,
   LcdMeterValue,
 } from "@/components/ui/lcd-meter";
 import { createFrameEmitter } from "@/lib/audio/frame-source";
@@ -74,16 +77,52 @@ it("draws a segment track per channel with the segment count and mode", () => {
   for (const slot of [
     "lcd-meter-track",
     "lcd-meter-unlit",
-    "lcd-meter-lit",
+    "lcd-meter-bar",
     "lcd-meter-hold",
   ]) {
     expect(document.querySelectorAll(`[data-slot='${slot}']`)).toHaveLength(2);
   }
-  const lit = document.querySelector("[data-slot='lcd-meter-lit']");
+  const bar = document.querySelector("[data-slot='lcd-meter-bar']");
+  expect(bar).toHaveAttribute("data-measure", "peak");
   // Dot mode lights only the top segment, so the span starts one step below it.
-  expect(lit?.className).toContain(
-    "--lcd-meter-from:max(0,var(--lcd-meter-lit)"
+  expect(bar?.className).toContain(
+    "--lcd-meter-from:max(0,var(--lcd-meter-bar)"
   );
+});
+
+it("defaults to the Level Meter's 24 segments", () => {
+  render(<LcdMeter aria-label="Out" peakDb={-6} />);
+  expect(screen.getByRole("meter")).toHaveAttribute("data-segments", "24");
+});
+
+it("layers an RMS bar over a peak bar, like the Level Meter's dual meter", () => {
+  render(
+    <LcdMeter aria-label="Voice" peakDb={-6} rmsDb={-18}>
+      <LcdMeterChannels>
+        <LcdMeterChannel>
+          <LcdMeterTrack>
+            <LcdMeterBar className="opacity-40" measure="peak" />
+            <LcdMeterBar measure="rms" />
+            <LcdMeterHold />
+          </LcdMeterTrack>
+        </LcdMeterChannel>
+      </LcdMeterChannels>
+    </LcdMeter>
+  );
+  const channel = document.querySelector("[data-slot='level-meter-channel']");
+  // The RMS level is snapped to whole segments like the peak level.
+  expect(channel?.className).toContain(
+    "--lcd-meter-rms:calc(round(down,var(--meter-rms)"
+  );
+  const bars = document.querySelectorAll<HTMLElement>(
+    "[data-slot='lcd-meter-bar']"
+  );
+  expect([...bars].map((bar) => bar.dataset.measure)).toEqual(["peak", "rms"]);
+  expect(bars[0]).toHaveClass("opacity-40");
+  expect(bars[1]?.className).toContain("--lcd-meter-bar:var(--lcd-meter-rms)");
+  expect(
+    document.querySelectorAll("[data-slot='lcd-meter-hold']")
+  ).toHaveLength(1);
 });
 
 it("lays the segments upward when vertical", () => {

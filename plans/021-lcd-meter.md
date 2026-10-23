@@ -21,9 +21,12 @@ A dot-matrix bar-graph level meter for the LCD Display (plan 020), so a screen c
 
 | Part | Built on | Notes |
 | --- | --- | --- |
-| `LcdMeter` | `LevelMeter` | All Level Meter props but `variant`. `segments` (32), `mode` (`bar`, `dot`). Named by the row's label |
+| `LcdMeter` | `LevelMeter` | All Level Meter props but `variant`. `segments` (24, like the Level Meter), `mode` (`bar`, `dot`). Named by the row's label |
 | `LcdMeterChannels` | `LevelMeterChannels` | With no children, one channel per channel in the data |
-| `LcdMeterChannel` | `LevelMeterChannel` | Unlit, lit and hold segment layers |
+| `LcdMeterChannel` | `LevelMeterChannel` | With no children, a track with a peak bar and the hold |
+| `LcdMeterTrack` | `LevelMeterTrack` | The unlit segments |
+| `LcdMeterBar` | `LevelMeterBar` | Lit segments up to `measure`: `peak` or `rms` |
+| `LcdMeterHold` | `LevelMeterHold` | The peak-hold segment |
 | `LcdMeterScale` | `LevelMeterScale` | Dim ink |
 | `LcdMeterValue` | `LevelMeterValue` | Lit ink, the display's font |
 | `LcdMeterClip` | `LevelMeterClip` | A clip dot like the Level Meter's, unlit until clipping |

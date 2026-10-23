@@ -1,7 +1,7 @@
 ---
 title: LCD Meter
-description: A dot-matrix bar-graph level meter for the LCD Display, lit in whole segments, with peak hold, a dot mode, a scale, a readout and a clip light.
-seoDescription: Build a hardware-style LCD bar-graph level meter in React. Whole lit segments, peak hold, bar and dot modes, stereo, vertical, a dB scale and a clip light, in your theme's ink. Copy and customize the audiocn LCD Meter.
+description: A dot-matrix bar-graph level meter for the LCD Display, lit in whole segments, with peak and RMS bars, peak hold, a dot mode, a scale, a readout and a clip light.
+seoDescription: Build a hardware-style LCD bar-graph level meter in React. Whole lit segments, peak and RMS bars, peak hold, bar and dot modes, stereo, vertical, a dB scale and a clip light, in your theme's ink. Copy and customize the audiocn LCD Meter.
 ---
 
 <ComponentPreview name="lcd-meter-demo" />
@@ -41,10 +41,15 @@ Inside an `LcdDisplayRow`, the meter is named by the row's `LcdDisplayLabel`. Ou
 ## Anatomy
 
 ```tsx
-<LcdMeter>
+<LcdMeter source={analyser.meter}>
   <LcdMeterChannels>
-    <LcdMeterChannel index={0} />
-    <LcdMeterChannel index={1} />
+    <LcdMeterChannel index={0}>
+      <LcdMeterTrack>
+        <LcdMeterBar measure="rms" />
+        <LcdMeterBar measure="peak" />
+        <LcdMeterHold />
+      </LcdMeterTrack>
+    </LcdMeterChannel>
     <LcdMeterScale />
   </LcdMeterChannels>
   <LcdMeterValue />
@@ -52,15 +57,29 @@ Inside an `LcdDisplayRow`, the meter is named by the row's `LcdDisplayLabel`. Ou
 </LcdMeter>
 ```
 
-With no children, `LcdMeter` renders `LcdMeterChannels`, and `LcdMeterChannels` with no children renders one `LcdMeterChannel` per channel in the data, so a stereo source shows two tracks on its own. Each channel stacks the unlit segments, the lit segments and the peak-hold segment.
+The parts match the Level Meter's. `LcdMeterTrack` draws the unlit segments, each `LcdMeterBar` lights the segments up to its measure, and `LcdMeterHold` is the peak-hold segment.
+
+With no children, `LcdMeter` renders `LcdMeterChannels`, and `LcdMeterChannels` with no children renders one `LcdMeterChannel` per channel in the data, so a stereo source shows two tracks on its own. An `LcdMeterChannel` with no children renders a track with a peak bar and the hold.
 
 ## Examples
+
+### Values
+
+Pass `peakDb` (and optionally `rmsDb`) for data that arrives slowly. The meter still moves smoothly between updates.
+
+<ComponentPreview name="lcd-meter-values" />
 
 ### Bar and dot
 
 `mode="bar"` lights every segment up to the level. `mode="dot"` lights only the top one, like the dot mode of a hardware bar-graph driver. The peak-hold segment shows in both.
 
 <ComponentPreview name="lcd-meter-modes" />
+
+### Peak and RMS
+
+Layer an `rms` bar over a translucent `peak` bar for a dual meter.
+
+<ComponentPreview name="lcd-meter-dual" />
 
 ### Inks
 
@@ -73,6 +92,10 @@ The meter draws in its display's ink, so it follows the display's `variant`: the
 Set `orientation="vertical"` and give the meter a height. `segments` sets how many segments the track has; `size` sets its thickness.
 
 <ComponentPreview name="lcd-meter-vertical" />
+
+### Microphone
+
+<ComponentPreview name="lcd-meter-microphone" />
 
 ## Feeding data
 
@@ -95,10 +118,11 @@ The ink comes from the display: `--lcd-display-lit` for lit segments, mixed into
 | `--lcd-meter-dim` | The scale. Default: the ink at 40% |
 | `--lcd-meter-gap` | The gap between segments. Default: the display's dot pitch |
 | `--lcd-meter-segments` | The segment count, set from `segments` |
-| `--lcd-meter-lit`, `--lcd-meter-hold` | On each channel: the level and the hold, snapped to whole segments (0..1) |
+| `--lcd-meter-lit`, `--lcd-meter-rms`, `--lcd-meter-hold` | On each channel: the peak level, the RMS level and the hold, snapped to whole segments (0..1) |
 | `--meter-thickness` | The track's thickness, set by `size` |
 | `data-lcd-mode` | On the meter: `bar` or `dot` |
 | `data-segments` | On the meter: the segment count |
+| `data-measure` | On each bar: `peak` or `rms` |
 | `data-zone`, `data-clipping`, `data-active` | From the Level Meter, for zone styling |
 
 Segments snap with the CSS `round()` function, available in every current browser.
@@ -115,7 +139,7 @@ Takes every [Level Meter](/docs/components/level-meter#api-reference) prop excep
 
 <PropsTable
   rows={[
-    ["segments", "number", "32", "Segments along the track. At least 2."],
+    ["segments", "number", "24", "Segments along the track. At least 2."],
     [
       "mode",
       '"bar" | "dot"',
@@ -130,6 +154,14 @@ Takes every [Level Meter](/docs/components/level-meter#api-reference) prop excep
 <PropsTable
   rows={[
     ["index", "number", "0", "Which channel of the frames this track shows."],
+  ]}
+/>
+
+### LcdMeterBar
+
+<PropsTable
+  rows={[
+    ["measure", '"peak" | "rms"', '"peak"', "Which measurement the bar shows."],
   ]}
 />
 

@@ -173,7 +173,6 @@ export const LcdMeterPreview = () => (
         <LcdMeterClip />
       </LcdMeter>
     </LcdDisplayRow>
-    <LcdDisplayStatus state="off" />
   </LcdDisplay>
 );
 

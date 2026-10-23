@@ -14,6 +14,7 @@ import {
   useLevelMeterLayout,
 } from "@/components/ui/level-meter";
 import type {
+  LevelMeterBarProps,
   LevelMeterChannelProps,
   LevelMeterClipProps,
   LevelMeterProps,
@@ -24,7 +25,8 @@ import { useAudioConfig } from "@/hooks/use-audio-config";
 import type { Orientation } from "@/lib/audio/types";
 import { cn } from "@/lib/utils";
 
-const DEFAULT_SEGMENTS = 32;
+/** The Level Meter's segment count, so the two meters match by default. */
+const DEFAULT_SEGMENTS = 24;
 const MIN_SEGMENTS = 2;
 
 /** `bar` lights every segment up to the level; `dot` lights only the top one. */
@@ -56,12 +58,13 @@ const LCD_METER_INKS =
   "[--lcd-meter-dim:color-mix(in_oklab,var(--lcd-meter-ink)_40%,transparent)] [--lcd-meter-gap:var(--lcd-display-pitch,2px)] [--lcd-meter-ink:var(--lcd-display-lit,currentColor)] [--lcd-meter-unlit:color-mix(in_oklab,var(--lcd-meter-ink)_14%,transparent)]";
 
 /**
- * The level and hold, snapped down to whole segments, so a segment is either
- * lit or not, like the hardware. Written on the channel, where the meter
- * paints `--meter-level` and `--meter-hold`.
+ * The peak level, the RMS level and the hold, snapped down to whole segments,
+ * so a segment is either lit or not, like the hardware. Written on the
+ * channel, where the meter paints `--meter-level`, `--meter-rms` and
+ * `--meter-hold`.
  */
 const SNAPPED_LEVELS =
-  "[--lcd-meter-hold:calc(round(down,var(--meter-hold)*var(--lcd-meter-segments),1)/var(--lcd-meter-segments))] [--lcd-meter-lit:calc(round(down,var(--meter-level)*var(--lcd-meter-segments),1)/var(--lcd-meter-segments))] [--lcd-meter-step:calc(1/var(--lcd-meter-segments))]";
+  "[--lcd-meter-hold:calc(round(down,var(--meter-hold)*var(--lcd-meter-segments),1)/var(--lcd-meter-segments))] [--lcd-meter-lit:calc(round(down,var(--meter-level)*var(--lcd-meter-segments),1)/var(--lcd-meter-segments))] [--lcd-meter-rms:calc(round(down,var(--meter-rms)*var(--lcd-meter-segments),1)/var(--lcd-meter-segments))] [--lcd-meter-step:calc(1/var(--lcd-meter-segments))]";
 
 /** Clips a segment layer to `--lcd-meter-from`..`--lcd-meter-to` (0..1). */
 const SPAN_CLIP: Record<Orientation, string> = {
@@ -74,62 +77,113 @@ const SPAN_CLIP: Record<Orientation, string> = {
 const SEGMENT_LAYER =
   "pointer-events-none absolute inset-0 mask-(--lcd-meter-mask)";
 
+/** The track, like the Level Meter's: the unlit segments, with bars on top. */
+export const LcdMeterTrack = ({
+  className,
+  children,
+  ...props
+}: ComponentProps<"div">) => {
+  const { orientation } = useLevelMeterLayout("LcdMeterTrack");
+  const horizontal = orientation === "horizontal";
+
+  return (
+    <div
+      className={cn(
+        "relative shrink-0",
+        horizontal
+          ? "h-(--meter-thickness) w-full"
+          : "h-full w-(--meter-thickness)",
+        className
+      )}
+      data-orientation={orientation}
+      data-slot="lcd-meter-track"
+      {...props}
+    >
+      <div
+        aria-hidden
+        className={cn(SEGMENT_LAYER, "bg-(--lcd-meter-unlit)")}
+        data-slot="lcd-meter-unlit"
+      />
+      {children}
+    </div>
+  );
+};
+
 /**
- * One channel's segments: unlit behind, lit up to the level (or only the top
- * one in `dot` mode), and the peak-hold segment.
+ * The lit segments, like the Level Meter's bar: up to the level, or only the
+ * top one in `dot` mode. Layer an `rms` bar over a dimmed `peak` bar for a
+ * dual meter.
+ */
+export const LcdMeterBar = ({
+  measure = "peak",
+  className,
+  ...props
+}: LevelMeterBarProps) => {
+  const { orientation } = useLevelMeterLayout("LcdMeterBar");
+  const { mode } = useContext(LcdMeterContext);
+
+  return (
+    <div
+      aria-hidden
+      className={cn(
+        SEGMENT_LAYER,
+        SPAN_CLIP[orientation],
+        "bg-(--lcd-meter-ink) [--lcd-meter-to:var(--lcd-meter-bar)]",
+        measure === "rms"
+          ? "[--lcd-meter-bar:var(--lcd-meter-rms)]"
+          : "[--lcd-meter-bar:var(--lcd-meter-lit)]",
+        mode === "dot"
+          ? "[--lcd-meter-from:max(0,var(--lcd-meter-bar)_-_var(--lcd-meter-step))]"
+          : "[--lcd-meter-from:0]",
+        className
+      )}
+      data-measure={measure}
+      data-slot="lcd-meter-bar"
+      {...props}
+    />
+  );
+};
+
+/** The peak-hold segment, like the Level Meter's hold. */
+export const LcdMeterHold = ({
+  className,
+  ...props
+}: ComponentProps<"div">) => {
+  const { orientation } = useLevelMeterLayout("LcdMeterHold");
+
+  return (
+    <div
+      aria-hidden
+      className={cn(
+        SEGMENT_LAYER,
+        SPAN_CLIP[orientation],
+        "bg-(--lcd-meter-ink) opacity-[min(1,var(--lcd-meter-hold)*var(--lcd-meter-segments))] [--lcd-meter-from:max(0,var(--lcd-meter-hold)_-_var(--lcd-meter-step))] [--lcd-meter-to:var(--lcd-meter-hold)]",
+        className
+      )}
+      data-slot="lcd-meter-hold"
+      {...props}
+    />
+  );
+};
+
+/**
+ * One channel. With no children it renders the Level Meter's default track:
+ * a peak bar and the hold, here as segments.
  */
 export const LcdMeterChannel = ({
   className,
   children,
   ...props
-}: LevelMeterChannelProps) => {
-  const { orientation } = useLevelMeterLayout("LcdMeterChannel");
-  const { mode } = useContext(LcdMeterContext);
-  const horizontal = orientation === "horizontal";
-  const clip = SPAN_CLIP[orientation];
-
-  return (
-    <LevelMeterChannel className={cn(SNAPPED_LEVELS, className)} {...props}>
-      <div
-        className={cn(
-          "relative shrink-0",
-          horizontal
-            ? "h-(--meter-thickness) w-full"
-            : "h-full w-(--meter-thickness)"
-        )}
-        data-slot="lcd-meter-track"
-      >
-        <div
-          aria-hidden
-          className={cn(SEGMENT_LAYER, "bg-(--lcd-meter-unlit)")}
-          data-slot="lcd-meter-unlit"
-        />
-        <div
-          aria-hidden
-          className={cn(
-            SEGMENT_LAYER,
-            clip,
-            "bg-(--lcd-meter-ink) [--lcd-meter-to:var(--lcd-meter-lit)]",
-            mode === "dot"
-              ? "[--lcd-meter-from:max(0,var(--lcd-meter-lit)_-_var(--lcd-meter-step))]"
-              : "[--lcd-meter-from:0]"
-          )}
-          data-slot="lcd-meter-lit"
-        />
-        <div
-          aria-hidden
-          className={cn(
-            SEGMENT_LAYER,
-            clip,
-            "bg-(--lcd-meter-ink) opacity-[min(1,var(--lcd-meter-hold)*var(--lcd-meter-segments))] [--lcd-meter-from:max(0,var(--lcd-meter-hold)_-_var(--lcd-meter-step))] [--lcd-meter-to:var(--lcd-meter-hold)]"
-          )}
-          data-slot="lcd-meter-hold"
-        />
-        {children}
-      </div>
-    </LevelMeterChannel>
-  );
-};
+}: LevelMeterChannelProps) => (
+  <LevelMeterChannel className={cn(SNAPPED_LEVELS, className)} {...props}>
+    {children ?? (
+      <LcdMeterTrack>
+        <LcdMeterBar />
+        <LcdMeterHold />
+      </LcdMeterTrack>
+    )}
+  </LevelMeterChannel>
+);
 
 /**
  * The tracks. With no children it renders one `LcdMeterChannel` per channel,
@@ -154,7 +208,7 @@ export interface LcdMeterProps extends Omit<
   LevelMeterProps,
   "variant" | "segments"
 > {
-  /** Segments along the track. Default 32. */
+  /** Segments along the track. Default 24, like the Level Meter. */
   segments?: number;
   /** `bar` lights every segment up to the level, `dot` only the top one. Default `bar`. */
   mode?: LcdMeterMode;
