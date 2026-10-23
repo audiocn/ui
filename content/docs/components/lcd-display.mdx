@@ -97,6 +97,21 @@ const fontDoto = Doto({
 <LcdDisplay className="[--lcd-display-font:var(--font-doto)]" matrix={false} />
 ```
 
+### A level meter
+
+For a level meter on the same screen, add an [LCD Meter](/docs/components/lcd-meter). It takes the display's ink, appearance and size.
+
+```tsx
+<LcdDisplay>
+  <LcdDisplayRow>
+    <LcdDisplayLabel>Input</LcdDisplayLabel>
+    <LcdDisplayValue>USB Mic</LcdDisplayValue>
+  </LcdDisplayRow>
+  <LcdDisplaySeparator />
+  <LcdMeter aria-label="Input level" source={analyser.meter} />
+</LcdDisplay>
+```
+
 ## Theming
 
 | Variable or attribute | Meaning |
