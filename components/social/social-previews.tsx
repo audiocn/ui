@@ -44,6 +44,8 @@ import {
   MixerSeparator,
 } from "@/components/ui/mixer";
 import { SmoothWaveform } from "@/components/ui/smooth-waveform";
+import { LcdDisplay } from "@/components/ui/lcd-display";
+import { LcdSpectrum } from "@/components/ui/lcd-spectrum";
 import { Spectrum } from "@/components/ui/spectrum";
 import {
   Waveform,
@@ -335,6 +337,11 @@ const SmoothPreview = () => (
 const SpectrumPreview = () => (
   <Spectrum className="h-64 w-full" peakHold source={socialVisualSource} />
 );
+const LcdSpectrumPreview = () => (
+  <LcdDisplay className="w-[44rem]" matrix={false} size="lg" variant="amber">
+    <LcdSpectrum className="h-56 w-full" source={socialVisualSource} />
+  </LcdDisplay>
+);
 const ChannelPreview = () => (
   <div className="w-full">
     <PreviewStrip channel={MIXER_CHANNELS[0]} />
@@ -385,6 +392,7 @@ const previews: Record<SocialPreviewName, ComponentType> = {
   home: HomePreview,
   knobs: KnobsTile,
   lcd: LcdPreview,
+  "lcd-spectrum": LcdSpectrumPreview,
   "live-waveform": LivePreview,
   meters: MeterPreview,
   "mic-setup": MicSetupPreview,

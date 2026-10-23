@@ -1,0 +1,93 @@
+---
+title: LCD Spectrum
+description: A spectrum analyzer drawn as LCD segments, in the display's ink, with sticky peak caps that fade and accelerate as they fall behind the bars.
+seoDescription: Build a hardware-style LCD spectrum analyzer in React. Lit segments per band, dot-matrix dark pixels, and peak caps that stick, then fall with acceleration and fade out behind the bars. Copy and customize the audiocn LCD Spectrum.
+---
+
+<ComponentPreview name="lcd-spectrum-demo" />
+
+## Installation
+
+```npm
+npx shadcn@latest add @audiocn/lcd-spectrum
+```
+
+The CLI also adds the [LCD Display](/docs/components/lcd-display).
+
+## Usage
+
+```tsx
+import { LcdDisplay } from "@/components/ui/lcd-display";
+import { LcdSpectrum } from "@/components/ui/lcd-spectrum";
+```
+
+```tsx
+<LcdDisplay matrix={false}>
+  <LcdSpectrum className="h-40 w-full" peakHold source={analyser.visual} />
+</LcdDisplay>
+```
+
+An LCD Spectrum is a canvas, so it draws its own dot grid rather than taking the display's text mask. Put it in an `LcdDisplay` with `matrix={false}` so the bezel and the glass come from the display and the segments stay whole.
+
+Each band is one column of segments. The unlit dots sit behind them in the display's dim ink, and the lit segments use its ink. The source feeds the bands as 0..1 values, the same as the [Spectrum](/docs/components/spectrum).
+
+## Anatomy
+
+`LcdSpectrum` is one canvas with no parts. Its layout comes from `className`: give it a height and a width.
+
+## Examples
+
+### Peak caps
+
+With `peakHold`, each column keeps a cap at its highest level. The cap sticks there for a short hold, then falls, accelerating, and fades out as it reaches the bar. It is painted before the bars, so a falling cap passes behind the segments and never covers them.
+
+Turn `peakHold` off for a plain analyzer.
+
+### Rows
+
+`rows` sets the number of lit segments per column. The default is 24. Fewer rows read as a coarser, more hardware-like screen; more rows read as a finer display.
+
+```tsx
+<LcdSpectrum className="h-40 w-full" rows={12} source={analyser.visual} />
+```
+
+## Theming
+
+The analyzer reads the display's variables, so it follows the display's `variant`, `appearance` and `size`.
+
+| Variable or attribute | Meaning |
+| --- | --- |
+| `--lcd-display-lit` | The lit segments and the peak caps |
+| `--lcd-display-ink-unlit` | The unlit dots behind the columns |
+
+Outside a display it falls back to the canvas's `currentColor` for both. The colours refresh every half second, so a theme switch repaints without a remount.
+
+## Accessibility
+
+The canvas is `role="img"` with the label "Frequency spectrum". Give it an `aria-label` of your own when the analyzer shows a specific source, such as a track or a bus.
+
+Under `prefers-reduced-motion` the peak caps are hidden and the bars repaint only when the source changes. Peak motion is decorative, so nothing is lost for a reader.
+
+## API reference
+
+### LcdSpectrum
+
+Takes every canvas prop, plus:
+
+<PropsTable
+  rows={[
+    [
+      "source",
+      "FrameSource<VisualFrame> | null",
+      "null",
+      "The frames to draw. Bands are 0..1 each, low to high.",
+    ],
+    ["rows", "number", "24", "Lit segments per column."],
+    [
+      "peakHold",
+      "boolean",
+      "true",
+      "Sticky peak caps that fade and accelerate as they fall, behind the bars.",
+    ],
+  ]}
+/>

@@ -125,6 +125,9 @@ export const examples: Record<string, ComponentType | undefined> = {
   "lcd-display-variants": dynamic(
     () => import("@/components/examples/lcd-display-variants")
   ),
+  "lcd-spectrum-demo": dynamic(
+    () => import("@/components/examples/lcd-spectrum-demo")
+  ),
   "level-meter-ballistics": dynamic(
     () => import("@/components/examples/level-meter-ballistics")
   ),
