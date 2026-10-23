@@ -246,9 +246,9 @@ export const LcdMeterValue = ({
 );
 
 /**
- * A `CLIP` legend: unlit until the signal clips, then lit for the hold time.
- * It is the Level Meter's clip indicator, so a click resets it and screen
- * readers hear "Clipping". Children replace the word.
+ * A clip light: a dot like the Level Meter's, unlit until the signal clips,
+ * then lit for the hold time. It is the Level Meter's clip indicator, so a
+ * click resets it and screen readers hear "Clipping". Children replace the dot.
  */
 export const LcdMeterClip = ({
   className,
@@ -257,11 +257,16 @@ export const LcdMeterClip = ({
 }: LevelMeterClipProps) => (
   <LevelMeterClip
     className={cn(
-      "h-auto rounded-sm px-1 py-0.5 text-[0.75em] font-normal text-(color:--lcd-meter-unlit) uppercase hover:bg-transparent focus-visible:ring-1 focus-visible:ring-(--lcd-meter-ink) data-clipping:text-(color:--lcd-meter-ink)",
+      "h-auto px-1 py-0.5 text-[0.75em] font-normal text-(color:--lcd-meter-unlit) uppercase hover:bg-transparent focus-visible:ring-1 focus-visible:ring-(--lcd-meter-ink) data-clipping:text-(color:--lcd-meter-ink)",
       className
     )}
     {...props}
   >
-    {children ?? <span data-slot="lcd-meter-clip-legend">Clip</span>}
+    {children ?? (
+      <span
+        className="size-[0.6em] shrink-0 rounded-full bg-(--lcd-meter-unlit) group-data-clipping/clip-indicator:bg-(--lcd-meter-ink)"
+        data-slot="lcd-meter-clip-light"
+      />
+    )}
   </LevelMeterClip>
 );

@@ -87,7 +87,7 @@ Copy, paste, make them yours.</p>
 | [Live Waveform](https://audiocn.dev/docs/components/live-waveform) | A canvas waveform of a live signal, as scrolling history or the current frame |
 | [Waveform](https://audiocn.dev/docs/components/waveform) | A clip's waveform with a playhead, seeking, hover time, regions and markers |
 | [Spectrum](https://audiocn.dev/docs/components/spectrum) | A frequency spectrum analyser with axes, a grid and peak hold |
-| [LCD Meter](https://audiocn.dev/docs/components/lcd-meter) | A dot-matrix bar-graph level meter for the LCD Display, with peak hold, bar and dot modes and a clip legend |
+| [LCD Meter](https://audiocn.dev/docs/components/lcd-meter) | A dot-matrix bar-graph level meter for the LCD Display, with peak hold, bar and dot modes and a clip light |
 
 **Controls**
 

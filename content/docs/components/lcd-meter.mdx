@@ -1,7 +1,7 @@
 ---
 title: LCD Meter
-description: A dot-matrix bar-graph level meter for the LCD Display, lit in whole segments, with peak hold, a dot mode, a scale, a readout and a clip legend.
-seoDescription: Build a hardware-style LCD bar-graph level meter in React. Whole lit segments, peak hold, bar and dot modes, stereo, vertical, a dB scale and a clip legend, in your theme's ink. Copy and customize the audiocn LCD Meter.
+description: A dot-matrix bar-graph level meter for the LCD Display, lit in whole segments, with peak hold, a dot mode, a scale, a readout and a clip light.
+seoDescription: Build a hardware-style LCD bar-graph level meter in React. Whole lit segments, peak hold, bar and dot modes, stereo, vertical, a dB scale and a clip light, in your theme's ink. Copy and customize the audiocn LCD Meter.
 ---
 
 <ComponentPreview name="lcd-meter-demo" />
@@ -90,8 +90,8 @@ The ink comes from the display: `--lcd-display-lit` for lit segments, mixed into
 
 | Variable or attribute | Meaning |
 | --- | --- |
-| `--lcd-meter-ink` | Lit segments, the readout and a lit clip legend. Default: `var(--lcd-display-lit, currentColor)` |
-| `--lcd-meter-unlit` | Unlit segments and the unlit clip legend. Default: the ink at 14% |
+| `--lcd-meter-ink` | Lit segments, the readout and a lit clip light. Default: `var(--lcd-display-lit, currentColor)` |
+| `--lcd-meter-unlit` | Unlit segments and the unlit clip light. Default: the ink at 14% |
 | `--lcd-meter-dim` | The scale. Default: the ink at 40% |
 | `--lcd-meter-gap` | The gap between segments. Default: the display's dot pitch |
 | `--lcd-meter-segments` | The segment count, set from `segments` |
@@ -135,4 +135,4 @@ Takes every [Level Meter](/docs/components/level-meter#api-reference) prop excep
 
 ### LcdMeterScale, LcdMeterValue, LcdMeterClip
 
-They take the props of `LevelMeterScale`, `LevelMeterValue` and `LevelMeterClip`. `LcdMeterClip`'s children replace the word "Clip".
+They take the props of `LevelMeterScale`, `LevelMeterValue` and `LevelMeterClip`. `LcdMeterClip` is a dot, like the Level Meter's clip light. Its children replace the dot.

@@ -117,7 +117,7 @@ it("adds a track for each channel a source sends", () => {
   expect(levelOf(1)).toBeCloseTo(0.6, 2);
 });
 
-it("composes a scale, a readout and a clip legend", () => {
+it("composes a scale, a readout and a clip light", () => {
   render(
     <LcdMeter aria-label="Out" peakDb={0}>
       <LcdMeterChannels>
@@ -134,7 +134,12 @@ it("composes a scale, a readout and a clip legend", () => {
     "0.0 dB"
   );
   const clip = screen.getByRole("button", { name: /Clipping/u });
-  expect(clip).toHaveTextContent("Clip");
+  // A dot, like the Level Meter's clip light, not a word.
+  expect(
+    clip.querySelector("[data-slot='lcd-meter-clip-light']")
+  ).not.toBeNull();
+  // The only text is the screen reader announcement.
+  expect(clip).toHaveTextContent(/^Clipping$/u);
   expect(clip).toHaveAttribute("data-clipping");
   fireEvent.click(clip);
   expect(
