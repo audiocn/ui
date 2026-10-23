@@ -338,6 +338,25 @@
       ]
     },
     {
+      "name": "lcd-meter",
+      "type": "registry:ui",
+      "title": "LCD Meter",
+      "description": "A recorder-style level meter on an LCD Display's screen: block segments in the display's ink that light whole, a held peak segment, per-channel dB readouts, a printed scale with a bracket over the clip zone and a CLIP flag, in light and dark.",
+      "dependencies": ["class-variance-authority"],
+      "registryDependencies": [
+        "@audiocn/core",
+        "@audiocn/db-scale",
+        "@audiocn/lcd-display",
+        "@audiocn/level-meter"
+      ],
+      "files": [
+        {
+          "path": "components/ui/lcd-meter.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
       "name": "bar-visualizer",
       "type": "registry:ui",
       "title": "Bar Visualizer",

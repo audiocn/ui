@@ -73,12 +73,15 @@ export interface LevelMeterActions {
   reset: () => void;
 }
 
-interface LevelMeterContextValue {
+export interface LevelMeterContextValue {
   orientation: Orientation;
   variant: LevelMeterVariant;
   minDb: number;
   maxDb: number;
   taper: Taper;
+  zones: MeterZone[];
+  /** Tracks the meter shows: declared, seen in the frames, or `channelCount`. */
+  channelCount: number;
   frames: FrameSource<MeterFrame>;
   /** The declarative levels, when the meter has values instead of a source. */
   declared: MeterFrame | null;
@@ -87,7 +90,8 @@ interface LevelMeterContextValue {
 
 const LevelMeterContext = createContext<LevelMeterContextValue | null>(null);
 
-const useLevelMeter = (part: string) => {
+/** The surrounding meter's range, scale and frames, for parts built on it. */
+export const useLevelMeter = (part: string) => {
   const context = useContext(LevelMeterContext);
   if (!context) {
     throw new Error(`${part} must be used inside LevelMeter.`);
@@ -869,6 +873,7 @@ export const LevelMeter = ({
 
   const contextValue = useMemo<LevelMeterContextValue>(
     () => ({
+      channelCount,
       declared,
       frames,
       maxDb,
@@ -877,8 +882,10 @@ export const LevelMeter = ({
       registerChannel,
       taper: taperFn,
       variant,
+      zones,
     }),
     [
+      channelCount,
       declared,
       frames,
       maxDb,
@@ -887,6 +894,7 @@ export const LevelMeter = ({
       registerChannel,
       taperFn,
       variant,
+      zones,
     ]
   );
 

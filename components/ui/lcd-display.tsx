@@ -71,7 +71,7 @@ const lcdDisplayVariants = cva(
   }
 );
 
-interface LcdDisplayContextValue {
+export interface LcdDisplayContextValue {
   /** The display itself, whose variables the portalled popup copies. */
   rootRef: RefObject<HTMLDivElement | null> | null;
   appearance: LcdDisplayAppearance;
@@ -81,14 +81,23 @@ interface LcdDisplayContextValue {
   scanlines: boolean;
 }
 
-const LcdDisplayContext = createContext<LcdDisplayContextValue>({
+/** What a select outside a display falls back to. */
+const DEFAULT_CONTEXT: LcdDisplayContextValue = {
   appearance: "auto",
   matrix: true,
   rootRef: null,
   scanlines: true,
   size: "default",
   variant: "primary",
-});
+};
+
+const LcdDisplayContext = createContext<LcdDisplayContextValue | null>(null);
+
+/**
+ * The surrounding display's settings, or null outside one. For parts built
+ * to sit on its screen, like `LcdMeter`.
+ */
+export const useLcdDisplay = () => useContext(LcdDisplayContext);
 
 const RowContext = createContext<{
   labelId: string;
@@ -487,7 +496,7 @@ export const LcdDisplaySelectContent = ({
   ...props
 }: LcdDisplaySelectContentProps) => {
   const { appearance, matrix, rootRef, scanlines, size, variant } =
-    useContext(LcdDisplayContext);
+    useContext(LcdDisplayContext) ?? DEFAULT_CONTEXT;
   // Copies the display's variables, so a custom ink or font reaches the popup.
   const shareVariables = useCallback(
     (popup: HTMLDivElement | null) => {
