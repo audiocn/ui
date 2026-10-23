@@ -60,6 +60,7 @@ import type { SocialPreviewName } from "@/lib/social-catalog";
 import {
   createStillSource,
   socialPeaks,
+  socialSpectrumSource,
   socialVisualSource,
 } from "@/lib/social-signal";
 
@@ -339,7 +340,13 @@ const SpectrumPreview = () => (
 );
 const LcdSpectrumPreview = () => (
   <LcdDisplay className="w-[44rem]" matrix={false} size="lg" variant="amber">
-    <LcdSpectrum className="h-56 w-full" peakHold source={socialVisualSource} />
+    <LcdSpectrum
+      className="h-56 w-full"
+      maxDb={0}
+      minDb={-60}
+      peakHold
+      source={socialSpectrumSource}
+    />
   </LcdDisplay>
 );
 const ChannelPreview = () => (
