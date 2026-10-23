@@ -32,6 +32,13 @@ import {
   LcdDisplayStatus,
   LcdDisplayValue,
 } from "@/components/ui/lcd-display";
+import {
+  LcdNumberField,
+  LcdNumberFieldGroup,
+  LcdNumberFieldInput,
+  LcdNumberFieldStepper,
+  LcdNumberFieldUnit,
+} from "@/components/ui/lcd-number-field";
 import { LevelMeter } from "@/components/ui/level-meter";
 import { LiveWaveform } from "@/components/ui/live-waveform";
 import {
@@ -148,6 +155,34 @@ export const LcdPreview = () => (
       <LcdDisplayValue>High</LcdDisplayValue>
     </LcdDisplayRow>
     <LcdDisplayStatus state="off" />
+  </LcdDisplay>
+);
+
+const ONE_DECIMAL = { maximumFractionDigits: 1, minimumFractionDigits: 1 };
+
+export const LcdNumberFieldPreview = () => (
+  <LcdDisplay className="w-[30rem]" size="lg" variant="amber">
+    <LcdDisplayRow>
+      <LcdNumberField defaultValue={128} format={ONE_DECIMAL}>
+        <LcdDisplayLabel>Tempo</LcdDisplayLabel>
+        <LcdNumberFieldGroup>
+          <LcdNumberFieldInput />
+          <LcdNumberFieldUnit>Bpm</LcdNumberFieldUnit>
+          <LcdNumberFieldStepper />
+        </LcdNumberFieldGroup>
+      </LcdNumberField>
+    </LcdDisplayRow>
+    <LcdDisplaySeparator />
+    <LcdDisplayRow>
+      <LcdNumberField defaultValue={-3} format={ONE_DECIMAL}>
+        <LcdDisplayLabel>Gain</LcdDisplayLabel>
+        <LcdNumberFieldGroup>
+          <LcdNumberFieldInput />
+          <LcdNumberFieldUnit>dB</LcdNumberFieldUnit>
+          <LcdNumberFieldStepper />
+        </LcdNumberFieldGroup>
+      </LcdNumberField>
+    </LcdDisplayRow>
   </LcdDisplay>
 );
 

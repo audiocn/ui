@@ -508,6 +508,20 @@
       ]
     },
     {
+      "name": "lcd-number-field",
+      "type": "registry:ui",
+      "title": "LCD Number Field",
+      "description": "An editable number for the LCD Display, built on Base UI's Number Field: type it, step it with the arrow keys, the wheel or pixel steppers, or scrub it by dragging its label, with a dim unit and a reset.",
+      "dependencies": ["@base-ui/react"],
+      "registryDependencies": ["@audiocn/lcd-display"],
+      "files": [
+        {
+          "path": "components/ui/lcd-number-field.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
       "name": "pan-control",
       "type": "registry:ui",
       "title": "Pan Control",
