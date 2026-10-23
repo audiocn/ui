@@ -1,7 +1,7 @@
 ---
 title: LCD Spectrum
-description: A spectrum analyzer drawn as LCD segments, in the display's ink, with sticky peak caps that fade and accelerate as they fall behind the bars.
-seoDescription: Build a hardware-style LCD spectrum analyzer in React. Lit segments per band, dot-matrix dark pixels, level and frequency axes, and peak caps that stick, then fall with acceleration and fade out behind the bars. Copy and customize the audiocn LCD Spectrum.
+description: A spectrum analyzer drawn as LCD segments, in the display's ink, with the Spectrum's axes, bar and dot modes, and sticky peak caps that fade and accelerate as they fall behind the bars.
+seoDescription: Build a hardware-style LCD spectrum analyzer in React. Lit segments per band, dot-matrix dark pixels, level and frequency axes, bar and dot modes, and peak caps that stick, then fall with acceleration and fade out behind the bars. Copy and customize the audiocn LCD Spectrum.
 ---
 
 <ComponentPreview name="lcd-spectrum-demo" />
@@ -29,7 +29,7 @@ const analyser = useAudioAnalyser(stream, { bands: 32 });
 </LcdDisplay>;
 ```
 
-An LCD Spectrum is a [Spectrum](/docs/components/spectrum) with LCD segments in place of the bars. It has the same level axis, frequency axis and grid, and the same ranges. Set `minHz`, `maxHz`, `minDb` and `maxDb` to match the analyser that produced the bands, so the axes are labelled correctly. The defaults match `useAudioAnalyser`.
+An LCD Spectrum is a [Spectrum](/docs/components/spectrum) with LCD segments in place of the bars. It has the same level axis, frequency axis and grid, and the same ranges and defaults. Set `minHz`, `maxHz`, `minDb` and `maxDb` to match the analyser that produced the bands, so the axes are labelled correctly. The defaults match `useAudioAnalyser`.
 
 Put it in an `LcdDisplay` with `matrix={false}`. The segments are a canvas that draws its own dot grid, so the bezel and the glass come from the display and the segments stay whole.
 
@@ -49,19 +49,35 @@ Leave out an axis to hide it. The axes are the Spectrum's, with the labels in th
 
 ## Examples
 
+### Bar and dot
+
+`mode="bar"` lights every segment up to the level. `mode="dot"` lights only the top one, like the LCD Meter's dot mode. The peak caps show in both.
+
+<ComponentPreview name="lcd-spectrum-modes" />
+
 ### Peak caps
 
 With `peakHold`, each column keeps a cap at its highest level. The cap sticks there for a short hold, then falls, accelerating, and fades out as it reaches the bar. It is painted before the bars, so a falling cap passes behind the segments and never covers them.
 
-Turn `peakHold` off for a plain analyzer.
+`peakHold` is off by default, as on the Spectrum.
+
+<ComponentPreview name="lcd-spectrum-peaks" />
 
 ### Rows
 
 `rows` sets the number of lit segments per column. The default is 24. Fewer rows read as a coarser, more hardware-like screen; more rows read as a finer display.
 
-```tsx
-<LcdSpectrum rows={12} source={analyser.visual} />
-```
+<ComponentPreview name="lcd-spectrum-rows" />
+
+### Inks
+
+The analyzer draws in its display's ink, so it follows the display's `variant`: the theme's `--primary` by default, or a fixed `amber`, `green`, `cyan` or `red`.
+
+<ComponentPreview name="lcd-spectrum-inks" />
+
+### Microphone
+
+<ComponentPreview name="lcd-spectrum-microphone" />
 
 ## Theming
 
@@ -73,6 +89,7 @@ The analyzer reads the display's variables, so it follows the display's `variant
 | `--lcd-display-ink-unlit` | The unlit dots behind the columns           |
 | `--lcd-display-ink-dim`   | The axis labels                             |
 | `--lcd-spectrum-grid`     | The grid lines. Default: the lit ink at 20% |
+| `data-lcd-mode`           | On the spectrum: `bar` or `dot`             |
 
 Outside a display the canvas falls back to its `currentColor`. The colours refresh every half second, so a theme switch repaints without a remount.
 
@@ -106,9 +123,15 @@ Takes every `div` prop, plus:
     ["scale", '"log" | "linear"', '"log"', "Frequency axis law."],
     ["rows", "number", "24", "Lit segments per column."],
     [
+      "mode",
+      '"bar" | "dot"',
+      '"bar"',
+      "bar lights every segment up to the level; dot lights only the top one.",
+    ],
+    [
       "peakHold",
       "boolean",
-      "true",
+      "false",
       "Sticky peak caps that fade and accelerate as they fall, behind the bars.",
     ],
     ["grid", "boolean", "true", null],

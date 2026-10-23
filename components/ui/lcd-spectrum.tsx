@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useRef } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef } from "react";
 import type { ComponentProps } from "react";
 
 import {
@@ -102,8 +102,19 @@ const readColors = (canvas: HTMLCanvasElement): Colors => {
   };
 };
 
-/** The surrounding LcdSpectrum's `rows`, so a composed canvas follows it. */
-const RowsContext = createContext(DEFAULT_ROWS);
+/** `bar` lights every segment up to the level; `dot` lights only the top one. */
+export type LcdSpectrumMode = "bar" | "dot";
+
+interface LcdSpectrumContextValue {
+  mode: LcdSpectrumMode;
+  rows: number;
+}
+
+/** The surrounding LcdSpectrum's mode and rows, so a composed canvas follows it. */
+const LcdSpectrumContext = createContext<LcdSpectrumContextValue>({
+  mode: "bar",
+  rows: DEFAULT_ROWS,
+});
 
 export interface LcdSpectrumCanvasProps extends ComponentProps<"canvas"> {
   /** Lit segments per column. Default: the LcdSpectrum's `rows`. */
@@ -122,7 +133,7 @@ export const LcdSpectrumCanvas = ({
   ...props
 }: LcdSpectrumCanvasProps) => {
   const settings = useSpectrum("LcdSpectrumCanvas");
-  const contextRows = useContext(RowsContext);
+  const { mode, rows: contextRows } = useContext(LcdSpectrumContext);
   const rows = rowsProp ?? contextRows;
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const reducedMotion = useReducedMotion();
@@ -246,7 +257,9 @@ export const LcdSpectrumCanvas = ({
 
       for (const [column, band] of bands.entries()) {
         const litRows = Math.floor(clamp(band, 0, 1) * rows);
-        for (let row = 0; row < litRows; row += 1) {
+        // Dot mode lights only the top segment, like the LCD Meter's.
+        const firstRow = mode === "dot" ? Math.max(0, litRows - 1) : 0;
+        for (let row = firstRow; row < litRows; row += 1) {
           context.fillRect(cellX(column), cellY(row), cellWidth, cellHeight);
         }
       }
@@ -280,7 +293,7 @@ export const LcdSpectrumCanvas = ({
       unsubscribe();
       observer.disconnect();
     };
-  }, [reducedMotion, rows, settings, visibleRef]);
+  }, [mode, reducedMotion, rows, settings, visibleRef]);
 
   return (
     <canvas
@@ -327,38 +340,42 @@ export const LcdSpectrumFrequencyAxis = ({
 export interface LcdSpectrumProps extends Omit<SpectrumProps, "variant"> {
   /** Lit segments per column. Default 24. */
   rows?: number;
-  /** Sticky peak caps that fade and accelerate as they fall. Default true. */
-  peakHold?: boolean;
+  /** `bar` lights every segment up to the level, `dot` only the top one. Default `bar`. */
+  mode?: LcdSpectrumMode;
 }
 
 /**
- * A Spectrum drawn as LCD segments, with the same ranges, axes and grid as the
- * Spectrum. Put it in an `LcdDisplay` with `matrix={false}`.
+ * A Spectrum drawn as LCD segments, with the same ranges, axes, grid and
+ * defaults as the Spectrum. `peakHold` adds sticky peak caps, as it adds peak
+ * markers to the Spectrum. Put it in an `LcdDisplay` with `matrix={false}`.
  */
 export const LcdSpectrum = ({
   rows = DEFAULT_ROWS,
-  peakHold = true,
+  mode = "bar",
   className,
   children,
   ...props
-}: LcdSpectrumProps) => (
-  <RowsContext.Provider value={rows}>
-    <Spectrum
-      className={cn(
-        "pt-[0.75em] [--lcd-spectrum-grid:color-mix(in_oklab,var(--lcd-display-lit)_20%,transparent)]",
-        className
-      )}
-      data-slot="lcd-spectrum"
-      peakHold={peakHold}
-      {...props}
-    >
-      {children ?? (
-        <>
-          <LcdSpectrumLevelAxis />
-          <LcdSpectrumCanvas />
-          <LcdSpectrumFrequencyAxis />
-        </>
-      )}
-    </Spectrum>
-  </RowsContext.Provider>
-);
+}: LcdSpectrumProps) => {
+  const context = useMemo(() => ({ mode, rows }), [mode, rows]);
+  return (
+    <LcdSpectrumContext.Provider value={context}>
+      <Spectrum
+        className={cn(
+          "pt-[0.75em] [--lcd-spectrum-grid:color-mix(in_oklab,var(--lcd-display-lit)_20%,transparent)]",
+          className
+        )}
+        data-lcd-mode={mode}
+        data-slot="lcd-spectrum"
+        {...props}
+      >
+        {children ?? (
+          <>
+            <LcdSpectrumLevelAxis />
+            <LcdSpectrumCanvas />
+            <LcdSpectrumFrequencyAxis />
+          </>
+        )}
+      </Spectrum>
+    </LcdSpectrumContext.Provider>
+  );
+};

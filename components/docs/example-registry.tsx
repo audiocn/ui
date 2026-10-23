@@ -128,6 +128,21 @@ export const examples: Record<string, ComponentType | undefined> = {
   "lcd-spectrum-demo": dynamic(
     () => import("@/components/examples/lcd-spectrum-demo")
   ),
+  "lcd-spectrum-inks": dynamic(
+    () => import("@/components/examples/lcd-spectrum-inks")
+  ),
+  "lcd-spectrum-microphone": dynamic(
+    () => import("@/components/examples/lcd-spectrum-microphone")
+  ),
+  "lcd-spectrum-modes": dynamic(
+    () => import("@/components/examples/lcd-spectrum-modes")
+  ),
+  "lcd-spectrum-peaks": dynamic(
+    () => import("@/components/examples/lcd-spectrum-peaks")
+  ),
+  "lcd-spectrum-rows": dynamic(
+    () => import("@/components/examples/lcd-spectrum-rows")
+  ),
   "level-meter-ballistics": dynamic(
     () => import("@/components/examples/level-meter-ballistics")
   ),

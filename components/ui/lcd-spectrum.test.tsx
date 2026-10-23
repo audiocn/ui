@@ -1,5 +1,5 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { act, render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   createPeakCap,
@@ -7,9 +7,46 @@ import {
   LcdSpectrumCanvas,
   stepPeakCap,
 } from "@/components/ui/lcd-spectrum";
+import { createFrameEmitter } from "@/lib/audio/frame-source";
+import type { VisualFrame } from "@/lib/audio/types";
+import { advance, useFakeFrames } from "@/test/fake-frames";
 
 const ROWS = 24;
 const FRAME_SECONDS = 1 / 60;
+
+const frameOf = (bands: number[]): VisualFrame => ({
+  bands: Float32Array.from(bands),
+  history: new Float32Array(1),
+  historyLength: 0,
+  historyStart: 0,
+  peakDb: -12,
+});
+
+/** Counts the cells the last paint filled. Grid lines are strokes, not fills. */
+const stubCanvas = () => {
+  let fills = 0;
+  vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockImplementation(
+    () =>
+      ({
+        beginPath: vi.fn(),
+        clearRect: () => {
+          fills = 0;
+        },
+        fillRect: () => {
+          fills += 1;
+        },
+        lineTo: vi.fn(),
+        moveTo: vi.fn(),
+        setTransform: vi.fn(),
+        stroke: vi.fn(),
+      }) as unknown as CanvasRenderingContext2D
+  );
+  vi.spyOn(
+    HTMLCanvasElement.prototype,
+    "getBoundingClientRect"
+  ).mockReturnValue(DOMRect.fromRect({ height: 80, width: 240 }));
+  return () => fills;
+};
 
 describe("stepPeakCap", () => {
   it("sticks at the top of a rising level", () => {
@@ -100,6 +137,11 @@ describe("LcdSpectrum", () => {
     }
   });
 
+  it("sets data-lcd-mode, like the LCD Meter", () => {
+    render(<LcdSpectrum mode="dot" />);
+    expect(screen.getByRole("img")).toHaveAttribute("data-lcd-mode", "dot");
+  });
+
   it("lets a composed canvas take its rows from the root", () => {
     const { container } = render(
       <LcdSpectrum rows={12}>
@@ -114,4 +156,54 @@ describe("LcdSpectrum", () => {
       container.querySelector('[data-slot="spectrum-level-axis"]')
     ).toBeNull();
   });
+});
+
+describe("LcdSpectrum painting", () => {
+  beforeEach(() => {
+    useFakeFrames();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  // Two columns of four rows: 8 unlit cells, then the lit ones on top.
+  it.each([
+    ["bar", 8 + 4 + 2],
+    ["dot", 8 + 1 + 1],
+  ] as const)("lights the segments of %s mode", (mode, cells) => {
+    const filled = stubCanvas();
+    const source = createFrameEmitter<VisualFrame>();
+    render(<LcdSpectrum mode={mode} rows={4} source={source} />);
+    act(() => {
+      source.emit(frameOf([1, 0.5]));
+    });
+    advance(50);
+    expect(filled()).toBe(cells);
+  });
+
+  // No peakHold prop: the default must be off, as on the Spectrum.
+  it.each([
+    ["by default", {}, 8],
+    ["with peakHold", { peakHold: true }, 8 + 2],
+  ])(
+    "draws peak caps only when asked, like the Spectrum (%s)",
+    (_name, props, cells) => {
+      const filled = stubCanvas();
+      const source = createFrameEmitter<VisualFrame>();
+      render(<LcdSpectrum {...props} rows={4} source={source} />);
+      // Half way up, so each cap has a segment above its bar to sit in.
+      act(() => {
+        source.emit(frameOf([0.5, 0.5]));
+      });
+      advance(50);
+      // The level drops away. A cap sticks at the top for its hold time.
+      act(() => {
+        source.emit(frameOf([0, 0]));
+      });
+      advance(50);
+      expect(filled()).toBe(cells);
+    }
+  );
 });

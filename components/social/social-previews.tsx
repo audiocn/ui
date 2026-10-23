@@ -26,6 +26,8 @@ import { MuteToggle, SoloToggle } from "@/components/ui/channel-toggle";
 import { ElectricBarVisualizer } from "@/components/ui/electric-bar-visualizer";
 import { ElectricWaveform } from "@/components/ui/electric-waveform";
 import { Fader } from "@/components/ui/fader";
+import { LcdDisplay } from "@/components/ui/lcd-display";
+import { LcdSpectrum } from "@/components/ui/lcd-spectrum";
 import {
   LevelMeter,
   LevelMeterBar,
@@ -44,8 +46,6 @@ import {
   MixerSeparator,
 } from "@/components/ui/mixer";
 import { SmoothWaveform } from "@/components/ui/smooth-waveform";
-import { LcdDisplay } from "@/components/ui/lcd-display";
-import { LcdSpectrum } from "@/components/ui/lcd-spectrum";
 import { Spectrum } from "@/components/ui/spectrum";
 import {
   Waveform,
@@ -339,7 +339,7 @@ const SpectrumPreview = () => (
 );
 const LcdSpectrumPreview = () => (
   <LcdDisplay className="w-[44rem]" matrix={false} size="lg" variant="amber">
-    <LcdSpectrum className="h-56 w-full" source={socialVisualSource} />
+    <LcdSpectrum className="h-56 w-full" peakHold source={socialVisualSource} />
   </LcdDisplay>
 );
 const ChannelPreview = () => (
