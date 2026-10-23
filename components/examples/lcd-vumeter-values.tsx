@@ -3,7 +3,7 @@ import {
   LcdDisplayLabel,
   LcdDisplayRow,
 } from "@/components/ui/lcd-display";
-import { LcdMeter } from "@/components/ui/lcd-meter";
+import { LcdVuMeter } from "@/components/ui/lcd-vumeter";
 
 const levels = [
   { label: "Quiet", peakDb: -42 },
@@ -12,7 +12,7 @@ const levels = [
   { label: "Clipping", peakDb: 0 },
 ];
 
-const LcdMeterValues = () => (
+const LcdVuMeterValues = () => (
   <LcdDisplay className="w-full max-w-md">
     {levels.map((level) => (
       <LcdDisplayRow key={level.label}>
@@ -20,10 +20,10 @@ const LcdMeterValues = () => (
         <LcdDisplayLabel className="w-[6em] shrink-0">
           {level.label}
         </LcdDisplayLabel>
-        <LcdMeter peakDb={level.peakDb} />
+        <LcdVuMeter peakDb={level.peakDb} />
       </LcdDisplayRow>
     ))}
   </LcdDisplay>
 );
 
-export default LcdMeterValues;
+export default LcdVuMeterValues;

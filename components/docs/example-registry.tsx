@@ -125,26 +125,26 @@ export const examples: Record<string, ComponentType | undefined> = {
   "lcd-display-variants": dynamic(
     () => import("@/components/examples/lcd-display-variants")
   ),
-  "lcd-meter-demo": dynamic(
-    () => import("@/components/examples/lcd-meter-demo")
+  "lcd-vumeter-demo": dynamic(
+    () => import("@/components/examples/lcd-vumeter-demo")
   ),
-  "lcd-meter-dual": dynamic(
-    () => import("@/components/examples/lcd-meter-dual")
+  "lcd-vumeter-dual": dynamic(
+    () => import("@/components/examples/lcd-vumeter-dual")
   ),
-  "lcd-meter-inks": dynamic(
-    () => import("@/components/examples/lcd-meter-inks")
+  "lcd-vumeter-inks": dynamic(
+    () => import("@/components/examples/lcd-vumeter-inks")
   ),
-  "lcd-meter-microphone": dynamic(
-    () => import("@/components/examples/lcd-meter-microphone")
+  "lcd-vumeter-microphone": dynamic(
+    () => import("@/components/examples/lcd-vumeter-microphone")
   ),
-  "lcd-meter-modes": dynamic(
-    () => import("@/components/examples/lcd-meter-modes")
+  "lcd-vumeter-modes": dynamic(
+    () => import("@/components/examples/lcd-vumeter-modes")
   ),
-  "lcd-meter-values": dynamic(
-    () => import("@/components/examples/lcd-meter-values")
+  "lcd-vumeter-values": dynamic(
+    () => import("@/components/examples/lcd-vumeter-values")
   ),
-  "lcd-meter-vertical": dynamic(
-    () => import("@/components/examples/lcd-meter-vertical")
+  "lcd-vumeter-vertical": dynamic(
+    () => import("@/components/examples/lcd-vumeter-vertical")
   ),
   "level-meter-ballistics": dynamic(
     () => import("@/components/examples/level-meter-ballistics")

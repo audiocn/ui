@@ -40,10 +40,10 @@ test("level meters keep their width while the level moves", async ({
   expect(drift).toBeLessThanOrEqual(TOLERANCE_PX);
 });
 
-test("the LCD meter keeps its width as the readout's text changes length", async ({
+test("the LCD VU meter keeps its width as the readout's text changes length", async ({
   page,
 }) => {
-  await page.goto("/docs/components/lcd-meter");
+  await page.goto("/docs/components/lcd-vumeter");
   const preview = page.locator('[data-slot="component-preview"]').first();
   await expect(preview.getByRole("meter").first()).toBeVisible();
   const widths = await preview.evaluate((element) => {
@@ -54,7 +54,7 @@ test("the LCD meter keeps its width as the readout's text changes length", async
       '[data-slot="level-meter-channels"]'
     );
     if (!(readout && channels)) {
-      throw new Error("The LCD meter preview has no readout or channels.");
+      throw new Error("The LCD VU meter preview has no readout or channels.");
     }
     // The readout rewrites its text on a timer, so set and measure in one task.
     return ["0.0 dB", "−16.4 dB"].map((text) => {

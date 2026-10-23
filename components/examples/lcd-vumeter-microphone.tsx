@@ -9,16 +9,16 @@ import {
   LcdDisplayRow,
 } from "@/components/ui/lcd-display";
 import {
-  LcdMeter,
-  LcdMeterChannel,
-  LcdMeterChannels,
-  LcdMeterClip,
-  LcdMeterValue,
-} from "@/components/ui/lcd-meter";
+  LcdVuMeter,
+  LcdVuMeterChannel,
+  LcdVuMeterChannels,
+  LcdVuMeterClip,
+  LcdVuMeterValue,
+} from "@/components/ui/lcd-vumeter";
 import { useAudioAnalyser } from "@/hooks/use-audio-analyser";
 import { useMicrophone } from "@/hooks/use-microphone";
 
-const LcdMeterMicrophone = () => {
+const LcdVuMeterMicrophone = () => {
   const microphone = useMicrophone();
   const analyser = useAudioAnalyser(microphone.stream);
   const listening = microphone.status === "active";
@@ -28,13 +28,13 @@ const LcdMeterMicrophone = () => {
       <LcdDisplay>
         <LcdDisplayRow>
           <LcdDisplayLabel>Mic</LcdDisplayLabel>
-          <LcdMeter source={analyser.meter}>
-            <LcdMeterChannels>
-              <LcdMeterChannel />
-            </LcdMeterChannels>
-            <LcdMeterValue />
-            <LcdMeterClip />
-          </LcdMeter>
+          <LcdVuMeter source={analyser.meter}>
+            <LcdVuMeterChannels>
+              <LcdVuMeterChannel />
+            </LcdVuMeterChannels>
+            <LcdVuMeterValue />
+            <LcdVuMeterClip />
+          </LcdVuMeter>
         </LcdDisplayRow>
       </LcdDisplay>
       <Button
@@ -54,4 +54,4 @@ const LcdMeterMicrophone = () => {
   );
 };
 
-export default LcdMeterMicrophone;
+export default LcdVuMeterMicrophone;

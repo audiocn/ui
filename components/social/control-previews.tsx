@@ -33,12 +33,12 @@ import {
   LcdDisplayValue,
 } from "@/components/ui/lcd-display";
 import {
-  LcdMeter,
-  LcdMeterChannel,
-  LcdMeterChannels,
-  LcdMeterClip,
-  LcdMeterScale,
-} from "@/components/ui/lcd-meter";
+  LcdVuMeter,
+  LcdVuMeterChannel,
+  LcdVuMeterChannels,
+  LcdVuMeterClip,
+  LcdVuMeterScale,
+} from "@/components/ui/lcd-vumeter";
 import { LevelMeter } from "@/components/ui/level-meter";
 import { LiveWaveform } from "@/components/ui/live-waveform";
 import {
@@ -160,18 +160,18 @@ export const LcdPreview = () => (
 
 const LCD_STEREO = [{ peakDb: -8 }, { peakDb: -14 }];
 
-export const LcdMeterPreview = () => (
+export const LcdVuMeterPreview = () => (
   <LcdDisplay className="w-[30rem]" size="lg" variant="amber">
     <LcdDisplayRow>
       <LcdDisplayLabel>Out</LcdDisplayLabel>
-      <LcdMeter channels={LCD_STEREO} segments={24}>
-        <LcdMeterChannels>
-          <LcdMeterChannel index={0} />
-          <LcdMeterChannel index={1} />
-          <LcdMeterScale />
-        </LcdMeterChannels>
-        <LcdMeterClip />
-      </LcdMeter>
+      <LcdVuMeter channels={LCD_STEREO} segments={24}>
+        <LcdVuMeterChannels>
+          <LcdVuMeterChannel index={0} />
+          <LcdVuMeterChannel index={1} />
+          <LcdVuMeterScale />
+        </LcdVuMeterChannels>
+        <LcdVuMeterClip />
+      </LcdVuMeter>
     </LcdDisplayRow>
   </LcdDisplay>
 );

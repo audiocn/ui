@@ -6,25 +6,25 @@ import {
   LcdDisplayRow,
   LcdDisplaySeparator,
 } from "@/components/ui/lcd-display";
-import { LcdMeter } from "@/components/ui/lcd-meter";
+import { LcdVuMeter } from "@/components/ui/lcd-vumeter";
 import { useDemoSignal } from "@/hooks/use-demo-signal";
 
-const LcdMeterModes = () => {
+const LcdVuMeterModes = () => {
   const signal = useDemoSignal({ kind: "speech", seed: 3 });
 
   return (
     <LcdDisplay className="w-full max-w-md" variant="green">
       <LcdDisplayRow>
         <LcdDisplayLabel>Bar</LcdDisplayLabel>
-        <LcdMeter source={signal.meter} />
+        <LcdVuMeter source={signal.meter} />
       </LcdDisplayRow>
       <LcdDisplaySeparator />
       <LcdDisplayRow>
         <LcdDisplayLabel>Dot</LcdDisplayLabel>
-        <LcdMeter mode="dot" source={signal.meter} />
+        <LcdVuMeter mode="dot" source={signal.meter} />
       </LcdDisplayRow>
     </LcdDisplay>
   );
 };
 
-export default LcdMeterModes;
+export default LcdVuMeterModes;

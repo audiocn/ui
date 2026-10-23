@@ -2,19 +2,19 @@
 
 import { LcdDisplay } from "@/components/ui/lcd-display";
 import {
-  LcdMeter,
-  LcdMeterChannel,
-  LcdMeterChannels,
-  LcdMeterScale,
-} from "@/components/ui/lcd-meter";
+  LcdVuMeter,
+  LcdVuMeterChannel,
+  LcdVuMeterChannels,
+  LcdVuMeterScale,
+} from "@/components/ui/lcd-vumeter";
 import { useDemoSignal } from "@/hooks/use-demo-signal";
 
-const LcdMeterVertical = () => {
+const LcdVuMeterVertical = () => {
   const signal = useDemoSignal({ channels: 2, kind: "music", seed: 4 });
 
   return (
     <LcdDisplay variant="amber">
-      <LcdMeter
+      <LcdVuMeter
         aria-label="Program level"
         className="h-48"
         orientation="vertical"
@@ -22,14 +22,14 @@ const LcdMeterVertical = () => {
         size="lg"
         source={signal.meter}
       >
-        <LcdMeterChannels>
-          <LcdMeterChannel index={0} />
-          <LcdMeterChannel index={1} />
-          <LcdMeterScale />
-        </LcdMeterChannels>
-      </LcdMeter>
+        <LcdVuMeterChannels>
+          <LcdVuMeterChannel index={0} />
+          <LcdVuMeterChannel index={1} />
+          <LcdVuMeterScale />
+        </LcdVuMeterChannels>
+      </LcdVuMeter>
     </LcdDisplay>
   );
 };
 
-export default LcdMeterVertical;
+export default LcdVuMeterVertical;

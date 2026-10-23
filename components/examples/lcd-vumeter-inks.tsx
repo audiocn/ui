@@ -5,7 +5,7 @@ import {
   LcdDisplayLabel,
   LcdDisplayRow,
 } from "@/components/ui/lcd-display";
-import { LcdMeter } from "@/components/ui/lcd-meter";
+import { LcdVuMeter } from "@/components/ui/lcd-vumeter";
 import { useDemoSignal } from "@/hooks/use-demo-signal";
 
 const INKS = [
@@ -15,7 +15,7 @@ const INKS = [
   { label: "Rec", variant: "red" },
 ] as const;
 
-const LcdMeterInks = () => {
+const LcdVuMeterInks = () => {
   const signal = useDemoSignal({ kind: "music", seed: 6 });
 
   return (
@@ -24,7 +24,7 @@ const LcdMeterInks = () => {
         <LcdDisplay key={ink.variant} size="sm" variant={ink.variant}>
           <LcdDisplayRow>
             <LcdDisplayLabel>{ink.label}</LcdDisplayLabel>
-            <LcdMeter segments={16} source={signal.meter} />
+            <LcdVuMeter segments={16} source={signal.meter} />
           </LcdDisplayRow>
         </LcdDisplay>
       ))}
@@ -32,4 +32,4 @@ const LcdMeterInks = () => {
   );
 };
 
-export default LcdMeterInks;
+export default LcdVuMeterInks;

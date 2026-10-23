@@ -14,7 +14,7 @@
     "live-waveform",
     "waveform",
     "spectrum",
-    "lcd-meter",
+    "lcd-vumeter",
     "---Controls---",
     "fader",
     "parameter-slider",
