@@ -19,6 +19,7 @@
     "parameter-slider",
     "knob",
     "lcd-display",
+    "lcd-number-field",
     "pan-control",
     "channel-toggle",
     "volume-control",
