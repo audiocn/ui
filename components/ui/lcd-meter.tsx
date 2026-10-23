@@ -227,14 +227,18 @@ export const LcdMeterScale = ({
   />
 );
 
-/** The level as lit digits, updated at a readable rate. */
+/**
+ * The level as lit digits, updated at a readable rate. It takes the display's
+ * letter spacing as `--db-readout-tracking`, so its reserved width includes the
+ * spacing and the meter beside it keeps its width as the digits change.
+ */
 export const LcdMeterValue = ({
   className,
   ...props
 }: LevelMeterValueProps) => (
   <LevelMeterValue
     className={cn(
-      "font-(family-name:--lcd-display-font,var(--font-mono)) text-[0.75em] text-(color:--lcd-meter-ink)",
+      "font-(family-name:--lcd-display-font,var(--font-mono)) text-[0.75em] text-(color:--lcd-meter-ink) [--db-readout-tracking:0.12em]",
       className
     )}
     {...props}

@@ -40,6 +40,33 @@ test("level meters keep their width while the level moves", async ({
   expect(drift).toBeLessThanOrEqual(TOLERANCE_PX);
 });
 
+test("the LCD meter keeps its width as the readout's text changes length", async ({
+  page,
+}) => {
+  await page.goto("/docs/components/lcd-meter");
+  const preview = page.locator('[data-slot="component-preview"]').first();
+  await expect(preview.getByRole("meter").first()).toBeVisible();
+  const widths = await preview.evaluate((element) => {
+    const readout = element.querySelector<HTMLElement>(
+      '[data-slot="db-readout"]'
+    );
+    const channels = element.querySelector<HTMLElement>(
+      '[data-slot="level-meter-channels"]'
+    );
+    if (!(readout && channels)) {
+      throw new Error("The LCD meter preview has no readout or channels.");
+    }
+    // The readout rewrites its text on a timer, so set and measure in one task.
+    return ["0.0 dB", "−16.4 dB"].map((text) => {
+      readout.textContent = text;
+      return channels.getBoundingClientRect().width;
+    });
+  });
+  expect(Math.abs((widths[0] ?? 0) - (widths[1] ?? 0))).toBeLessThanOrEqual(
+    TOLERANCE_PX
+  );
+});
+
 test("fader values keep their width across the whole range", async ({
   page,
 }) => {
