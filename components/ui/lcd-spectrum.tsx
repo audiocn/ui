@@ -257,7 +257,7 @@ export const LcdSpectrumCanvas = ({
 
       for (const [column, band] of bands.entries()) {
         const litRows = Math.floor(clamp(band, 0, 1) * rows);
-        // Dot mode lights only the top segment, like the LCD Meter's.
+        // Dot mode lights only the top segment, like the LCD VU Meter's.
         const firstRow = mode === "dot" ? Math.max(0, litRows - 1) : 0;
         for (let row = firstRow; row < litRows; row += 1) {
           context.fillRect(cellX(column), cellY(row), cellWidth, cellHeight);

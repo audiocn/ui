@@ -137,7 +137,7 @@ describe("LcdSpectrum", () => {
     }
   });
 
-  it("sets data-lcd-mode, like the LCD Meter", () => {
+  it("sets data-lcd-mode, like the LCD VU Meter", () => {
     render(<LcdSpectrum mode="dot" />);
     expect(screen.getByRole("img")).toHaveAttribute("data-lcd-mode", "dot");
   });
