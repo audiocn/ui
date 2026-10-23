@@ -77,6 +77,7 @@ Copy, paste, make them yours.</p>
 | Component | What it does |
 | --- | --- |
 | [Level Meter](https://audiocn.dev/docs/components/level-meter) | Peak and RMS meter with zones, peak hold, a scale, a readout and a clip light |
+| [LCD Meter](https://audiocn.dev/docs/components/lcd-meter) | A recorder-style level meter on the LCD Display, with block segments, peak hold and a CLIP flag |
 | [dB Scale](https://audiocn.dev/docs/components/db-scale) | Tick marks and labels for a decibel range, shared by meters and faders |
 | [dB Readout](https://audiocn.dev/docs/components/db-readout) | A numeric level label that updates at a readable rate and never shifts the layout |
 | [Clip Indicator](https://audiocn.dev/docs/components/clip-indicator) | A clip light that holds after the signal clips, with a count and click to reset |

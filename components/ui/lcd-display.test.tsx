@@ -15,6 +15,7 @@ import {
   LcdDisplaySeparator,
   LcdDisplayStatus,
   LcdDisplayValue,
+  useLcdDisplay,
 } from "@/components/ui/lcd-display";
 
 const EFFORTS = [
@@ -235,6 +236,45 @@ describe("LcdDisplaySelect", () => {
     const trigger = screen.getByRole("combobox");
     expect(trigger).toHaveAttribute("aria-labelledby", "effort-label");
     expect(trigger).toHaveAccessibleName("Effort");
+  });
+
+  it("tells parts on its screen its settings, and nothing outside one", () => {
+    const seen: (string | null)[] = [];
+    const Probe = () => {
+      const display = useLcdDisplay();
+      seen.push(display ? `${display.size} ${display.matrix}` : null);
+      return null;
+    };
+    render(
+      <>
+        <Probe />
+        <LcdDisplay matrix={false} size="lg">
+          <Probe />
+        </LcdDisplay>
+      </>
+    );
+    expect(seen).toEqual([null, "lg false"]);
+  });
+
+  it("keeps a select's popup on the defaults outside a display", async () => {
+    const user = userEvent.setup();
+    render(
+      <LcdDisplaySelect defaultValue="high" items={EFFORTS}>
+        <LcdDisplaySelectTrigger aria-label="Effort" />
+        <LcdDisplaySelectContent>
+          {EFFORTS.map((item) => (
+            <LcdDisplaySelectItem key={item.value} value={item.value}>
+              {item.label}
+            </LcdDisplaySelectItem>
+          ))}
+        </LcdDisplaySelectContent>
+      </LcdDisplaySelect>
+    );
+    await user.click(screen.getByRole("combobox"));
+    const option = await screen.findByRole("option", { name: "Low" });
+    const popup = option.closest("[data-slot='lcd-display-select-content']");
+    expect(popup).toHaveAttribute("data-appearance", "auto");
+    expect(popup).toHaveAttribute("data-variant", "primary");
   });
 
   it("carries a custom ink into the portalled popup", async () => {

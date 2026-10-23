@@ -32,6 +32,7 @@ import {
   LcdDisplayStatus,
   LcdDisplayValue,
 } from "@/components/ui/lcd-display";
+import { LcdMeter } from "@/components/ui/lcd-meter";
 import { LevelMeter } from "@/components/ui/level-meter";
 import { LiveWaveform } from "@/components/ui/live-waveform";
 import {
@@ -147,6 +148,24 @@ export const LcdPreview = () => (
       <LcdDisplayLabel>Effort</LcdDisplayLabel>
       <LcdDisplayValue>High</LcdDisplayValue>
     </LcdDisplayRow>
+    <LcdDisplayStatus state="off" />
+  </LcdDisplay>
+);
+
+export const LcdMeterPreview = () => (
+  <LcdDisplay className="w-[30rem]" size="lg" variant="amber">
+    <LcdDisplayRow>
+      <LcdDisplayLabel>Input</LcdDisplayLabel>
+      <LcdDisplayValue>Line In</LcdDisplayValue>
+    </LcdDisplayRow>
+    <LcdDisplaySeparator />
+    <LcdMeter
+      aria-label="Input level"
+      channels={[
+        { peakDb: -7, rmsDb: -14 },
+        { peakDb: -11, rmsDb: -17 },
+      ]}
+    />
     <LcdDisplayStatus state="off" />
   </LcdDisplay>
 );
