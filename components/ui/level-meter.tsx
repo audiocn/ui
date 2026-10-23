@@ -74,6 +74,8 @@ export interface LevelMeterActions {
 }
 
 interface LevelMeterContextValue {
+  /** Tracks the default anatomy renders: declared, observed, or `channelCount`. */
+  channelCount: number;
   orientation: Orientation;
   variant: LevelMeterVariant;
   minDb: number;
@@ -93,6 +95,17 @@ const useLevelMeter = (part: string) => {
     throw new Error(`${part} must be used inside LevelMeter.`);
   }
   return context;
+};
+
+/**
+ * The meter's orientation and how many tracks it shows, for a custom skin
+ * that renders its own channels the way the default anatomy does.
+ */
+export const useLevelMeterLayout = (
+  part = "useLevelMeterLayout"
+): { channelCount: number; orientation: Orientation } => {
+  const { channelCount, orientation } = useLevelMeter(part);
+  return { channelCount, orientation };
 };
 
 /**
@@ -869,6 +882,7 @@ export const LevelMeter = ({
 
   const contextValue = useMemo<LevelMeterContextValue>(
     () => ({
+      channelCount,
       declared,
       frames,
       maxDb,
@@ -879,6 +893,7 @@ export const LevelMeter = ({
       variant,
     }),
     [
+      channelCount,
       declared,
       frames,
       maxDb,

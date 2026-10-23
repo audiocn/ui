@@ -91,6 +91,10 @@
     "alt": "LCD Display — audiocn: an amber dot-matrix screen with model and effort settings.",
     "url": "/og/components-lcd-display-c10395f35ae0.png"
   },
+  "/docs/components/lcd-meter": {
+    "alt": "LCD Meter — audiocn: an amber dot-matrix stereo bar-graph meter with a scale and peak hold.",
+    "url": "/og/components-lcd-meter-39e10caf8d21.png"
+  },
   "/docs/components/level-meter": {
     "alt": "audiocn Level Meter: solid and segmented stereo meters with green and yellow zones, scales and peak hold.",
     "url": "/og/level-meter-b1bd067dc6a2.png"

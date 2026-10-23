@@ -756,6 +756,24 @@
       ]
     },
     {
+      "name": "lcd-meter",
+      "type": "registry:ui",
+      "title": "LCD Meter",
+      "description": "A dot-matrix bar-graph level meter for the LCD Display: a Level Meter drawn as whole lit segments in the display's ink, with peak hold, bar and dot modes, stereo and vertical tracks, a scale, a readout and a clip legend.",
+      "registryDependencies": [
+        "@audiocn/core",
+        "@audiocn/use-audio-config",
+        "@audiocn/level-meter",
+        "@audiocn/lcd-display"
+      ],
+      "files": [
+        {
+          "path": "components/ui/lcd-meter.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
       "name": "system-audio-mixer",
       "type": "registry:block",
       "title": "System Audio Mixer",

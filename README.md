@@ -9,7 +9,7 @@ Level meters, visualizers, faders, knobs, channel strips, a complete mixer, play
 Copy, paste, make them yours.</p>
 
 <p>
-  <a href="https://audiocn.dev/docs/components"><img src="https://shieldcn.dev/badge/components-23.svg?logo=lu:AudioLines&amp;mode=light&amp;valueColor=10b981" alt="23 components" /></a>
+  <a href="https://audiocn.dev/docs/components"><img src="https://shieldcn.dev/badge/components-24.svg?logo=lu:AudioLines&amp;mode=light&amp;valueColor=10b981" alt="24 components" /></a>
   <a href="https://audiocn.dev/docs/blocks"><img src="https://shieldcn.dev/badge/blocks-6.svg?logo=lu:LayoutDashboard&amp;mode=light&amp;valueColor=10b981" alt="6 blocks" /></a>
   <a href="https://audiocn.dev/docs/hooks/use-audio-analyser"><img src="https://shieldcn.dev/badge/hooks-16.svg?logo=lu:Webhook&amp;mode=light&amp;valueColor=10b981" alt="16 hooks" /></a>
   <a href="./license.md"><img src="https://shieldcn.dev/badge/license-MIT.svg?logo=lu:Scale&amp;mode=light&amp;valueColor=10b981" alt="MIT licence" /></a>
@@ -68,7 +68,7 @@ Copy, paste, make them yours.</p>
 </table>
 
 <details>
-<summary><strong>All 23 components</strong></summary>
+<summary><strong>All 24 components</strong></summary>
 
 <br />
 
@@ -87,6 +87,7 @@ Copy, paste, make them yours.</p>
 | [Live Waveform](https://audiocn.dev/docs/components/live-waveform) | A canvas waveform of a live signal, as scrolling history or the current frame |
 | [Waveform](https://audiocn.dev/docs/components/waveform) | A clip's waveform with a playhead, seeking, hover time, regions and markers |
 | [Spectrum](https://audiocn.dev/docs/components/spectrum) | A frequency spectrum analyser with axes, a grid and peak hold |
+| [LCD Meter](https://audiocn.dev/docs/components/lcd-meter) | A dot-matrix bar-graph level meter for the LCD Display, with peak hold, bar and dot modes and a clip legend |
 
 **Controls**
 
