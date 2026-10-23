@@ -125,6 +125,27 @@ export const examples: Record<string, ComponentType | undefined> = {
   "lcd-display-variants": dynamic(
     () => import("@/components/examples/lcd-display-variants")
   ),
+  "lcd-vumeter-demo": dynamic(
+    () => import("@/components/examples/lcd-vumeter-demo")
+  ),
+  "lcd-vumeter-dual": dynamic(
+    () => import("@/components/examples/lcd-vumeter-dual")
+  ),
+  "lcd-vumeter-inks": dynamic(
+    () => import("@/components/examples/lcd-vumeter-inks")
+  ),
+  "lcd-vumeter-microphone": dynamic(
+    () => import("@/components/examples/lcd-vumeter-microphone")
+  ),
+  "lcd-vumeter-modes": dynamic(
+    () => import("@/components/examples/lcd-vumeter-modes")
+  ),
+  "lcd-vumeter-values": dynamic(
+    () => import("@/components/examples/lcd-vumeter-values")
+  ),
+  "lcd-vumeter-vertical": dynamic(
+    () => import("@/components/examples/lcd-vumeter-vertical")
+  ),
   "level-meter-ballistics": dynamic(
     () => import("@/components/examples/level-meter-ballistics")
   ),

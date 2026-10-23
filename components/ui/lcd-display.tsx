@@ -96,6 +96,14 @@ const RowContext = createContext<{
 } | null>(null);
 
 /**
+ * The id of the surrounding row's `LcdDisplayLabel`, or undefined outside a
+ * row. Lets a value from another file, like a meter or a number field, be
+ * named by its row's label the way the select is.
+ */
+export const useLcdDisplayRowLabelId = (): string | undefined =>
+  useContext(RowContext)?.labelId;
+
+/**
  * The variables a caller may set on the display. The popup is portalled out
  * of it, so it copies them instead of inheriting them.
  */

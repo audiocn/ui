@@ -1,0 +1,170 @@
+---
+title: LCD VU Meter
+description: A dot-matrix bar-graph level meter for the LCD Display, lit in whole segments, with peak and RMS bars, peak hold, a dot mode, a scale, a readout and a clip light.
+seoDescription: Build a hardware-style LCD bar-graph level meter in React. Whole lit segments, peak and RMS bars, peak hold, bar and dot modes, stereo, vertical, a dB scale and a clip light, in your theme's ink. Copy and customize the audiocn LCD VU Meter.
+---
+
+<ComponentPreview name="lcd-vumeter-demo" />
+
+## Installation
+
+```npm
+npx shadcn@latest add @audiocn/lcd-vumeter
+```
+
+The CLI also adds the [LCD Display](/docs/components/lcd-display) and the [Level Meter](/docs/components/level-meter) it is built from.
+
+## Usage
+
+```tsx
+import {
+  LcdDisplay,
+  LcdDisplayLabel,
+  LcdDisplayRow,
+} from "@/components/ui/lcd-display";
+import { LcdVuMeter } from "@/components/ui/lcd-vumeter";
+```
+
+```tsx
+<LcdDisplay>
+  <LcdDisplayRow>
+    <LcdDisplayLabel>Input</LcdDisplayLabel>
+    <LcdVuMeter source={analyser.meter} />
+  </LcdDisplayRow>
+</LcdDisplay>
+```
+
+An LCD VU Meter is a [Level Meter](/docs/components/level-meter) drawn as an LCD bar graph. It takes the same `source`, `peakDb`, `rmsDb`, `channels`, `ballistics`, `zones`, `taper` and `actionsRef`, and reports the same `meter` role and values. The level is snapped down to whole segments, so a segment is either lit or not, like the hardware. Put it inside an `LcdDisplay`: it draws in the display's ink, glows in the dark appearance, and the screen's dot mask breaks the segments into pixels.
+
+Inside an `LcdDisplayRow`, the meter is named by the row's `LcdDisplayLabel`. Outside one, give it an `aria-label`.
+
+## Anatomy
+
+```tsx
+<LcdVuMeter source={analyser.meter}>
+  <LcdVuMeterChannels>
+    <LcdVuMeterChannel index={0}>
+      <LcdVuMeterTrack>
+        <LcdVuMeterBar measure="rms" />
+        <LcdVuMeterBar measure="peak" />
+        <LcdVuMeterHold />
+      </LcdVuMeterTrack>
+    </LcdVuMeterChannel>
+    <LcdVuMeterScale />
+  </LcdVuMeterChannels>
+  <LcdVuMeterValue />
+  <LcdVuMeterClip />
+</LcdVuMeter>
+```
+
+The parts match the Level Meter's. `LcdVuMeterTrack` draws the unlit segments, each `LcdVuMeterBar` lights the segments up to its measure, and `LcdVuMeterHold` is the peak-hold segment.
+
+With no children, `LcdVuMeter` renders `LcdVuMeterChannels`, and `LcdVuMeterChannels` with no children renders one `LcdVuMeterChannel` per channel in the data, so a stereo source shows two tracks on its own. An `LcdVuMeterChannel` with no children renders a track with a peak bar and the hold.
+
+## Examples
+
+### Values
+
+Pass `peakDb` (and optionally `rmsDb`) for data that arrives slowly. The meter still moves smoothly between updates.
+
+<ComponentPreview name="lcd-vumeter-values" />
+
+### Bar and dot
+
+`mode="bar"` lights every segment up to the level. `mode="dot"` lights only the top one, like the dot mode of a hardware bar-graph driver. The peak-hold segment shows in both.
+
+<ComponentPreview name="lcd-vumeter-modes" />
+
+### Peak and RMS
+
+Layer an `rms` bar over a translucent `peak` bar for a dual meter.
+
+<ComponentPreview name="lcd-vumeter-dual" />
+
+### Inks
+
+The meter draws in its display's ink, so it follows the display's `variant`: the theme's `--primary` by default, or a fixed `amber`, `green`, `cyan` or `red`. Switch the theme in the sidebar to see the demo above follow it. A custom `--lcd-display-ink` reaches the meter too.
+
+<ComponentPreview name="lcd-vumeter-inks" />
+
+### Vertical
+
+Set `orientation="vertical"` and give the meter a height. `segments` sets how many segments the track has; `size` sets its thickness.
+
+<ComponentPreview name="lcd-vumeter-vertical" />
+
+### Microphone
+
+<ComponentPreview name="lcd-vumeter-microphone" />
+
+## Feeding data
+
+The meter is fed exactly like a Level Meter: a frame source, declarative values, or a handle for callers with their own frame loop. See [Feeding data](/docs/concepts/feeding-data).
+
+```tsx
+<LcdVuMeter source={analyser.meter} />
+<LcdVuMeter peakDb={-12} rmsDb={-18} />
+<LcdVuMeter actionsRef={meterRef} />
+```
+
+## Theming
+
+The ink comes from the display: `--lcd-display-lit` for lit segments, mixed into the unlit and dim inks. Outside a display it falls back to `currentColor`.
+
+| Variable or attribute | Meaning |
+| --- | --- |
+| `--lcd-vumeter-ink` | Lit segments, the readout and a lit clip light. Default: `var(--lcd-display-lit, currentColor)` |
+| `--lcd-vumeter-unlit` | Unlit segments and the unlit clip light. Default: the ink at 14% |
+| `--lcd-vumeter-dim` | The scale. Default: the ink at 40% |
+| `--lcd-vumeter-gap` | The gap between segments. Default: the display's dot pitch |
+| `--lcd-vumeter-segments` | The segment count, set from `segments` |
+| `--lcd-vumeter-lit`, `--lcd-vumeter-rms`, `--lcd-vumeter-hold` | On each channel: the peak level, the RMS level and the hold, snapped to whole segments (0..1) |
+| `--meter-thickness` | The track's thickness, set by `size` |
+| `data-lcd-mode` | On the meter: `bar` or `dot` |
+| `data-segments` | On the meter: the segment count |
+| `data-measure` | On each bar: `peak` or `rms` |
+| `data-zone`, `data-clipping`, `data-active` | From the Level Meter, for zone styling |
+
+Segments snap with the CSS `round()` function, available in every current browser.
+
+## Accessibility
+
+The meter is the Level Meter underneath: `role="meter"` with `aria-valuenow` in dB and `aria-valuetext` such as "−12.0 dB", updated at most four times a second. `LcdVuMeterClip` is the Level Meter's clip indicator: a button that resets it, announcing "Clipping" once per hold. Under reduced motion the meter steps at a calm rate instead of animating.
+
+## API reference
+
+### LcdVuMeter
+
+Takes every [Level Meter](/docs/components/level-meter#api-reference) prop except `variant`, plus:
+
+<PropsTable
+  rows={[
+    ["segments", "number", "24", "Segments along the track. At least 2."],
+    [
+      "mode",
+      '"bar" | "dot"',
+      '"bar"',
+      "bar lights every segment up to the level; dot lights only the top one.",
+    ],
+  ]}
+/>
+
+### LcdVuMeterChannel
+
+<PropsTable
+  rows={[
+    ["index", "number", "0", "Which channel of the frames this track shows."],
+  ]}
+/>
+
+### LcdVuMeterBar
+
+<PropsTable
+  rows={[
+    ["measure", '"peak" | "rms"', '"peak"', "Which measurement the bar shows."],
+  ]}
+/>
+
+### LcdVuMeterScale, LcdVuMeterValue, LcdVuMeterClip
+
+They take the props of `LevelMeterScale`, `LevelMeterValue` and `LevelMeterClip`. `LcdVuMeterClip` is a dot, like the Level Meter's clip light. Its children replace the dot.

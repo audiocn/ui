@@ -38,6 +38,8 @@ The readout sets `data-zone` and `data-silent`, so it can change color with plai
 | `data-zone`    | `ok`, `warn` or `clip`             |
 | `data-silent`  | The level is at or below `floorDb` |
 
+The readout reserves room for its widest text, so it keeps its width as the digits change. In letter-spaced text, such as an LCD Display, set `--db-readout-tracking` to the letter spacing. The readout then uses it and reserves room for it too.
+
 ## API reference
 
 <PropsTable

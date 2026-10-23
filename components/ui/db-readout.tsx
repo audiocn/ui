@@ -200,14 +200,21 @@ export const DbReadout = ({
     <span
       key={source ? "source" : "value"}
       className={cn(
-        "inline-block min-w-(--db-readout-width) text-end font-mono tabular-nums",
+        "inline-block min-w-(--db-readout-width) text-end font-mono tracking-(--db-readout-tracking) tabular-nums",
         className
       )}
       data-silent={initialDb <= floorDb ? "" : undefined}
       data-slot="db-readout"
       data-zone={zoneForDb(initialDb, zones)}
       ref={elementRef}
-      style={{ "--db-readout-width": `${widest}ch`, ...style } as CSSProperties}
+      style={
+        {
+          // Unset, the tracking inherits and the width reserves glyphs only.
+          // Set, both use it, so letter-spaced text keeps its width too.
+          "--db-readout-width": `calc(${widest} * (1ch + var(--db-readout-tracking, 0px)))`,
+          ...style,
+        } as CSSProperties
+      }
       {...props}
     >
       {render(initialDb)}
