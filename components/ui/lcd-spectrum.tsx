@@ -1,14 +1,25 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { createContext, useContext, useEffect, useRef } from "react";
 import type { ComponentProps } from "react";
 
-import { useFrameSource } from "@/hooks/use-frame-source";
+import {
+  drawSpectrumGrid,
+  Spectrum,
+  SpectrumFrequencyAxis,
+  SpectrumLevelAxis,
+  useSpectrum,
+} from "@/components/ui/spectrum";
+import type {
+  SpectrumFrequencyAxisProps,
+  SpectrumLevelAxisProps,
+  SpectrumProps,
+  SpectrumSize,
+} from "@/components/ui/spectrum";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { useVisibility } from "@/hooks/use-visibility";
 import { clamp } from "@/lib/audio/decibels";
 import { subscribeFrame } from "@/lib/audio/frame-loop";
-import type { FrameSource, VisualFrame } from "@/lib/audio/types";
 import { cn } from "@/lib/utils";
 
 const DEFAULT_ROWS = 24;
@@ -75,13 +86,8 @@ export const stepPeakCap = (
   };
 };
 
-interface Size {
-  width: number;
-  height: number;
-  ratio: number;
-}
-
 interface Colors {
+  grid: string;
   lit: string;
   unlit: string;
 }
@@ -89,43 +95,38 @@ interface Colors {
 const readColors = (canvas: HTMLCanvasElement): Colors => {
   const style = getComputedStyle(canvas);
   return {
+    grid: style.getPropertyValue("--lcd-spectrum-grid").trim() || style.color,
     lit: style.getPropertyValue("--lcd-display-lit").trim() || style.color,
     unlit:
       style.getPropertyValue("--lcd-display-ink-unlit").trim() || style.color,
   };
 };
 
-export interface LcdSpectrumProps extends ComponentProps<"canvas"> {
-  source?: FrameSource<VisualFrame> | null;
-  /** Lit segments per column. Default 24. */
+/** The surrounding LcdSpectrum's `rows`, so a composed canvas follows it. */
+const RowsContext = createContext(DEFAULT_ROWS);
+
+export interface LcdSpectrumCanvasProps extends ComponentProps<"canvas"> {
+  /** Lit segments per column. Default: the LcdSpectrum's `rows`. */
   rows?: number;
-  /** Sticky peak caps that fade and accelerate as they fall. Default true. */
-  peakHold?: boolean;
 }
 
 /**
- * A spectrum analyzer drawn as LCD segments: one column per band, unlit dots
- * behind, and lit segments in the display's ink. A peak cap sticks at the top
- * of each column, then falls, fading out as it accelerates towards the bar.
- * The caps are painted first, so the bars always cover them.
+ * The LCD segments: one column per band, unlit dots behind, and lit segments
+ * in the display's ink. A peak cap sticks at the top of each column, then
+ * falls, fading out as it accelerates towards the bar. The grid and the caps
+ * are painted first, so the bars always cover them.
  */
-export const LcdSpectrum = ({
-  source = null,
-  rows = DEFAULT_ROWS,
-  peakHold = true,
+export const LcdSpectrumCanvas = ({
+  rows: rowsProp,
   className,
   ...props
-}: LcdSpectrumProps) => {
+}: LcdSpectrumCanvasProps) => {
+  const settings = useSpectrum("LcdSpectrumCanvas");
+  const contextRows = useContext(RowsContext);
+  const rows = rowsProp ?? contextRows;
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const frameRef = useRef<VisualFrame | null>(null);
-  const versionRef = useRef(0);
   const reducedMotion = useReducedMotion();
   const visibleRef = useVisibility(canvasRef);
-
-  useFrameSource(source, (frame) => {
-    frameRef.current = frame;
-    versionRef.current += 1;
-  });
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -133,7 +134,8 @@ export const LcdSpectrum = ({
     if (!(canvas && context)) {
       return;
     }
-    const size: Size = { height: 0, ratio: 1, width: 0 };
+    const { frameRef, grid, peakHold, versionRef } = settings;
+    const size: SpectrumSize = { height: 0, ratio: 1, width: 0 };
     let colors = readColors(canvas);
     let framesSinceColor = 0;
     let caps: PeakCap[] = [];
@@ -162,7 +164,11 @@ export const LcdSpectrum = ({
       }
       framesSinceColor = 0;
       const next = readColors(canvas);
-      if (next.lit !== colors.lit || next.unlit !== colors.unlit) {
+      if (
+        next.grid !== colors.grid ||
+        next.lit !== colors.lit ||
+        next.unlit !== colors.unlit
+      ) {
         colors = next;
         paintedVersion = -1;
       }
@@ -196,6 +202,9 @@ export const LcdSpectrum = ({
       context.setTransform(size.ratio, 0, 0, size.ratio, 0, 0);
       context.clearRect(0, 0, size.width, size.height);
       if (!bands || bands.length === 0) {
+        if (grid) {
+          drawSpectrumGrid(context, size, settings, colors.grid);
+        }
         return;
       }
       const slot = size.width / bands.length;
@@ -211,6 +220,9 @@ export const LcdSpectrum = ({
         for (let row = 0; row < rows; row += 1) {
           context.fillRect(cellX(column), cellY(row), cellWidth, cellHeight);
         }
+      }
+      if (grid) {
+        drawSpectrumGrid(context, size, settings, colors.grid);
       }
 
       context.fillStyle = colors.lit;
@@ -268,16 +280,85 @@ export const LcdSpectrum = ({
       unsubscribe();
       observer.disconnect();
     };
-  }, [peakHold, reducedMotion, rows, visibleRef]);
+  }, [reducedMotion, rows, settings, visibleRef]);
 
   return (
     <canvas
-      aria-label="Frequency spectrum"
-      className={cn("block h-32 min-h-0 w-full", className)}
-      data-slot="lcd-spectrum"
+      aria-hidden
+      className={cn(
+        "[grid-column:2] [grid-row:1] size-full min-h-0",
+        className
+      )}
+      data-slot="lcd-spectrum-canvas"
       ref={canvasRef}
-      role="img"
       {...props}
     />
   );
 };
+
+/** The dB labels down the left, in the display's dim ink. */
+export const LcdSpectrumLevelAxis = ({
+  className,
+  ...props
+}: SpectrumLevelAxisProps) => (
+  <SpectrumLevelAxis
+    className={cn(
+      "w-[2.5em] text-[0.625em] text-(color:--lcd-display-ink-dim)",
+      className
+    )}
+    {...props}
+  />
+);
+
+/** The frequency labels along the bottom, in the display's dim ink. */
+export const LcdSpectrumFrequencyAxis = ({
+  className,
+  ...props
+}: SpectrumFrequencyAxisProps) => (
+  <SpectrumFrequencyAxis
+    className={cn(
+      "h-[1.5em] text-[0.625em] text-(color:--lcd-display-ink-dim)",
+      className
+    )}
+    {...props}
+  />
+);
+
+export interface LcdSpectrumProps extends Omit<SpectrumProps, "variant"> {
+  /** Lit segments per column. Default 24. */
+  rows?: number;
+  /** Sticky peak caps that fade and accelerate as they fall. Default true. */
+  peakHold?: boolean;
+}
+
+/**
+ * A Spectrum drawn as LCD segments, with the same ranges, axes and grid as the
+ * Spectrum. Put it in an `LcdDisplay` with `matrix={false}`.
+ */
+export const LcdSpectrum = ({
+  rows = DEFAULT_ROWS,
+  peakHold = true,
+  className,
+  children,
+  ...props
+}: LcdSpectrumProps) => (
+  <RowsContext.Provider value={rows}>
+    <Spectrum
+      className={cn(
+        "pt-[0.75em] [--lcd-spectrum-grid:color-mix(in_oklab,var(--lcd-display-lit)_20%,transparent)]",
+        className
+      )}
+      data-slot="lcd-spectrum"
+      peakHold={peakHold}
+      {...props}
+    >
+      {children ?? (
+        <>
+          <LcdSpectrumLevelAxis />
+          <LcdSpectrumCanvas />
+          <LcdSpectrumFrequencyAxis />
+        </>
+      )}
+    </Spectrum>
+  </RowsContext.Provider>
+);

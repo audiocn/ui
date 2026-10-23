@@ -20,7 +20,7 @@ const REDUCED_MOTION_INTERVAL_MS = 250;
 const LEVEL_TICK_DB = 12;
 const DEFAULT_FREQUENCY_TICKS = [100, 1000, 10_000];
 
-interface SpectrumContextValue {
+export interface SpectrumContextValue {
   minDb: number;
   maxDb: number;
   minHz: number;
@@ -36,7 +36,11 @@ interface SpectrumContextValue {
 
 const SpectrumContext = createContext<SpectrumContextValue | null>(null);
 
-const useSpectrum = (part: string) => {
+/**
+ * The surrounding Spectrum's ranges, settings and frames. A canvas of your own,
+ * such as the LCD Spectrum's, reads it to draw inside a Spectrum.
+ */
+export const useSpectrum = (part: string) => {
   const context = useContext(SpectrumContext);
   if (!context) {
     throw new Error(`${part} must be used inside Spectrum.`);
@@ -48,7 +52,7 @@ const formatHz = (hz: number) => (hz >= 1000 ? `${hz / 1000}k` : String(hz));
 
 const formatLevel = (db: number) => String(Math.round(db));
 
-interface Size {
+export interface SpectrumSize {
   width: number;
   height: number;
   ratio: number;
@@ -69,9 +73,10 @@ const readColors = (canvas: HTMLCanvasElement): Colors => {
   };
 };
 
-const drawGrid = (
+/** Draws the level and frequency grid lines for a Spectrum's ranges. */
+export const drawSpectrumGrid = (
   context: CanvasRenderingContext2D,
-  size: Size,
+  size: SpectrumSize,
   settings: SpectrumContextValue,
   color: string
 ) => {
@@ -97,7 +102,7 @@ const drawGrid = (
 
 const drawBars = (
   context: CanvasRenderingContext2D,
-  size: Size,
+  size: SpectrumSize,
   bands: Float32Array
 ) => {
   const slot = size.width / bands.length;
@@ -115,7 +120,7 @@ const drawBars = (
 
 const drawCurve = (
   context: CanvasRenderingContext2D,
-  size: Size,
+  size: SpectrumSize,
   bands: Float32Array,
   filled: boolean
 ) => {
@@ -146,7 +151,7 @@ const drawCurve = (
 /** Draws held peaks and reports whether any are still falling. */
 const drawPeaks = (
   context: CanvasRenderingContext2D,
-  size: Size,
+  size: SpectrumSize,
   bands: Float32Array,
   peaks: Float32Array,
   release: number
@@ -186,7 +191,7 @@ export const SpectrumCanvas = ({
       return;
     }
     const { frameRef, grid, peakHold, variant, versionRef } = settings;
-    const size: Size = { height: 0, ratio: 1, width: 0 };
+    const size: SpectrumSize = { height: 0, ratio: 1, width: 0 };
     let colors = readColors(canvas);
     let framesSinceColor = 0;
     let peaks = new Float32Array(0);
@@ -242,7 +247,7 @@ export const SpectrumCanvas = ({
       context.setTransform(size.ratio, 0, 0, size.ratio, 0, 0);
       context.clearRect(0, 0, size.width, size.height);
       if (grid) {
-        drawGrid(context, size, settings, colors.grid);
+        drawSpectrumGrid(context, size, settings, colors.grid);
       }
       const bands = frameRef.current?.bands;
       if (!bands || bands.length === 0) {

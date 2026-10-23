@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   createPeakCap,
   LcdSpectrum,
+  LcdSpectrumCanvas,
   stepPeakCap,
 } from "@/components/ui/lcd-spectrum";
 
@@ -64,11 +65,53 @@ describe("stepPeakCap", () => {
 });
 
 describe("LcdSpectrum", () => {
-  it("renders an accessible image canvas", () => {
-    render(<LcdSpectrum />);
+  it("renders an accessible image with the canvas and both axes", () => {
+    const { container } = render(<LcdSpectrum />);
 
-    const canvas = screen.getByRole("img", { name: "Frequency spectrum" });
-    expect(canvas.tagName).toBe("CANVAS");
-    expect(canvas.dataset.slot).toBe("lcd-spectrum");
+    const root = screen.getByRole("img", { name: "Frequency spectrum" });
+    expect(root.dataset.slot).toBe("lcd-spectrum");
+    for (const slot of [
+      "spectrum-level-axis",
+      "lcd-spectrum-canvas",
+      "spectrum-frequency-axis",
+    ]) {
+      expect(container.querySelector(`[data-slot="${slot}"]`)).not.toBeNull();
+    }
+  });
+
+  it("labels the axes from the same ranges as the Spectrum", () => {
+    const { container } = render(<LcdSpectrum maxDb={0} minDb={-60} />);
+
+    const level = container.querySelector('[data-slot="spectrum-level-axis"]');
+    expect(level?.textContent).toBe("0-12-24-36-48-60");
+    const frequency = container.querySelector(
+      '[data-slot="spectrum-frequency-axis"]'
+    );
+    expect(frequency?.textContent).toBe("1001k10k");
+  });
+
+  it("draws the labels in the display's dim ink", () => {
+    const { container } = render(<LcdSpectrum />);
+
+    for (const slot of ["spectrum-level-axis", "spectrum-frequency-axis"]) {
+      const axis = container.querySelector(`[data-slot="${slot}"]`);
+      expect(axis).toHaveClass("text-(color:--lcd-display-ink-dim)");
+      expect(axis).not.toHaveClass("text-muted-foreground");
+    }
+  });
+
+  it("lets a composed canvas take its rows from the root", () => {
+    const { container } = render(
+      <LcdSpectrum rows={12}>
+        <LcdSpectrumCanvas className="opacity-50" />
+      </LcdSpectrum>
+    );
+
+    const canvases = container.querySelectorAll("canvas");
+    expect(canvases).toHaveLength(1);
+    expect(canvases[0]).toHaveClass("opacity-50");
+    expect(
+      container.querySelector('[data-slot="spectrum-level-axis"]')
+    ).toBeNull();
   });
 });

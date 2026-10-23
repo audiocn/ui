@@ -507,16 +507,16 @@
         }
       ]
     },
-{
+    {
       "name": "lcd-spectrum",
       "type": "registry:ui",
       "title": "LCD Spectrum",
       "description": "A spectrum analyzer drawn as LCD segments in the LCD Display's ink, with sticky peak caps that fade and accelerate as they fall behind the bars.",
       "dependencies": [],
       "registryDependencies": [
-        "lcd-display",
         "@audiocn/core",
-        "@audiocn/use-frame-source",
+        "@audiocn/lcd-display",
+        "@audiocn/spectrum",
         "@audiocn/use-reduced-motion",
         "@audiocn/use-visibility"
       ],

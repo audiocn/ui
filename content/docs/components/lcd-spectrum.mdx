@@ -1,7 +1,7 @@
 ---
 title: LCD Spectrum
 description: A spectrum analyzer drawn as LCD segments, in the display's ink, with sticky peak caps that fade and accelerate as they fall behind the bars.
-seoDescription: Build a hardware-style LCD spectrum analyzer in React. Lit segments per band, dot-matrix dark pixels, and peak caps that stick, then fall with acceleration and fade out behind the bars. Copy and customize the audiocn LCD Spectrum.
+seoDescription: Build a hardware-style LCD spectrum analyzer in React. Lit segments per band, dot-matrix dark pixels, level and frequency axes, and peak caps that stick, then fall with acceleration and fade out behind the bars. Copy and customize the audiocn LCD Spectrum.
 ---
 
 <ComponentPreview name="lcd-spectrum-demo" />
@@ -12,7 +12,7 @@ seoDescription: Build a hardware-style LCD spectrum analyzer in React. Lit segme
 npx shadcn@latest add @audiocn/lcd-spectrum
 ```
 
-The CLI also adds the [LCD Display](/docs/components/lcd-display).
+The CLI also adds the [LCD Display](/docs/components/lcd-display) and the [Spectrum](/docs/components/spectrum).
 
 ## Usage
 
@@ -22,18 +22,30 @@ import { LcdSpectrum } from "@/components/ui/lcd-spectrum";
 ```
 
 ```tsx
+const analyser = useAudioAnalyser(stream, { bands: 32 });
+
 <LcdDisplay matrix={false}>
-  <LcdSpectrum className="h-40 w-full" peakHold source={analyser.visual} />
-</LcdDisplay>
+  <LcdSpectrum source={analyser.visual} />
+</LcdDisplay>;
 ```
 
-An LCD Spectrum is a canvas, so it draws its own dot grid rather than taking the display's text mask. Put it in an `LcdDisplay` with `matrix={false}` so the bezel and the glass come from the display and the segments stay whole.
+An LCD Spectrum is a [Spectrum](/docs/components/spectrum) with LCD segments in place of the bars. It has the same level axis, frequency axis and grid, and the same ranges. Set `minHz`, `maxHz`, `minDb` and `maxDb` to match the analyser that produced the bands, so the axes are labelled correctly. The defaults match `useAudioAnalyser`.
 
-Each band is one column of segments. The unlit dots sit behind them in the display's dim ink, and the lit segments use its ink. The source feeds the bands as 0..1 values, the same as the [Spectrum](/docs/components/spectrum).
+Put it in an `LcdDisplay` with `matrix={false}`. The segments are a canvas that draws its own dot grid, so the bezel and the glass come from the display and the segments stay whole.
+
+Each band is one column of segments. The unlit dots sit behind them in the display's dim ink, and the lit segments use its ink. The source feeds the bands as 0..1 values, the same as the Spectrum.
 
 ## Anatomy
 
-`LcdSpectrum` is one canvas with no parts. Its layout comes from `className`: give it a height and a width.
+```tsx
+<LcdSpectrum>
+  <LcdSpectrumLevelAxis />
+  <LcdSpectrumCanvas />
+  <LcdSpectrumFrequencyAxis />
+</LcdSpectrum>
+```
+
+Leave out an axis to hide it. The axes are the Spectrum's, with the labels in the display's dim ink.
 
 ## Examples
 
@@ -48,23 +60,25 @@ Turn `peakHold` off for a plain analyzer.
 `rows` sets the number of lit segments per column. The default is 24. Fewer rows read as a coarser, more hardware-like screen; more rows read as a finer display.
 
 ```tsx
-<LcdSpectrum className="h-40 w-full" rows={12} source={analyser.visual} />
+<LcdSpectrum rows={12} source={analyser.visual} />
 ```
 
 ## Theming
 
-The analyzer reads the display's variables, so it follows the display's `variant`, `appearance` and `size`.
+The analyzer reads the display's variables, so it follows the display's `variant`, `appearance` and `size`. The axis labels are sized in `em`, so they grow with the display's `size`.
 
-| Variable or attribute | Meaning |
-| --- | --- |
-| `--lcd-display-lit` | The lit segments and the peak caps |
-| `--lcd-display-ink-unlit` | The unlit dots behind the columns |
+| Variable or attribute     | Meaning                                     |
+| ------------------------- | ------------------------------------------- |
+| `--lcd-display-lit`       | The lit segments and the peak caps          |
+| `--lcd-display-ink-unlit` | The unlit dots behind the columns           |
+| `--lcd-display-ink-dim`   | The axis labels                             |
+| `--lcd-spectrum-grid`     | The grid lines. Default: the lit ink at 20% |
 
-Outside a display it falls back to the canvas's `currentColor` for both. The colours refresh every half second, so a theme switch repaints without a remount.
+Outside a display the canvas falls back to its `currentColor`. The colours refresh every half second, so a theme switch repaints without a remount.
 
 ## Accessibility
 
-The canvas is `role="img"` with the label "Frequency spectrum". Give it an `aria-label` of your own when the analyzer shows a specific source, such as a track or a bus.
+The spectrum is `role="img"` with the label "Frequency spectrum". Give it an `aria-label` of your own when the analyzer shows a specific source, such as a track or a bus. The canvas and the axes are hidden from screen readers.
 
 Under `prefers-reduced-motion` the peak caps are hidden and the bars repaint only when the source changes. Peak motion is decorative, so nothing is lost for a reader.
 
@@ -72,16 +86,24 @@ Under `prefers-reduced-motion` the peak caps are hidden and the bars repaint onl
 
 ### LcdSpectrum
 
-Takes every canvas prop, plus:
+Takes every `div` prop, plus:
 
 <PropsTable
   rows={[
+    ["source", "FrameSource<VisualFrame> | null", null, null],
     [
-      "source",
-      "FrameSource<VisualFrame> | null",
-      "null",
-      "The frames to draw. Bands are 0..1 each, low to high.",
+      "minDb / maxDb",
+      "number",
+      "-100 / -30",
+      "The level range the bands cover.",
     ],
+    [
+      "minHz / maxHz",
+      "number",
+      "40 / 16000",
+      "The frequency range the bands cover.",
+    ],
+    ["scale", '"log" | "linear"', '"log"', "Frequency axis law."],
     ["rows", "number", "24", "Lit segments per column."],
     [
       "peakHold",
@@ -89,5 +111,25 @@ Takes every canvas prop, plus:
       "true",
       "Sticky peak caps that fade and accelerate as they fall, behind the bars.",
     ],
+    ["grid", "boolean", "true", null],
   ]}
 />
+
+### LcdSpectrumCanvas
+
+Takes every `canvas` prop, plus:
+
+<PropsTable
+  rows={[
+    [
+      "rows",
+      "number",
+      null,
+      "Lit segments per column. Defaults to the LcdSpectrum's rows.",
+    ],
+  ]}
+/>
+
+### LcdSpectrumLevelAxis and LcdSpectrumFrequencyAxis
+
+They take the same `ticks` and `format` props as the Spectrum's axes.
