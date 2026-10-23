@@ -214,6 +214,7 @@ pnpm typecheck
 pnpm check            # lint and format check (Ultracite)
 pnpm build            # examples, registry and site
 pnpm og:build         # regenerate the social cards in public/og/
+pnpm og:build --new   # add cards only for pages that have none yet
 ```
 
 The screenshots in this README are the social cards captured at 2x into `.github/readme/`. `pnpm og:build` refreshes them alongside the social images.
