@@ -62,7 +62,7 @@ describe("LcdDisplay", () => {
           <LcdDisplayValue className="text-white">128</LcdDisplayValue>
         </LcdDisplayRow>
         <LcdDisplaySeparator />
-        <LcdDisplayStatus />
+        <LcdDisplayStatus state="idle" />
       </LcdDisplay>
     );
     for (const slot of [
@@ -83,6 +83,23 @@ describe("LcdDisplay", () => {
     expect(screen.getByText("128")).toHaveClass("text-white");
     expect(screen.getByRole("group")).toBe(root);
     expect(screen.getByRole("separator")).toBeInTheDocument();
+  });
+
+  it("hides the status pixel until it has a state", () => {
+    const { container, rerender } = render(
+      <LcdDisplay>
+        <LcdDisplayStatus />
+      </LcdDisplay>
+    );
+    const status = () =>
+      container.querySelector("[data-slot='lcd-display-status']");
+    expect(status()).toBeNull();
+    rerender(
+      <LcdDisplay>
+        <LcdDisplayStatus state="busy" />
+      </LcdDisplay>
+    );
+    expect(status()).toHaveAttribute("data-state", "busy");
   });
 
   it("sets the ink from variant and the text from size", () => {

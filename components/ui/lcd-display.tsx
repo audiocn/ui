@@ -389,27 +389,34 @@ export const LcdDisplaySeparator = ({
 );
 
 export interface LcdDisplayStatusProps extends ComponentProps<"span"> {
-  /** `idle` blinks slowly, `busy` quickly, `off` shows nothing lit. Default `idle`. */
+  /**
+   * `idle` blinks slowly, `busy` quickly, `off` shows the pixel unlit.
+   * Without a state the pixel is hidden.
+   */
   state?: "idle" | "busy" | "off";
 }
 
-/** The blinking pixel in the bottom-right corner of the screen. */
+/**
+ * The blinking pixel in the bottom-right corner of the screen. It is hidden
+ * until it has a `state`.
+ */
 export const LcdDisplayStatus = ({
-  state = "idle",
+  state,
   className,
   ...props
-}: LcdDisplayStatusProps) => (
-  <span
-    aria-hidden
-    className={cn(
-      "absolute right-2 bottom-2 size-1.5 animate-pulse bg-(--lcd-display-lit) data-[state=busy]:[animation-duration:0.6s] data-[state=off]:animate-none data-[state=off]:bg-(--lcd-display-ink-unlit) motion-reduce:animate-none",
-      className
-    )}
-    data-slot="lcd-display-status"
-    data-state={state}
-    {...props}
-  />
-);
+}: LcdDisplayStatusProps) =>
+  state ? (
+    <span
+      aria-hidden
+      className={cn(
+        "absolute right-2 bottom-2 size-1.5 animate-pulse bg-(--lcd-display-lit) data-[state=busy]:[animation-duration:0.6s] data-[state=off]:animate-none data-[state=off]:bg-(--lcd-display-ink-unlit) motion-reduce:animate-none",
+        className
+      )}
+      data-slot="lcd-display-status"
+      data-state={state}
+      {...props}
+    />
+  ) : null;
 
 /** A row value the user can change, built on Base UI's Select. */
 export const LcdDisplaySelect = <Value,>(

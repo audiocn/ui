@@ -54,11 +54,13 @@ Set `appearance="light"` or `appearance="dark"` to keep one look in both modes, 
     <LcdDisplayLabel />
     <LcdDisplayValue />
   </LcdDisplayRow>
-  <LcdDisplayStatus />
+  <LcdDisplayStatus state="idle" />
 </LcdDisplay>
 ```
 
 A row holds a label and either a read-only `LcdDisplayValue` or an `LcdDisplaySelect`. `LcdDisplaySelect` is [Base UI's Select](https://base-ui.com/react/components/select), so it takes the same props: `value`, `defaultValue`, `onValueChange` and `items`. Pass `items` to show each value's label in the trigger.
+
+`LcdDisplayStatus` is the pixel in the screen's bottom-right corner. It is hidden until you give it a `state`.
 
 ## Examples
 
@@ -172,8 +174,8 @@ The display is a `group`. Each select's trigger is named by its row's `LcdDispla
     [
       "state",
       '"idle" | "busy" | "off"',
-      '"idle"',
-      "idle blinks slowly, busy quickly, off stays unlit.",
+      null,
+      "idle blinks slowly, busy quickly, off stays unlit. Without a state the pixel is hidden.",
     ],
   ]}
 />

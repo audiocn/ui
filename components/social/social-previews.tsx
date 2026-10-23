@@ -26,6 +26,8 @@ import { MuteToggle, SoloToggle } from "@/components/ui/channel-toggle";
 import { ElectricBarVisualizer } from "@/components/ui/electric-bar-visualizer";
 import { ElectricWaveform } from "@/components/ui/electric-waveform";
 import { Fader } from "@/components/ui/fader";
+import { LcdDisplay } from "@/components/ui/lcd-display";
+import { LcdSpectrum } from "@/components/ui/lcd-spectrum";
 import {
   LevelMeter,
   LevelMeterBar,
@@ -58,6 +60,7 @@ import type { SocialPreviewName } from "@/lib/social-catalog";
 import {
   createStillSource,
   socialPeaks,
+  socialSpectrumSource,
   socialVisualSource,
 } from "@/lib/social-signal";
 
@@ -335,6 +338,17 @@ const SmoothPreview = () => (
 const SpectrumPreview = () => (
   <Spectrum className="h-64 w-full" peakHold source={socialVisualSource} />
 );
+const LcdSpectrumPreview = () => (
+  <LcdDisplay className="w-[44rem]" matrix={false} size="lg" variant="amber">
+    <LcdSpectrum
+      className="h-56 w-full"
+      maxDb={0}
+      minDb={-60}
+      peakHold
+      source={socialSpectrumSource}
+    />
+  </LcdDisplay>
+);
 const ChannelPreview = () => (
   <div className="w-full">
     <PreviewStrip channel={MIXER_CHANNELS[0]} />
@@ -385,6 +399,7 @@ const previews: Record<SocialPreviewName, ComponentType> = {
   home: HomePreview,
   knobs: KnobsTile,
   lcd: LcdPreview,
+  "lcd-spectrum": LcdSpectrumPreview,
   "live-waveform": LivePreview,
   meters: MeterPreview,
   "mic-setup": MicSetupPreview,
