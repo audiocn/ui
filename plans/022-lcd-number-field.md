@@ -28,6 +28,7 @@ An editable number for the LCD Display (plan 020), so a screen can set a value l
 | `LcdNumberFieldUnit` | `span` | Dim ink |
 | `LcdNumberFieldIncrement`, `Decrement` | `NumberField.Increment`, `Decrement` | 5 × 3 pixel chevrons |
 | `LcdNumberFieldStepper` | `span` | The increment over the decrement |
+| `LcdNumberFieldReset` | `button` | Returns to `resetValue` (default `defaultValue ?? min`), like the Parameter Slider's and the Fader's reset. Hidden while unmodified |
 
 - The scrub area wraps the label rather than the value, because Base UI's scrub area takes pointer lock on press, which would stop the value from being clicked into and typed.
 - **Inks.** The field reads the display's variables, so it follows its `variant` (theme primary, amber, green, cyan, red), its appearance and every site theme, with no colour props of its own.

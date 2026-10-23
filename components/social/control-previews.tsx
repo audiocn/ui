@@ -183,7 +183,6 @@ export const LcdNumberFieldPreview = () => (
         </LcdNumberFieldGroup>
       </LcdNumberField>
     </LcdDisplayRow>
-    <LcdDisplayStatus state="off" />
   </LcdDisplay>
 );
 

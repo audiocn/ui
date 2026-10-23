@@ -1,8 +1,11 @@
 "use client";
 
+import { mergeProps } from "@base-ui/react/merge-props";
 import { NumberField as NumberFieldPrimitive } from "@base-ui/react/number-field";
+import { useRender } from "@base-ui/react/use-render";
 import {
   createContext,
+  useCallback,
   useContext,
   useId,
   useLayoutEffect,
@@ -18,9 +21,18 @@ interface LcdNumberFieldContextValue {
   /** The unit's id while one is rendered, so the input can point at it. */
   unitId: string | undefined;
   setUnitId: (id: string | undefined) => void;
+  disabled: boolean;
+  /** Whether the value differs from `resetValue`. */
+  modified: boolean;
+  reset: (event?: Event) => void;
 }
 
 const LcdNumberFieldContext = createContext<LcdNumberFieldContextValue>({
+  disabled: true,
+  modified: false,
+  reset: () => {
+    // Outside a field there is no value to reset.
+  },
   setUnitId: () => {
     // Outside a field there is no input to describe.
   },
@@ -148,6 +160,41 @@ export const LcdNumberFieldUnit = ({
   );
 };
 
+export type LcdNumberFieldResetProps = useRender.ComponentProps<"button">;
+
+/**
+ * Returns the value to `resetValue`, like the Parameter Slider's and the
+ * Fader's reset. It is disabled and hidden while there is nothing to reset.
+ */
+export const LcdNumberFieldReset = ({
+  render,
+  className,
+  children,
+  ...props
+}: LcdNumberFieldResetProps) => {
+  const { disabled, modified, reset } = useContext(LcdNumberFieldContext);
+
+  return useRender({
+    defaultTagName: "button",
+    props: mergeProps<"button">(
+      {
+        "aria-label": "Reset",
+        children: children ?? "Reset",
+        className: cn(
+          "-my-0.5 cursor-pointer rounded-sm px-1 py-0.5 text-[0.75em] text-(--lcd-display-ink-dim) uppercase outline-none hover:text-(--lcd-display-lit) focus-visible:ring-1 focus-visible:ring-(--lcd-display-lit) disabled:pointer-events-none disabled:opacity-0",
+          className
+        ),
+        disabled: disabled || !modified,
+        onClick: (event) => reset(event.nativeEvent),
+        type: "button",
+      },
+      props
+    ),
+    render,
+    state: { modified, slot: "lcd-number-field-reset" },
+  });
+};
+
 const STEPPER_BUTTON =
   "flex cursor-pointer items-center justify-center rounded-[1px] px-0.5 py-px text-(--lcd-display-ink-dim) outline-none hover:text-(--lcd-display-lit) active:text-(--lcd-display-lit) disabled:cursor-default disabled:opacity-40 disabled:hover:text-(--lcd-display-ink-dim)";
 
@@ -201,7 +248,31 @@ export const LcdNumberFieldStepper = ({
   </span>
 );
 
-export type LcdNumberFieldProps = NumberFieldPrimitive.Root.Props;
+/** Base UI's reasons, plus `reset` from `LcdNumberFieldReset`. */
+export type LcdNumberFieldChangeReason =
+  | NumberFieldPrimitive.Root.ChangeEventReason
+  | "reset";
+
+export interface LcdNumberFieldChangeDetails {
+  event?: Event;
+  reason: LcdNumberFieldChangeReason;
+}
+
+export interface LcdNumberFieldProps extends Omit<
+  NumberFieldPrimitive.Root.Props,
+  "onValueChange" | "onValueCommitted"
+> {
+  onValueChange?: (
+    value: number | null,
+    details: LcdNumberFieldChangeDetails
+  ) => void;
+  onValueCommitted?: (
+    value: number | null,
+    details: LcdNumberFieldChangeDetails
+  ) => void;
+  /** The value `LcdNumberFieldReset` returns to. Default `defaultValue ?? min`. */
+  resetValue?: number;
+}
 
 /**
  * An editable number on the LCD Display, built on Base UI's Number Field:
@@ -212,18 +283,64 @@ export type LcdNumberFieldProps = NumberFieldPrimitive.Root.Props;
  */
 export const LcdNumberField = ({
   allowWheelScrub = true,
+  value: valueProp,
+  defaultValue,
+  onValueChange,
+  onValueCommitted,
+  resetValue,
+  min,
+  disabled = false,
   className,
   children,
   ...props
 }: LcdNumberFieldProps) => {
   const [unitId, setUnitId] = useState<string>();
-  const context = useMemo(() => ({ setUnitId, unitId }), [unitId]);
+  // The field holds an uncontrolled value itself, so Reset can set it too.
+  const [ownValue, setOwnValue] = useState<number | null>(defaultValue ?? null);
+  const controlled = valueProp !== undefined;
+  const value = controlled ? valueProp : ownValue;
+  const target = resetValue ?? defaultValue ?? min ?? null;
+
+  const change = useCallback(
+    (next: number | null, details: LcdNumberFieldChangeDetails) => {
+      if (!controlled) {
+        setOwnValue(next);
+      }
+      onValueChange?.(next, details);
+    },
+    [controlled, onValueChange]
+  );
+  const reset = useCallback(
+    (event?: Event) => {
+      const details = { event, reason: "reset" } as const;
+      change(target, details);
+      onValueCommitted?.(target, details);
+    },
+    [change, onValueCommitted, target]
+  );
+
+  const context = useMemo(
+    () => ({ disabled, modified: value !== target, reset, setUnitId, unitId }),
+    [disabled, reset, target, unitId, value]
+  );
   return (
     <LcdNumberFieldContext.Provider value={context}>
       <NumberFieldPrimitive.Root
         allowWheelScrub={allowWheelScrub}
         className={cn("contents", className)}
         data-slot="lcd-number-field"
+        disabled={disabled}
+        min={min}
+        onValueChange={(next, details) =>
+          change(next, { event: details.event, reason: details.reason })
+        }
+        onValueCommitted={(next, details) =>
+          onValueCommitted?.(next, {
+            event: details.event,
+            reason: details.reason,
+          })
+        }
+        value={value}
         {...props}
       >
         {children ?? (

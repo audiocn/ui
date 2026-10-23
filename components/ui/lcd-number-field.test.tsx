@@ -12,6 +12,7 @@ import {
   LcdNumberField,
   LcdNumberFieldGroup,
   LcdNumberFieldInput,
+  LcdNumberFieldReset,
   LcdNumberFieldScrubArea,
   LcdNumberFieldStepper,
   LcdNumberFieldUnit,
@@ -20,10 +21,12 @@ import {
 const TempoRow = ({
   onValueChange,
   onValueCommitted,
+  withReset = false,
   withUnit = true,
 }: {
   onValueChange?: (value: number | null) => void;
   onValueCommitted?: (value: number | null) => void;
+  withReset?: boolean;
   withUnit?: boolean;
 }) => (
   <LcdDisplay>
@@ -41,6 +44,7 @@ const TempoRow = ({
           <LcdDisplayLabel>Tempo</LcdDisplayLabel>
         </LcdNumberFieldScrubArea>
         <LcdNumberFieldGroup>
+          {withReset ? <LcdNumberFieldReset /> : null}
           <LcdNumberFieldInput />
           {withUnit ? <LcdNumberFieldUnit>BPM</LcdNumberFieldUnit> : null}
           <LcdNumberFieldStepper />
@@ -124,4 +128,55 @@ it("renders the input and steppers by default, controlled", () => {
   fireEvent.keyDown(input, { key: "ArrowDown" });
   expect(input).toHaveValue("-4");
   expect(screen.getByRole("button", { name: "Increase" })).toBeInTheDocument();
+});
+
+it("resets to defaultValue, like the Parameter Slider and the Fader", async () => {
+  const user = userEvent.setup();
+  const onValueChange = vi.fn();
+  const onValueCommitted = vi.fn();
+  render(
+    <TempoRow
+      onValueChange={onValueChange}
+      onValueCommitted={onValueCommitted}
+      withReset
+    />
+  );
+  const input = screen.getByRole("textbox", { name: "Tempo" });
+  const reset = screen.getByRole("button", { name: "Reset" });
+  // Nothing to reset yet, so it is disabled and hidden.
+  expect(reset).toBeDisabled();
+  fireEvent.keyDown(input, { key: "ArrowUp", shiftKey: true });
+  expect(input).toHaveValue("130");
+  expect(reset).toBeEnabled();
+  expect(reset).toHaveAttribute("data-modified");
+  await user.click(reset);
+  expect(input).toHaveValue("120");
+  expect(onValueChange).toHaveBeenLastCalledWith(
+    120,
+    expect.objectContaining({ reason: "reset" })
+  );
+  expect(onValueCommitted).toHaveBeenLastCalledWith(
+    120,
+    expect.objectContaining({ reason: "reset" })
+  );
+  expect(reset).toBeDisabled();
+});
+
+const ControlledTempo = () => {
+  const [tempo, setTempo] = useState<number | null>(140);
+  return (
+    <LcdNumberField onValueChange={setTempo} resetValue={128} value={tempo}>
+      <LcdNumberFieldGroup>
+        <LcdNumberFieldReset />
+        <LcdNumberFieldInput aria-label="Tempo" />
+      </LcdNumberFieldGroup>
+    </LcdNumberField>
+  );
+};
+
+it("resets a controlled field to resetValue", async () => {
+  const user = userEvent.setup();
+  render(<ControlledTempo />);
+  await user.click(screen.getByRole("button", { name: "Reset" }));
+  expect(screen.getByRole("textbox", { name: "Tempo" })).toHaveValue("128");
 });

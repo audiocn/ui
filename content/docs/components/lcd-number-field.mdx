@@ -61,6 +61,7 @@ Drag the label to scrub the value, like turning an encoder: Shift for large step
     <LcdDisplayLabel />
   </LcdNumberFieldScrubArea>
   <LcdNumberFieldGroup>
+    <LcdNumberFieldReset />
     <LcdNumberFieldInput />
     <LcdNumberFieldUnit />
     <LcdNumberFieldStepper>
@@ -72,6 +73,8 @@ Drag the label to scrub the value, like turning an encoder: Shift for large step
 ```
 
 With no children, `LcdNumberField` renders the group with the input and the stepper, and `LcdNumberFieldStepper` with no children renders the increment over the decrement.
+
+`LcdNumberFieldReset` returns the value to `resetValue`, like the Parameter Slider's and the Fader's reset. It is hidden while there is nothing to reset.
 
 ## Examples
 
@@ -118,7 +121,7 @@ The Up and Down arrow keys step by `step`, with Shift by `largeStep` and with Al
 
 ### LcdNumberField
 
-Takes every [Base UI Number Field Root](https://base-ui.com/react/components/number-field#root) prop. It changes one default:
+Takes every [Base UI Number Field Root](https://base-ui.com/react/components/number-field#root) prop. It changes one default and adds a reset:
 
 <PropsTable
   rows={[
@@ -127,6 +130,19 @@ Takes every [Base UI Number Field Root](https://base-ui.com/react/components/num
       "boolean",
       "true",
       "Change the value with the wheel while the field is focused and hovered.",
+    ],
+    ["resetValue", "number", "defaultValue ?? min", null],
+    [
+      "onValueChange",
+      "(value, details) => void",
+      null,
+      "details.reason: Base UI's reason, or reset.",
+    ],
+    [
+      "onValueCommitted",
+      "(value, details) => void",
+      null,
+      "details.reason: Base UI's reason, or reset.",
     ],
   ]}
 />
@@ -148,3 +164,7 @@ Takes every [Base UI Number Field Root](https://base-ui.com/react/components/num
 ### LcdNumberFieldInput, LcdNumberFieldIncrement, LcdNumberFieldDecrement
 
 They take the props of Base UI's `NumberField.Input`, `NumberField.Increment` and `NumberField.Decrement`. Children of a stepper button replace its pixel chevron.
+
+### LcdNumberFieldReset
+
+A button that returns the value to `resetValue`. Its children replace the word "Reset".
