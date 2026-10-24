@@ -197,6 +197,11 @@ describe("LcdDisplaySelect", () => {
     expect(trigger).toHaveTextContent("High");
   });
 
+  it("keeps the default cursor on the trigger, like every button in the kit", () => {
+    render(<EffortRow />);
+    expect(screen.getByRole("combobox").className).not.toMatch(/\bcursor-/u);
+  });
+
   it("picks a choice from the popup", async () => {
     const user = userEvent.setup();
     const onValueChange = vi.fn();

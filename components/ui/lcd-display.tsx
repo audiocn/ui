@@ -460,7 +460,7 @@ export const LcdDisplaySelectTrigger = ({
     <SelectPrimitive.Trigger
       aria-labelledby={row?.labelId}
       className={cn(
-        "-mx-1 inline-flex cursor-pointer items-center gap-3 rounded-sm px-1 py-0.5 text-(--lcd-display-lit) uppercase tabular-nums outline-none focus-visible:ring-1 focus-visible:ring-(--lcd-display-lit) disabled:cursor-default disabled:text-(--lcd-display-ink-dim) data-placeholder:text-(--lcd-display-ink-dim)",
+        "-mx-1 inline-flex items-center gap-3 rounded-sm px-1 py-0.5 text-(--lcd-display-lit) uppercase tabular-nums outline-none focus-visible:ring-1 focus-visible:ring-(--lcd-display-lit) disabled:text-(--lcd-display-ink-dim) data-placeholder:text-(--lcd-display-ink-dim)",
         FLICKER,
         className
       )}

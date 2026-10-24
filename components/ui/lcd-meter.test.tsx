@@ -36,9 +36,9 @@ describe("LcdMeter", () => {
     const error = vi.spyOn(console, "error").mockImplementation(() => {
       // React reports the thrown error; the assertion below is the test.
     });
-    expect(() => render(<LcdMeter aria-label="Mic level" peakDb={-12} />)).toThrow(
-      "LcdMeter must be used inside LcdDisplay."
-    );
+    expect(() =>
+      render(<LcdMeter aria-label="Mic level" peakDb={-12} />)
+    ).toThrow("LcdMeter must be used inside LcdDisplay.");
     error.mockRestore();
   });
 
@@ -46,7 +46,12 @@ describe("LcdMeter", () => {
     const ref = createRef<HTMLDivElement>();
     render(
       <LcdDisplay>
-        <LcdMeter aria-label="Mic level" className="py-1" peakDb={-12} ref={ref} />
+        <LcdMeter
+          aria-label="Mic level"
+          className="py-1"
+          peakDb={-12}
+          ref={ref}
+        />
       </LcdDisplay>
     );
     const meter = screen.getByRole("meter", { name: "Mic level" });
