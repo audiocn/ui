@@ -5,6 +5,7 @@
     "use-frame-source",
     "use-level",
     "use-clip-hold",
+    "use-tap-tempo",
     "use-reduced-motion",
     "use-visibility",
     "use-audio-context",

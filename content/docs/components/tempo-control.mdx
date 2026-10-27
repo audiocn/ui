@@ -1,0 +1,147 @@
+---
+title: Tempo Control
+description: An editable BPM input with tap tempo, keyboard stepping and a rolling average.
+---
+
+<ComponentPreview name="tempo-control-demo" />
+
+## Installation
+
+```npm
+npx shadcn@latest add @audiocn/tempo-control
+```
+
+## Usage
+
+```tsx
+import { TempoControl } from "@/components/ui/tempo-control";
+```
+
+```tsx
+<TempoControl defaultValue={120} onValueChange={setBpm} />
+```
+
+Tap at least twice to measure a tempo. The control averages the last four intervals and starts a new sequence after more than two seconds without a tap. Typing or stepping the input clears the tap history.
+
+BPM values are always whole numbers. Tapped, typed and externally supplied fractional values round to the nearest integer. The default range is 30-600 BPM; set `min` and `max` to suit your application.
+
+## Anatomy
+
+The input and tap button render by default. Supply children to arrange the parts, change their labels, or omit the tap button.
+
+```tsx
+<TempoControl>
+  <TempoControlInput />
+  <TempoControlTap>Tap tempo</TempoControlTap>
+</TempoControl>
+```
+
+## Examples
+
+### Custom elements
+
+<ComponentPreview name="tempo-control-pad" />
+
+Use `TempoControlTap`'s `render` prop to replace the default trigger with a custom element. This example combines a sound pad with a tempo readout.
+
+### Controlled BPM
+
+<ComponentPreview name="tempo-control-controlled" />
+
+`value` remains owned by the parent. `onValueChange` reports changes with a reason of `tap`, `keyboard` or `input`. `onValueCommitted` fires after a measured tap, keyboard step, or text edit committed by blurring the input.
+
+### Sizes and disabled states
+
+<ComponentPreview name="tempo-control-states" />
+
+`size` and `disabled` inherit from `AudioConfigProvider`; explicit props win. `readOnly` keeps the input focusable but prevents editing and tapping.
+
+## Theming
+
+| Variable or attribute | Meaning |
+| --- | --- |
+| `--tempo-height` | Shared input and tap-button height, set by `size` |
+| `data-size` | `sm`, `default` or `lg`, on the root |
+| `data-disabled` | Disabled state, on the root |
+| `data-readonly` | Read-only state, on the root |
+| `data-slot` | `tempo-control`, `tempo-control-input-group`, `tempo-control-input`, `tempo-control-unit`, `tempo-control-tap` |
+
+Use `className` on the root, input and tap button to customize the layout and appearance. Colours follow the standard shadcn theme tokens.
+
+## Accessibility
+
+- The input is labelled "Tempo in beats per minute". Override `aria-label`, supply `aria-labelledby`, or pair `id` with a visible label and remove the default with `aria-label={undefined}`.
+- Space and Enter activate the focused tap button.
+- Disabled and read-only controls ignore taps. Holding a key does not generate repeated taps.
+- Press feedback respects reduced-motion preferences.
+
+```tsx
+<label htmlFor="delay-tempo">Delay tempo</label>
+<TempoControl>
+  <TempoControlInput id="delay-tempo" aria-label={undefined} />
+  <TempoControlTap />
+</TempoControl>
+```
+
+| Focus      | Key               | Action                |
+| ---------- | ----------------- | --------------------- |
+| Input      | Up / Down         | Change by 1 BPM       |
+| Input      | Shift + Up / Down | Change by `largeStep` |
+| Input      | Home / End        | Set `min` / `max`     |
+| Tap button | Space / Enter     | Tap once              |
+
+## API reference
+
+### TempoControl
+
+<PropsTable
+  rows={[
+    ["value / defaultValue", "number", "120 (uncontrolled)", "BPM."],
+    [
+      "onValueChange",
+      "(value, details) => void",
+      null,
+      "details.reason is tap, keyboard or input.",
+    ],
+    [
+      "onValueCommitted",
+      "(value) => void",
+      null,
+      "On measured tap, keyboard step or input blur.",
+    ],
+    [
+      "min / max",
+      "number",
+      "30 / 600",
+      "Positive integer BPM bounds; min must not exceed max.",
+    ],
+    [
+      "largeStep",
+      "number",
+      "10",
+      "Positive integer increment for Shift + Up / Down.",
+    ],
+    [
+      "tapTimeout",
+      "number",
+      "2000",
+      "Idle milliseconds. Set at least 60000 / min to support the slowest tempo.",
+    ],
+    [
+      "size",
+      '"sm" | "default" | "lg"',
+      '"default"',
+      "Inherits audio configuration.",
+    ],
+    ["disabled / readOnly", "boolean", "false", null],
+    ["name", "string", null, "Name of the numeric form field."],
+  ]}
+/>
+
+### TempoControlInput
+
+Accepts Base UI `NumberField.Input` props, including `id`, `aria-label`, `className` and `ref`.
+
+### TempoControlTap
+
+Accepts Base UI `Button` props, including `render`, `children`, `className`, `ref` and `disabled`. A disabled or read-only root always disables tapping. An `onClick` handler can cancel a tap with `event.preventDefault()`.
