@@ -35,3 +35,16 @@ export const Spinner = () => {
 ```
 
 The hook returns a ref, not state: reading `visibleRef.current` inside a loop costs nothing and never re-renders. It reads `true` until the first observation, and stays `true` where `IntersectionObserver` is unavailable.
+
+## Waking a sleeping loop
+
+Pass `onChange` to hear when the element comes into view or leaves it. audiocn painters use it with `createFrameTask` from `lib/audio/frame-loop`: a meter that is off screen, or has settled, requests no frames at all, and coming back into view wakes it.
+
+```tsx
+const task = useRef<FrameTask | null>(null);
+const visibleRef = useVisibility(ref, (visible) => {
+  if (visible) {
+    task.current?.wake();
+  }
+});
+```

@@ -7,6 +7,7 @@ import { bandsFromSpectrum, logBandEdges } from "@/lib/audio/bands";
 import { dbToLevel, peakDb, rmsDb } from "@/lib/audio/decibels";
 import { subscribeFrame } from "@/lib/audio/frame-loop";
 import { createFrameRelay } from "@/lib/audio/frame-source";
+import { appendHistory } from "@/lib/audio/history";
 import type { FrameSource, MeterFrame, VisualFrame } from "@/lib/audio/types";
 
 export type AnalyserInput = MediaStream | HTMLMediaElement | AudioNode | null;
@@ -162,22 +163,8 @@ export const createAnalyserTap = (
   const meterSubscribers = new Set<(frame: MeterFrame) => void>();
   const visualSubscribers = new Set<(frame: VisualFrame) => void>();
   let lastFrameMs = 0;
-  let lastHistoryMs = 0;
   let stopLoop: (() => void) | null = null;
   let disposed = false;
-
-  const pushHistory = (level: number) => {
-    const { history } = visualFrame;
-    const size = history.length;
-    if (visualFrame.historyLength < size) {
-      history[(visualFrame.historyStart + visualFrame.historyLength) % size] =
-        level;
-      visualFrame.historyLength += 1;
-    } else {
-      history[visualFrame.historyStart] = level;
-      visualFrame.historyStart = (visualFrame.historyStart + 1) % size;
-    }
-  };
 
   const tick = (nowMs: number) => {
     if (nowMs - lastFrameMs < intervalMs) {
@@ -206,10 +193,12 @@ export const createAnalyserTap = (
     mix.getFloatFrequencyData(spectrum);
     bandsFromSpectrum(spectrum, context.sampleRate, edges, visualFrame.bands);
     visualFrame.peakDb = peakDb(mixTimeDomain);
-    if (nowMs - lastHistoryMs >= historyIntervalMs) {
-      lastHistoryMs = nowMs;
-      pushHistory(dbToLevel(visualFrame.peakDb));
-    }
+    appendHistory(
+      visualFrame,
+      dbToLevel(visualFrame.peakDb),
+      nowMs,
+      historyIntervalMs
+    );
     for (const subscriber of visualSubscribers) {
       subscriber(visualFrame);
     }
@@ -219,7 +208,7 @@ export const createAnalyserTap = (
     const active =
       !disposed && meterSubscribers.size + visualSubscribers.size > 0;
     if (active && !stopLoop) {
-      stopLoop = subscribeFrame(tick);
+      stopLoop = subscribeFrame(tick, "update");
     } else if (!active && stopLoop) {
       stopLoop();
       stopLoop = null;

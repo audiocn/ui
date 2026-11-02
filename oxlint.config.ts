@@ -13,6 +13,7 @@ const SHADCN_FILES = [
   "components/ui/badge.tsx",
   "components/ui/card.tsx",
   "components/ui/context-menu.tsx",
+  "components/ui/dropdown-menu.tsx",
   "components/ui/empty.tsx",
   "components/ui/field.tsx",
   "components/ui/input.tsx",

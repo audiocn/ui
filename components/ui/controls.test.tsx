@@ -1,15 +1,18 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import type { CSSProperties } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { useState } from "react";
+import type { CSSProperties, ReactNode } from "react";
+import { describe, expect, it, onTestFinished, vi } from "vitest";
 
 import { AudioDeviceSelect } from "@/components/ui/audio-device-select";
 import { MuteToggle } from "@/components/ui/channel-toggle";
 import { Fader } from "@/components/ui/fader";
 import {
+  DialProvider,
   Knob,
   KnobCap,
   KnobDial,
   KnobLabel,
+  KnobPointer,
   KnobScale,
   KnobValue,
   parseKnobValue,
@@ -21,21 +24,35 @@ import {
   ParameterSliderLabel,
 } from "@/components/ui/parameter-slider";
 import { VolumeControl } from "@/components/ui/volume-control";
+import { AudioContextProvider } from "@/hooks/use-audio-context";
+import { createClickSound } from "@/lib/audio/click";
+import { createFakeAudioContext } from "@/test/fake-audio";
 
 /** The shared AudioContext the knob clicks through, null like on the server. */
-const audio = vi.hoisted(() => ({ context: null as unknown }));
+const audio = vi.hoisted(() => {
+  const shared = {
+    context: null as AudioContext | null,
+    getSharedAudioContext: vi.fn((): AudioContext | null => shared.context),
+  };
+  return shared;
+});
 
 vi.mock(import("@/hooks/use-audio-context"), async (importOriginal) => ({
   ...(await importOriginal()),
-  getSharedAudioContext: () => audio.context as AudioContext | null,
+  getSharedAudioContext: audio.getSharedAudioContext,
 }));
 
-/** A fake audio node that chains and cleans up like a real one. */
-const fakeNode = () => ({
-  addEventListener: vi.fn(),
-  connect: (next: unknown) => next,
-  disconnect: vi.fn(),
-});
+/** A clock that only moves forward, 100 ms per read, past every click limit. */
+const clock = { now: 0 };
+const spaceClicksApart = () => {
+  vi.spyOn(performance, "now").mockImplementation(() => {
+    clock.now += 100;
+    return clock.now;
+  });
+  onTestFinished(() => {
+    vi.restoreAllMocks();
+  });
+};
 
 const faderInput = () => screen.getByRole("slider");
 
@@ -328,76 +345,367 @@ describe("Knob", () => {
     expect(face?.outerHTML).toBe(faceMarkup);
   });
 
+  it("marks the mini cap with an engraved line that turns with the value", () => {
+    const { container } = render(
+      <Knob aria-label="Gain" defaultValue={50}>
+        <KnobDial>
+          <KnobCap variant="mini" />
+        </KnobDial>
+      </Knob>
+    );
+    const cap = container.querySelector("[data-slot='knob-cap']");
+    const pointer = () =>
+      container.querySelector("[data-slot='knob-cap-pointer']");
+    const end = (axis: "x" | "y") =>
+      Number(pointer()?.getAttribute(`${axis}2`));
+    expect(cap).toHaveAttribute("data-variant", "mini");
+    expect(container.querySelector("[data-slot='knob-cap-dot']")).toBeNull();
+    // At the middle of the arc the line points straight up.
+    expect(end("x")).toBeCloseTo(50);
+    expect(end("y")).toBeLessThan(50);
+    fireEvent.keyDown(screen.getByRole("slider"), { key: "End" });
+    expect(end("x")).toBeGreaterThan(50);
+    expect(end("y")).toBeGreaterThan(50);
+    fireEvent.keyDown(screen.getByRole("slider"), { key: "Home" });
+    expect(end("x")).toBeLessThan(50);
+    expect(end("y")).toBeGreaterThan(50);
+  });
+
   it("clicks on graduations only with clickSound", () => {
-    const start = vi.fn();
-    const fakeContext = {
-      createBuffer: (_channels: number, length: number) => ({
-        getChannelData: () => new Float32Array(length),
-      }),
-      createBufferSource: () => ({
-        ...fakeNode(),
-        buffer: null,
-        playbackRate: { value: 1 },
-        start,
-      }),
-      createGain: () => ({ ...fakeNode(), gain: { value: 1 } }),
-      currentTime: 0,
-      destination: {},
-      sampleRate: 48_000,
-      state: "running",
-    };
-    audio.context = fakeContext;
-    // Far enough apart that no click is held back by the 30 ms limit.
-    let now = 0;
-    vi.spyOn(performance, "now").mockImplementation(() => {
-      now += 100;
-      return now;
-    });
-    try {
-      const { unmount } = render(<Knob aria-label="Quiet" defaultValue={50} />);
-      fireEvent.keyDown(screen.getByRole("slider"), { key: "PageUp" });
-      expect(start).not.toHaveBeenCalled();
-      unmount();
-
-      // Without a scale it clicks every largeStep: 59 is silent, 60 clicks.
-      const { unmount: unmountPlain } = render(
-        <Knob aria-label="Volume" clickSound defaultValue={58} />
-      );
-      const plain = screen.getByRole("slider");
-      fireEvent.keyDown(plain, { key: "ArrowUp" });
-      expect(start).not.toHaveBeenCalled();
-      fireEvent.keyDown(plain, { key: "ArrowUp" });
-      expect(start).toHaveBeenCalledTimes(1);
-      // Leaving a graduation is silent; reaching the one below clicks.
-      fireEvent.keyDown(plain, { key: "ArrowDown" });
-      expect(start).toHaveBeenCalledTimes(1);
-      fireEvent.keyDown(plain, { key: "PageDown" });
-      expect(start).toHaveBeenCalledTimes(2);
-      unmountPlain();
-
-      // With a scale it clicks on the long ticks, every 5 here.
-      render(
-        <Knob aria-label="Volume" clickSound defaultValue={33}>
-          <KnobDial>
-            <KnobScale majorEvery={5} ticks={100} />
-          </KnobDial>
-        </Knob>
-      );
-      const dial = screen.getByRole("slider");
-      fireEvent.keyDown(dial, { key: "ArrowUp" });
-      expect(start).toHaveBeenCalledTimes(2);
-      fireEvent.keyDown(dial, { key: "ArrowUp" });
-      expect(start).toHaveBeenCalledTimes(3);
-    } finally {
+    const shared = createFakeAudioContext();
+    audio.context = shared.context;
+    onTestFinished(() => {
       audio.context = null;
-      vi.restoreAllMocks();
+    });
+    spaceClicksApart();
+    const { unmount } = render(<Knob aria-label="Quiet" defaultValue={50} />);
+    fireEvent.keyDown(screen.getByRole("slider"), { key: "PageUp" });
+    expect(shared.sources).toHaveLength(0);
+    unmount();
+
+    // Without a scale it clicks every largeStep: 59 is silent, 60 clicks.
+    const { unmount: unmountPlain } = render(
+      <Knob aria-label="Volume" clickSound defaultValue={58} />
+    );
+    const plain = screen.getByRole("slider");
+    fireEvent.keyDown(plain, { key: "ArrowUp" });
+    expect(shared.sources).toHaveLength(0);
+    fireEvent.keyDown(plain, { key: "ArrowUp" });
+    expect(shared.sources).toHaveLength(1);
+    // Leaving a graduation is silent; reaching the one below clicks.
+    fireEvent.keyDown(plain, { key: "ArrowDown" });
+    expect(shared.sources).toHaveLength(1);
+    fireEvent.keyDown(plain, { key: "PageDown" });
+    expect(shared.sources).toHaveLength(2);
+    unmountPlain();
+
+    // With a scale it clicks on the long ticks, every 5 here.
+    render(
+      <Knob aria-label="Volume" clickSound defaultValue={33}>
+        <KnobDial>
+          <KnobScale majorEvery={5} ticks={100} />
+        </KnobDial>
+      </Knob>
+    );
+    const dial = screen.getByRole("slider");
+    fireEvent.keyDown(dial, { key: "ArrowUp" });
+    expect(shared.sources).toHaveLength(2);
+    fireEvent.keyDown(dial, { key: "ArrowUp" });
+    expect(shared.sources).toHaveLength(3);
+  });
+
+  it("leaves audio alone until it clicks", () => {
+    const shared = createFakeAudioContext();
+    audio.context = shared.context;
+    audio.getSharedAudioContext.mockClear();
+    // useAudioContext reaches the real getter, which would build this one.
+    vi.stubGlobal(
+      "AudioContext",
+      class {
+        addEventListener = shared.fake.addEventListener;
+        removeEventListener = shared.fake.removeEventListener;
+        state = "suspended";
+      }
+    );
+    const listen = vi.spyOn(document, "addEventListener");
+    spaceClicksApart();
+    onTestFinished(() => {
+      audio.context = null;
+      vi.unstubAllGlobals();
+    });
+    render(
+      <>
+        <Knob defaultValue={50}>
+          <KnobDial />
+          <KnobLabel>Quiet</KnobLabel>
+        </Knob>
+        <Knob clickSound defaultValue={59}>
+          <KnobDial />
+          <KnobLabel>Volume</KnobLabel>
+        </Knob>
+      </>
+    );
+    expect(audio.getSharedAudioContext).not.toHaveBeenCalled();
+    expect(shared.fake.addEventListener).not.toHaveBeenCalled();
+    for (const gesture of ["pointerdown", "keydown", "touchend"]) {
+      expect(listen).not.toHaveBeenCalledWith(
+        gesture,
+        expect.anything(),
+        expect.anything()
+      );
     }
+
+    fireEvent.keyDown(screen.getByRole("slider", { name: "Volume" }), {
+      key: "ArrowUp",
+    });
+    expect(shared.sources).toHaveLength(1);
+    expect(audio.getSharedAudioContext).toHaveBeenCalled();
+  });
+
+  it("clicks through the AudioContextProvider's context", () => {
+    const provided = createFakeAudioContext();
+    const shared = createFakeAudioContext();
+    audio.context = shared.context;
+    onTestFinished(() => {
+      audio.context = null;
+    });
+    spaceClicksApart();
+    render(
+      <AudioContextProvider context={provided.context}>
+        <Knob aria-label="Volume" clickSound defaultValue={59} />
+      </AudioContextProvider>
+    );
+    fireEvent.keyDown(screen.getByRole("slider"), { key: "ArrowUp" });
+    expect(provided.sources).toHaveLength(1);
+    expect(provided.sources[0]?.start).toHaveBeenCalledOnce();
+    expect(provided.gains[0]?.connect).toHaveBeenCalledWith(
+      provided.fake.destination
+    );
+    expect(shared.sources).toHaveLength(0);
+  });
+
+  it("plays a custom click sound in place of its own", () => {
+    const provided = createFakeAudioContext();
+    const thud = createClickSound({ tone: { hz: 460 } });
+    thud.play({ context: provided.context, when: 0 });
+    render(
+      <AudioContextProvider context={provided.context}>
+        <Knob aria-label="Volume" clickSound={thud} defaultValue={59} />
+      </AudioContextProvider>
+    );
+    fireEvent.keyDown(screen.getByRole("slider"), { key: "ArrowUp" });
+    expect(provided.sources).toHaveLength(2);
+    expect(provided.sources[1]?.buffer).toBe(provided.sources[0]?.buffer);
+  });
+
+  it("clicks at most every 30 ms", () => {
+    const provided = createFakeAudioContext();
+    const now = vi.spyOn(performance, "now").mockReturnValue(0);
+    onTestFinished(() => {
+      now.mockRestore();
+    });
+    render(
+      <AudioContextProvider context={provided.context}>
+        <Knob
+          aria-label="Volume"
+          clickSound={createClickSound()}
+          defaultValue={50}
+        />
+      </AudioContextProvider>
+    );
+    const dial = screen.getByRole("slider");
+    fireEvent.keyDown(dial, { key: "PageUp" });
+    now.mockReturnValue(10);
+    fireEvent.keyDown(dial, { key: "PageUp" });
+    expect(provided.sources).toHaveLength(1);
+    now.mockReturnValue(40);
+    fireEvent.keyDown(dial, { key: "PageUp" });
+    expect(provided.sources).toHaveLength(2);
   });
 
   it("reads typed values", () => {
     expect(parseKnobValue("\u221212 dB")).toBe(-12);
     expect(parseKnobValue("1.2k")).toBe(1200);
     expect(parseKnobValue("gain")).toBeNull();
+  });
+
+  it("keeps the knob's drag area on the whole dial under a cap", () => {
+    const { container } = render(
+      <Knob aria-label="Volume" defaultValue={50}>
+        <KnobDial>
+          <KnobCap />
+        </KnobDial>
+      </Knob>
+    );
+    expect(
+      container.querySelector("[data-slot='knob-hit-area']")
+    ).toHaveAttribute("r", "50");
+  });
+});
+
+/** A dial of its own, outside any Knob, that keeps the cap's radius in state. */
+const HuggingDial = ({
+  children,
+  onRender,
+}: {
+  children: ReactNode;
+  onRender: () => void;
+}) => {
+  const [geometry, setGeometry] = useState<{ radius: number | null }>({
+    radius: null,
+  });
+  onRender();
+  return (
+    <svg data-cap-radius={geometry.radius ?? undefined}>
+      <DialProvider
+        angle={0}
+        onCapRadiusChange={(radius) => setGeometry({ radius })}
+      >
+        {children}
+      </DialProvider>
+    </svg>
+  );
+};
+
+describe("DialProvider", () => {
+  it("turns the cap and pointer to the angle of any dial", () => {
+    const { container, rerender } = render(
+      <svg>
+        <DialProvider angle={90}>
+          <KnobCap />
+          <KnobPointer />
+        </DialProvider>
+      </svg>
+    );
+    const part = (slot: string) =>
+      container.querySelector(`[data-slot='${slot}']`);
+    const coordinate = (slot: string, name: string) =>
+      Number(part(slot)?.getAttribute(name));
+    expect(part("knob-cap-grain")).toHaveAttribute(
+      "transform",
+      "rotate(90 50 50)"
+    );
+    // At 90 degrees both marks point straight right.
+    expect(coordinate("knob-cap-dot", "cx")).toBeGreaterThan(50);
+    expect(coordinate("knob-cap-dot", "cy")).toBeCloseTo(50);
+    expect(coordinate("knob-pointer", "x2")).toBeGreaterThan(50);
+    expect(coordinate("knob-pointer", "y2")).toBeCloseTo(50);
+    rerender(
+      <svg>
+        <DialProvider angle={-90}>
+          <KnobCap />
+          <KnobPointer />
+        </DialProvider>
+      </svg>
+    );
+    expect(part("knob-cap-grain")).toHaveAttribute(
+      "transform",
+      "rotate(-90 50 50)"
+    );
+    expect(coordinate("knob-cap-dot", "cx")).toBeLessThan(50);
+    expect(coordinate("knob-pointer", "x2")).toBeLessThan(50);
+  });
+
+  it("reports the radius of the bezel each cap variant draws", () => {
+    const onCapRadiusChange = vi.fn();
+    const { container, rerender } = render(
+      <svg>
+        <DialProvider angle={0} onCapRadiusChange={onCapRadiusChange}>
+          <KnobCap />
+        </DialProvider>
+      </svg>
+    );
+    const bezelRadius = () =>
+      Number(
+        container
+          .querySelector("[data-slot='knob-cap'] circle[fill$='-bezel)']")
+          ?.getAttribute("r")
+      );
+    expect(onCapRadiusChange).toHaveBeenLastCalledWith(bezelRadius());
+    expect(onCapRadiusChange).toHaveBeenLastCalledWith(25.5);
+    rerender(
+      <svg>
+        <DialProvider angle={0} onCapRadiusChange={onCapRadiusChange}>
+          <KnobCap variant="mini" />
+        </DialProvider>
+      </svg>
+    );
+    expect(onCapRadiusChange).toHaveBeenLastCalledWith(bezelRadius());
+    expect(onCapRadiusChange).toHaveBeenLastCalledWith(32);
+  });
+
+  it("clears the reported radius when the cap goes away", () => {
+    const onCapRadiusChange = vi.fn();
+    const { rerender } = render(
+      <svg>
+        <DialProvider angle={0} onCapRadiusChange={onCapRadiusChange}>
+          <KnobCap />
+        </DialProvider>
+      </svg>
+    );
+    rerender(
+      <svg>
+        <DialProvider angle={0} onCapRadiusChange={onCapRadiusChange}>
+          <KnobPointer />
+        </DialProvider>
+      </svg>
+    );
+    expect(onCapRadiusChange).toHaveBeenCalledTimes(2);
+    expect(onCapRadiusChange).toHaveBeenLastCalledWith(null);
+  });
+
+  it("reports once while the dial turns, whatever its callback", () => {
+    const report = vi.fn();
+    const { rerender } = render(
+      <svg>
+        <DialProvider angle={0} onCapRadiusChange={(radius) => report(radius)}>
+          <KnobCap />
+        </DialProvider>
+      </svg>
+    );
+    rerender(
+      <svg>
+        <DialProvider angle={90} onCapRadiusChange={(radius) => report(radius)}>
+          <KnobCap />
+        </DialProvider>
+      </svg>
+    );
+    expect(report).toHaveBeenCalledTimes(1);
+  });
+
+  it("lets a dial keep the reported radius in state", () => {
+    const onRender = vi.fn();
+    const { container } = render(
+      <HuggingDial onRender={onRender}>
+        <KnobCap />
+      </HuggingDial>
+    );
+    expect(container.querySelector("svg")).toHaveAttribute(
+      "data-cap-radius",
+      "25.5"
+    );
+    expect(onRender.mock.calls.length).toBeLessThanOrEqual(2);
+  });
+
+  it("refuses a cap or pointer outside any dial", () => {
+    const quiet = vi.spyOn(console, "error").mockImplementation(() => null);
+    onTestFinished(() => {
+      quiet.mockRestore();
+    });
+    expect(() =>
+      render(
+        <svg>
+          <KnobCap />
+        </svg>
+      )
+    ).toThrow("KnobCap must be used inside a dial, like KnobDial.");
+    expect(() =>
+      render(
+        <svg>
+          <KnobPointer />
+        </svg>
+      )
+    ).toThrow("KnobPointer must be used inside a dial, like KnobDial.");
   });
 });
 

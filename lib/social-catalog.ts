@@ -4,6 +4,8 @@ export type SocialPreviewName =
   | "meters"
   | "vu"
   | "knobs"
+  | "lcd"
+  | "lcd-meter"
   | "waveform"
   | "electric-waveform"
   | "bars"
@@ -13,6 +15,7 @@ export type SocialPreviewName =
   | "spectrum"
   | "faders"
   | "parameters"
+  | "tempo"
   | "pan"
   | "volume"
   | "channel"
@@ -120,6 +123,8 @@ export const componentPreviews: Record<string, SocialPreviewName | undefined> =
     "electric-waveform": "electric-waveform",
     fader: "faders",
     knob: "knobs",
+    "lcd-display": "lcd",
+    "lcd-meter": "lcd-meter",
     "level-meter": "meters",
     "live-waveform": "live-waveform",
     mixer: "mixer",
@@ -128,6 +133,7 @@ export const componentPreviews: Record<string, SocialPreviewName | undefined> =
     "smooth-waveform": "smooth-waveform",
     "sound-pad": "pads",
     spectrum: "spectrum",
+    "tempo-control": "tempo",
     "track-list": "tracks",
     "volume-control": "volume",
     "vu-meter": "vu",
@@ -166,6 +172,7 @@ const contextualPreviews: Record<string, SocialPreviewName | undefined> = {
   "/docs/hooks/use-reduced-motion": "smooth-waveform",
   "/docs/hooks/use-sound": "pads",
   "/docs/hooks/use-system-audio": "system-settings",
+  "/docs/hooks/use-tap-tempo": "tempo",
   "/docs/hooks/use-visibility": "bars",
   "/docs/hooks/use-waveform-data": "waveform",
   "/docs/hooks/use-web-audio-mixer": "system-mixer",
@@ -185,6 +192,9 @@ const previewDescriptions: Record<SocialPreviewName, string> = {
   faders: "three console faders at different gain settings",
   home: "a mixer, rotary knobs and a waveform",
   knobs: "gain, pan and frequency knobs with labelled values",
+  lcd: "an amber dot-matrix screen with model and effort settings",
+  "lcd-meter":
+    "an amber dot-matrix screen with a stereo level meter in block segments",
   "live-waveform": "a live oscilloscope trace and scrolling signal history",
   meters: "solid and segmented stereo level meters with scales and peak hold",
   "mic-setup":
@@ -207,6 +217,7 @@ const previewDescriptions: Record<SocialPreviewName, string> = {
   "system-mixer":
     "a complete system audio mixer with microphone, music, sound pads and master controls",
   "system-settings": "system audio settings with capture, volume and a meter",
+  tempo: "an editable BPM input and a tap tempo button",
   theming: "the same audio controls in light and dark themes",
   toggles: "mute, solo and monitor controls with their pressed states",
   tracks: "a track list with active and playing states",

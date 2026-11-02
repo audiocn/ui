@@ -90,8 +90,10 @@ export const formatDb = (db: number, options: FormatDbOptions = {}): string => {
   } = options;
   const suffix = unit ? " dB" : "";
 
+  // No reading yet. Two hyphens rather than a dash: hosts such as Videorc ban
+  // the em dash from user-facing copy.
   if (Number.isNaN(db)) {
-    return `—${suffix}`;
+    return `--${suffix}`;
   }
   if (db === SILENCE_DB || db <= floorDb) {
     const prefix = sign === "never" ? "" : MINUS_SIGN;

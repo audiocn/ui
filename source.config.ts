@@ -8,7 +8,9 @@ export const docs = defineDocs({
   dir: "content/docs",
   docs: {
     postprocess: {
-      includeProcessedMarkdown: true,
+      // `function` keeps MDX elements as JSX so `getText("processed")` can
+      // resolve them from a components map. See lib/docs/markdown-components.
+      includeProcessedMarkdown: { headingIds: false, output: "function" },
     },
     schema: pageSchema.extend({
       seoDescription: pageSchema.shape.description,

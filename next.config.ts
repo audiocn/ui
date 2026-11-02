@@ -13,6 +13,11 @@ const nextConfig: NextConfig = {
       "./lib/**/*",
     ],
   },
+  // Serves the Markdown twin of a docs page at `<page>.md`, for AI agents.
+  rewrites: () =>
+    Promise.resolve([
+      { destination: "/llms.mdx/:path*", source: "/docs/:path*.md" },
+    ]),
 };
 
 export default withMDX(nextConfig);

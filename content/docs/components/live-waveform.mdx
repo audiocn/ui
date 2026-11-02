@@ -23,6 +23,12 @@ import { LiveWaveform } from "@/components/ui/live-waveform";
 
 The waveform fills its container, so size it with classes. It redraws on resize and picks up theme changes on its own.
 
+Scrolling moves between history samples without adding samples. The source's `historyIntervalMs` option sets the minimum wait, 50 ms by default. The source takes the next sample on the first frame after that wait. With 16 ms frames, samples arrive every 64 ms, and a bar moves one step over those 64 ms.
+
+The drawing uses a short buffer so it can follow measured sample times without guessing when the next sample will arrive. This adds twice the configured history interval as display delay, 100 ms by default. If the browser pauses or throttles frames, the built-in sources skip missed samples rather than repeat stale levels. If you use a custom source, add the [history timing fields](/docs/concepts/feeding-data#frames) to enable smooth scrolling.
+
+When the source stops sending frames, the waveform finishes its buffered scroll and stops requesting animation frames. A new source frame wakes it again.
+
 ## Examples
 
 ### Variants

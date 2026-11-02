@@ -14,6 +14,34 @@ const DEFAULT_FLOOR_DB = -60;
 /** Two-digit levels, the widest a meter usually shows, on either side of 0. */
 const WIDEST_MAGNITUDE_DB = 88.8;
 
+const noop = () => {
+  // Nothing to wake before the ticker starts.
+};
+
+/**
+ * An interval that stops itself once `step` reports nothing left to do, and
+ * that `wake` starts again: a readout whose source went quiet costs no timer.
+ */
+const createTicker = (step: () => boolean, intervalMs: number) => {
+  let timer: ReturnType<typeof setInterval> | null = null;
+  const stop = () => {
+    if (timer !== null) {
+      clearInterval(timer);
+      timer = null;
+    }
+  };
+  const wake = () => {
+    if (timer === null) {
+      timer = setInterval(() => {
+        if (!step()) {
+          stop();
+        }
+      }, intervalMs);
+    }
+  };
+  return { stop, wake };
+};
+
 export interface DbReadoutProps extends Omit<
   ComponentProps<"span">,
   "children"
@@ -104,6 +132,10 @@ export const DbReadout = ({
     ].map((db) => render(db).length)
   );
 
+  // Frames since the last tick, and the wake for a ticker that went quiet.
+  const freshRef = useRef(false);
+  const wakeRef = useRef<() => void>(noop);
+
   useFrameSource(source, (frame) => {
     const db = readChannel(frame, measure, channel);
     const now = performance.now();
@@ -111,18 +143,23 @@ export const DbReadout = ({
       peakRef.current = db;
       peakAtRef.current = now;
     }
+    freshRef.current = true;
+    wakeRef.current();
   });
 
   // Reads the latest props on each tick, so an inline format or zones array
   // doesn't restart the timer (and freeze the readout) on every render.
-  const tick = useEffectEvent(() => {
+  // Returns whether the ticker still has work: a quiet source whose readout
+  // stopped changing lets it stop, and the next frame starts it again.
+  const tick = useEffectEvent((): boolean => {
     const element = elementRef.current;
     if (!element) {
-      return;
+      return false;
     }
     const db = peakRef.current;
     const text = render(db);
-    if (text !== shownRef.current) {
+    const changed = text !== shownRef.current;
+    if (changed) {
       shownRef.current = text;
       if (element.firstChild) {
         element.firstChild.nodeValue = text;
@@ -136,22 +173,32 @@ export const DbReadout = ({
     if (holdMs === 0) {
       peakRef.current = SILENCE_DB;
     }
+    const fresh = freshRef.current;
+    freshRef.current = false;
+    return changed || fresh;
   });
 
   useEffect(() => {
     if (!source) {
       return;
     }
-    const timer = setInterval(() => {
-      tick();
-    }, intervalMs);
+    // The first tick always writes, whatever the span shows now.
+    shownRef.current = null;
+    const ticker = createTicker(() => tick(), intervalMs);
+    wakeRef.current = ticker.wake;
+    ticker.wake();
     return () => {
-      clearInterval(timer);
+      wakeRef.current = noop;
+      ticker.stop();
     };
   }, [intervalMs, source]);
 
+  // The ticker writes text React does not know about. Switching between a
+  // source and a value swaps the span, so a value never shows the last live
+  // level and a returning source starts from a fresh first paint.
   return (
     <span
+      key={source ? "source" : "value"}
       className={cn(
         "inline-block min-w-(--db-readout-width) text-end font-mono tabular-nums",
         className

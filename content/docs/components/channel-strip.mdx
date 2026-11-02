@@ -5,6 +5,8 @@ description: One channel of a mixer, as a row or a console strip, composed from 
 
 <ComponentPreview name="channel-strip-demo" />
 
+In these previews, the fader applies gain to the demo signal and mute silences it. The meter shows the level after both controls. Muting or excluding a channel with solo clears its meter immediately; audible channels keep their normal meter ballistics.
+
 ## Installation
 
 ```npm
@@ -62,7 +64,7 @@ Every part is optional. The smallest useful strip is a title, a meter and a mute
 
 ### Console strips
 
-With `orientation="vertical"`, the meter and fader stand side by side.
+With `orientation="vertical"`, the meter and fader stand side by side. These strips share `useMixer` state, so solo silences the other channels.
 
 <ComponentPreview name="channel-strip-console" />
 

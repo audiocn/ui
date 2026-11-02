@@ -2,7 +2,7 @@ import { act, render, screen } from "@testing-library/react";
 import { createRef } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { LevelMeter } from "@/components/ui/level-meter";
+import { LevelMeter, useLevelMeter } from "@/components/ui/level-meter";
 import type { LevelMeterActions } from "@/components/ui/level-meter";
 import { createFrameEmitter } from "@/lib/audio/frame-source";
 import type { MeterFrame } from "@/lib/audio/types";
@@ -76,6 +76,28 @@ describe("LevelMeter", () => {
     render(<LevelMeter aria-label="Mic" peakDb={0} />);
     advance(100);
     expect(screen.getByRole("meter")).toHaveAttribute("data-clipping");
+  });
+
+  it("shares its scale, zones and channel count with parts built on it", () => {
+    const seen: string[] = [];
+    const Probe = () => {
+      const { channelCount, maxDb, minDb, taper, zones } =
+        useLevelMeter("Probe");
+      seen.push(
+        `${minDb}..${maxDb} ${taper.toPosition(-30)} ${zones.length} ${channelCount}`
+      );
+      return null;
+    };
+    render(
+      <LevelMeter
+        aria-label="Program"
+        channels={[{ peakDb: -12 }, { peakDb: -24 }]}
+        zones={[{ fromDb: Number.NEGATIVE_INFINITY, zone: "ok" }]}
+      >
+        <Probe />
+      </LevelMeter>
+    );
+    expect(seen.at(-1)).toBe("-60..0 0.5 1 2");
   });
 
   it("uses the orientation it is given", () => {

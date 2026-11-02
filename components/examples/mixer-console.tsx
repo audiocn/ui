@@ -49,8 +49,13 @@ const ConsoleStrip = ({
   seed: number;
   mixer: MixerController;
 }) => {
-  const signal = useDemoSignal({ kind, seed });
   const channel = mixer.channel(id);
+  const signal = useDemoSignal({
+    gainDb: channel?.gainDb,
+    kind,
+    playing: mixer.isAudible(id),
+    seed,
+  });
   if (!channel) {
     return null;
   }
@@ -66,6 +71,7 @@ const ConsoleStrip = ({
       <ChannelStripMeter>
         <LevelMeter
           aria-label={`${title} level`}
+          ballistics={mixer.isAudible(id) ? undefined : "instant"}
           size="sm"
           source={signal.meter}
         />

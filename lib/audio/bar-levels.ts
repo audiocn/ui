@@ -5,6 +5,8 @@ const RELEASE_PER_FRAME = 0.86;
 const FRAME_MS = 16.67;
 const SIGNAL_THRESHOLD = 0.02;
 const MS_PER_SECOND = 1000;
+/** Bars this close to their target have nothing left to animate. */
+const SETTLE_EPSILON = 0.002;
 
 /** What bars do with no signal. */
 export type BarIdle = "static" | "pulse" | "wave";
@@ -30,6 +32,11 @@ export interface BarLevels {
    * count). Returns true when the input is above the signal floor.
    */
   step: (nowMs: number, input: ArrayLike<number> | null) => boolean;
+  /**
+   * True after a step that left nothing to animate: every bar is at its
+   * target, and no idle animation or loading sweep is running.
+   */
+  readonly settled: boolean;
 }
 
 const idleLevel = (idle: BarIdle, index: number, seconds: number) => {
@@ -86,6 +93,7 @@ export const createBarLevels = ({
   const current = new Float32Array(barCount);
   const levels = new Float32Array(barCount).fill(minLevel);
   let lastMs = 0;
+  let settled = false;
 
   const extraLevel = (index: number, seconds: number, quiet: boolean) => {
     if (loading && !reducedMotion) {
@@ -112,6 +120,9 @@ export const createBarLevels = ({
     readInput(input);
     const active = loudestOf(targets) >= SIGNAL_THRESHOLD;
     const quiet = !(reducedMotion || active);
+    const animating =
+      (loading && !reducedMotion) || (quiet && idle !== "static");
+    let converged = true;
 
     for (let index = 0; index < barCount; index += 1) {
       const target = Math.max(
@@ -125,9 +136,19 @@ export const createBarLevels = ({
           : previous * release + target * (1 - release);
       current[index] = next;
       levels[index] = clamp(Math.max(minLevel, next), 0, 1);
+      if (Math.abs(next - target) > SETTLE_EPSILON) {
+        converged = false;
+      }
     }
+    settled = converged && !animating;
     return active;
   };
 
-  return { levels, step };
+  return {
+    levels,
+    get settled() {
+      return settled;
+    },
+    step,
+  };
 };

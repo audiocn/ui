@@ -1,0 +1,238 @@
+---
+title: LCD Meter
+description: A level meter on an LCD Display's screen, with block segments, a held peak, readouts, a printed scale and a CLIP flag.
+seoDescription: Build a recorder-style LCD level meter in React with dot-matrix block segments, peak hold, dB readouts and a clip flag, in your theme's colour in light and dark mode. Copy and customize the audiocn LCD Meter.
+---
+
+<ComponentPreview name="lcd-meter-demo" />
+
+## Installation
+
+```npm
+npx shadcn@latest add @audiocn/lcd-meter
+```
+
+## Usage
+
+```tsx
+import { LcdDisplay } from "@/components/ui/lcd-display";
+import { LcdMeter } from "@/components/ui/lcd-meter";
+```
+
+```tsx
+<LcdDisplay>
+  <LcdMeter aria-label="Input level" source={analyser.meter} />
+</LcdDisplay>
+```
+
+The meter lives on an [LCD Display](/docs/components/lcd-display)'s screen, so it takes that screen's ink, glass, dot grid and glow, and it can share the screen with settings rows and the status pixel. It follows your theme the same way: dark pixels on a backlit glass in light mode, glowing ink in dark mode, in the theme's `--primary` or a fixed hardware ink.
+
+With no children, it draws one row per channel (labelled L and R for a pair), each with a track, a held peak and a readout, then the scale and a CLIP flag. The metering is [Level Meter](/docs/components/level-meter)'s: the same sources, ballistics, peak hold and clip hold.
+
+## Anatomy
+
+```tsx
+<LcdDisplay>
+  <LcdMeter>
+    <LcdMeterChannel index={0}>
+      <LcdMeterLabel />
+      <LcdMeterTrack>
+        <LcdMeterBar />
+        <LcdMeterHold />
+      </LcdMeterTrack>
+      <LcdMeterValue />
+    </LcdMeterChannel>
+    <LcdMeterScale />
+    <LcdMeterClip />
+  </LcdMeter>
+</LcdDisplay>
+```
+
+The meter is a three-column grid: labels, tracks and readouts. Each `LcdMeterChannel` is one row of it; the scale sits under the tracks and the CLIP flag under the readouts. A readout inside a channel shows that channel, and one outside shows the loudest.
+
+## Examples
+
+### Inks
+
+The meter has no colours of its own. Set `variant` on the display for a fixed hardware ink, or `appearance="dark"` for a dark screen on a light page.
+
+<ComponentPreview name="lcd-meter-inks" />
+
+### Segments
+
+Segments are whole dots of the display's grid: 3 dots wide with a 1-dot gap by default. A lit segment lights whole, never in part. Set `--lcd-meter-segment` to one dot for a fine ladder, or `--lcd-meter-gap` to `0px` for a solid bar.
+
+<ComponentPreview name="lcd-meter-segments" />
+
+```tsx
+<LcdMeter className="[--lcd-meter-segment:var(--lcd-display-pitch)]" />
+<LcdMeter className="[--lcd-meter-gap:0px]" />
+```
+
+### Peak and RMS
+
+Layer an `rms` bar over a dimmed `peak` bar for a dual meter.
+
+```tsx
+<LcdMeterTrack>
+  <LcdMeterBar className="opacity-40" />
+  <LcdMeterBar measure="rms" />
+  <LcdMeterHold />
+</LcdMeterTrack>
+```
+
+### Microphone
+
+Custom rows take labels of any length. The meter moves its tracks onto the screen's dot grid, so segments never cut a dot in half.
+
+<ComponentPreview name="lcd-meter-microphone" />
+
+## Feeding data
+
+A meter accepts levels three ways, as [Level Meter](/docs/components/level-meter) does. See [Feeding data](/docs/concepts/feeding-data).
+
+```tsx
+// A source: subscribes and paints itself, no React renders.
+<LcdMeter source={analyser.meter} />
+
+// Values: for slow data. Ballistics smooth the movement.
+<LcdMeter peakDb={-9.1} rmsDb={-18} />
+
+// A handle: for callers that own their own frame loop.
+const meter = useRef<LevelMeterActions>(null);
+meter.current?.paint({ channels: [{ peakDb: -9.1 }] });
+<LcdMeter actionsRef={meter} />
+```
+
+The meter uses the `audio` taper by default, which gives the loud end of the range most of the track, like a recorder's screen. Pass `taper="linear"` for equal distance per dB.
+
+## Theming
+
+| Variable | Default |
+| --- | --- |
+| `--lcd-meter-segment` | 3 dots of `--lcd-display-pitch` |
+| `--lcd-meter-gap` | 1 dot. `0px` gives a solid bar |
+| `--lcd-meter-thickness` | 5, 7 or 10 dots for the display's `sm`, `default` and `lg` |
+| `--lcd-meter-unlit` | Unlit segments and the CLIP flag at rest: the lit pixels at 14% |
+| `--lcd-display-*` | Everything else: the ink, lit and dim pixels, glass, glow, pitch and font. See [LCD Display](/docs/components/lcd-display#theming) |
+| `--meter-level`, `--meter-rms`, `--meter-hold` | On each channel, live, 0..1 |
+
+| Data attribute | On | Meaning |
+| --- | --- | --- |
+| `data-zone` | root, channels | `ok`, `warn` or `clip` |
+| `data-clipping` | root, CLIP flag | The signal clipped in the last 1.5 s |
+| `data-active` | channels | The level is above the bottom of the range |
+| `data-size` | root | The display's size |
+| `data-measure` | bars | `peak` or `rms` |
+
+The screen has one ink, so zones show as a bracket printed over the clip zone and a CLIP flag that inverts while the signal clips. `data-zone` is there if you want to style them yourself.
+
+## Accessibility
+
+- The meter has `role="meter"` with its value in dB, updated at most four times a second. Give it a name with `aria-label` or `aria-labelledby`.
+- The CLIP flag is a button that turns the flag off, and announces clipping to screen readers.
+- With reduced motion, the meter shows the current level four times a second instead of animating, and the CLIP flag inverts without a transition.
+
+## API reference
+
+### LcdMeter
+
+Takes [`LevelMeter`](/docs/components/level-meter#api-reference)'s data and scale props, except `orientation`, `variant`, `segments` and `size`. The size comes from the display.
+
+<PropsTable
+  rows={[
+    [
+      "source",
+      "FrameSource<MeterFrame> | null",
+      null,
+      "Subscribes and paints without re-rendering React.",
+    ],
+    ["peakDb", "number", null, "Mono peak level in dBFS, for declarative use."],
+    ["rmsDb", "number", null, "Mono RMS level in dBFS."],
+    [
+      "channels",
+      "ChannelLevel[]",
+      null,
+      "Levels per channel, for declarative multi-channel use.",
+    ],
+    ["channelCount", "number", "1", "Rows to render before data arrives."],
+    ["minDb", "number", "-60", "Bottom of the displayed range."],
+    ["maxDb", "number", "0", "Top of the displayed range."],
+    [
+      "zones",
+      "MeterZone[]",
+      "DEFAULT_ZONES",
+      "The scale's bracket covers the clip zone.",
+    ],
+    [
+      "ballistics",
+      '"peak" | "vu" | "instant" | Partial<BallisticsOptions>',
+      '"peak"',
+      "How the meter moves.",
+    ],
+    ["taper", '"linear" | "audio" | Taper', '"audio"', "Scale law."],
+    [
+      "actionsRef",
+      "Ref<LevelMeterActions>",
+      null,
+      "{ paint(frame), reset() }.",
+    ],
+  ]}
+/>
+
+### LcdMeterChannel
+
+<PropsTable
+  rows={[
+    ["index", "number", "0", "Which channel of the frames this row shows."],
+  ]}
+/>
+
+### LcdMeterBar
+
+<PropsTable
+  rows={[
+    ["measure", '"peak" | "rms"', '"peak"', "Which level this bar shows."],
+  ]}
+/>
+
+### LcdMeterValue
+
+Takes [`DbReadout`](/docs/components/db-readout)'s props.
+
+<PropsTable
+  rows={[
+    [
+      "channel",
+      'number | "max"',
+      null,
+      "Its row's channel inside a channel, the loudest outside one.",
+    ],
+    ["measure", '"peak" | "rms"', '"peak"', null],
+    ["unit", "boolean", "false", 'Append " dB".'],
+  ]}
+/>
+
+### LcdMeterScale
+
+<PropsTable
+  rows={[
+    [
+      "ticks",
+      "number[]",
+      "-48, -24, -12, -6, -3, 0",
+      "Tick values, kept to the range. Ticks above 0 add +3 and +6.",
+    ],
+    [
+      "format",
+      "(db: number) => string",
+      null,
+      "Text for each tick. Default: the magnitude, with a plus above 0.",
+    ],
+    ["bracket", "boolean", "true", "Print a bracket over the clip zone."],
+  ]}
+/>
+
+### LcdMeterClip
+
+Takes [`ClipIndicator`](/docs/components/clip-indicator)'s props. Children replace the word `CLIP`.

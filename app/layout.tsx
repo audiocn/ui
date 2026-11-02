@@ -1,7 +1,7 @@
 import { Analytics } from "@vercel/analytics/next";
 import { RootProvider } from "fumadocs-ui/provider/next";
 import type { Metadata } from "next";
-import { DM_Sans, Geist_Mono, Outfit } from "next/font/google";
+import { DM_Sans, Doto, Geist_Mono, Outfit } from "next/font/google";
 
 import "./globals.css";
 import {
@@ -29,6 +29,15 @@ const dmSans = DM_Sans({ subsets: ["latin"], variable: "--font-sans" });
 const fontMono = Geist_Mono({
   subsets: ["latin"],
   variable: "--font-mono",
+});
+
+// The dot-matrix face for the LCD display demos, at its heaviest weight so the
+// dots fill out. Not preloaded: only a few docs pages use it.
+const fontDoto = Doto({
+  preload: false,
+  subsets: ["latin"],
+  variable: "--font-doto",
+  weight: "900",
 });
 
 const homeMetadata = getPageMetadata({ pathname: "/", title: siteConfig.name });
@@ -60,6 +69,7 @@ const RootLayout = ({
     className={cn(
       "antialiased",
       fontMono.variable,
+      fontDoto.variable,
       "font-sans",
       dmSans.variable,
       outfitHeading.variable

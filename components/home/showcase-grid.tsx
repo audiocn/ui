@@ -41,9 +41,9 @@ const LEFT: ShowcaseItem[] = [
   { href: "/docs/components/knob", label: "Knobs", tile: "knobs" },
   { href: "/docs/components/spectrum", label: "Spectrum", tile: "spectrum" },
   {
-    href: "/docs/components/parameter-slider",
-    label: "Parameter sliders",
-    tile: "eq",
+    href: "/docs/components/knob#volume-dial",
+    label: "Volume dial",
+    tile: "volume-knob",
   },
   {
     href: "/docs/components/live-waveform",

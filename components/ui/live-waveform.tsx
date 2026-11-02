@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useImperativeHandle, useRef } from "react";
+import {
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+} from "react";
 import type { ComponentProps, Ref } from "react";
 
 import { useFrameSource } from "@/hooks/use-frame-source";
@@ -8,13 +14,49 @@ import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { useVisibility } from "@/hooks/use-visibility";
 import { resampleLevels } from "@/lib/audio/bands";
 import { clamp } from "@/lib/audio/decibels";
-import { subscribeFrame } from "@/lib/audio/frame-loop";
+import { createFrameTask } from "@/lib/audio/frame-loop";
+import { createHistoryPlayback } from "@/lib/audio/history-playback";
 import type { FrameSource, VisualFrame } from "@/lib/audio/types";
 import { cn } from "@/lib/utils";
 
 const COLOR_REFRESH_FRAMES = 30;
 const REDUCED_MOTION_INTERVAL_MS = 250;
 const IDLE_ALPHA = 0.35;
+
+const noop = () => {
+  // Nothing to wake before the painter starts.
+};
+
+/**
+ * Calls `onChange` when the page theme may have changed the canvas colour: a
+ * class, style or data-theme change on the root element, or the system colour
+ * scheme. A sleeping painter would otherwise keep the old colour.
+ */
+const observeTheme = (onChange: () => void) => {
+  const stops: (() => void)[] = [];
+  if (typeof MutationObserver !== "undefined") {
+    const observer = new MutationObserver(onChange);
+    observer.observe(document.documentElement, {
+      attributeFilter: ["class", "style", "data-theme"],
+      attributes: true,
+    });
+    stops.push(() => {
+      observer.disconnect();
+    });
+  }
+  if (typeof window.matchMedia === "function") {
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    media.addEventListener("change", onChange);
+    stops.push(() => {
+      media.removeEventListener("change", onChange);
+    });
+  }
+  return () => {
+    for (const stop of stops) {
+      stop();
+    }
+  };
+};
 
 export interface LiveWaveformActions {
   /** Paint a frame directly. */
@@ -95,11 +137,19 @@ const drawBar = (
 
 const historyLevels = (frame: VisualFrame, count: number) => {
   const available = Math.min(frame.historyLength, count);
-  const out = new Float32Array(available);
   const size = frame.history.length;
+  const includePrevious =
+    available === size &&
+    available < count &&
+    frame.historyPreviousLevel !== undefined;
+  const offset = includePrevious ? 1 : 0;
+  const out = new Float32Array(available + offset);
+  if (includePrevious) {
+    out[0] = frame.historyPreviousLevel ?? 0;
+  }
   const first = frame.historyStart + frame.historyLength - available;
   for (let index = 0; index < available; index += 1) {
-    out[index] = frame.history[(first + index) % size] ?? 0;
+    out[index + offset] = frame.history[(first + index) % size] ?? 0;
   }
   return out;
 };
@@ -110,18 +160,7 @@ const levelsFor = (
   options: DrawOptions
 ): Float32Array => {
   if (options.mode === "scrolling") {
-    if (options.variant !== "mirror") {
-      return historyLevels(frame, count);
-    }
-    const half = historyLevels(frame, Math.ceil(count / 2));
-    const out = new Float32Array(count);
-    const center = Math.floor(count / 2);
-    for (let offset = 0; offset < half.length; offset += 1) {
-      const value = half[half.length - 1 - offset] ?? 0;
-      out[center + offset] = value;
-      out[center - offset] = value;
-    }
-    return out;
+    return historyLevels(frame, count + 1);
   }
   if (options.variant !== "mirror") {
     return resampleLevels(
@@ -165,7 +204,8 @@ const drawLine = (
   context: CanvasRenderingContext2D,
   size: Size,
   frame: VisualFrame,
-  options: DrawOptions
+  options: DrawOptions,
+  scrollProgress: number
 ) => {
   const middle = size.height / 2;
   context.lineWidth = options.lineWidth;
@@ -197,7 +237,7 @@ const drawLine = (
     Math.floor(size.width / (options.barWidth + options.barGap))
   );
   const levels = levelsFor(frame, count, { ...options, variant: "bars" });
-  const offset = count - levels.length;
+  const offset = count - levels.length + 1 - scrollProgress;
   for (let index = 0; index < levels.length; index += 1) {
     const x = ((offset + index) / (count - 1)) * size.width;
     const value = clamp((levels[index] ?? 0) * options.sensitivity, 0, 1);
@@ -220,26 +260,76 @@ const drawLine = (
   context.stroke();
 };
 
+const drawLevelBar = (
+  context: CanvasRenderingContext2D,
+  size: Size,
+  options: DrawOptions,
+  x: number,
+  level: number
+) => {
+  const value = clamp(level * options.sensitivity, 0, 1);
+  const height = Math.max(options.minBarHeight, value * size.height);
+  const y = (size.height - height) / 2;
+  context.globalAlpha = 0.4 + 0.6 * value;
+  drawBar(context, x, y, options.barWidth, height, options.barRadius);
+};
+
+const drawScrollingMirror = (
+  context: CanvasRenderingContext2D,
+  size: Size,
+  frame: VisualFrame,
+  options: DrawOptions,
+  scrollProgress: number,
+  count: number
+) => {
+  const levels = historyLevels(frame, Math.ceil(count / 2) + 1);
+  const center = (size.width - options.barWidth) / 2;
+  const pitch = options.barWidth + options.barGap;
+  context.save();
+  context.beginPath();
+  context.rect(0, 0, center, size.height);
+  context.rect(center + options.barWidth, 0, center, size.height);
+  context.clip();
+  for (let age = levels.length - 1; age > 0; age -= 1) {
+    const value = levels[levels.length - 1 - age] ?? 0;
+    const distance = (age - 1 + scrollProgress) * pitch;
+    drawLevelBar(context, size, options, center - distance, value);
+    drawLevelBar(context, size, options, center + distance, value);
+  }
+  context.restore();
+  if (levels.length > 0) {
+    const newest = levels.at(-1) ?? 0;
+    const previous = levels.at(-2) ?? newest;
+    drawLevelBar(
+      context,
+      size,
+      options,
+      center,
+      previous + (newest - previous) * scrollProgress
+    );
+  }
+};
+
 const drawBars = (
   context: CanvasRenderingContext2D,
   size: Size,
   frame: VisualFrame,
-  options: DrawOptions
+  options: DrawOptions,
+  scrollProgress: number
 ) => {
   const pitch = options.barWidth + options.barGap;
   const count = Math.max(1, Math.floor((size.width + options.barGap) / pitch));
-  const levels = levelsFor(frame, count, options);
-  const offset = count - levels.length;
-  const used = count * pitch - options.barGap;
-  const left = (size.width - used) / 2;
-
-  for (let index = 0; index < levels.length; index += 1) {
-    const value = clamp((levels[index] ?? 0) * options.sensitivity, 0, 1);
-    const height = Math.max(options.minBarHeight, value * size.height);
-    const x = left + (offset + index) * pitch;
-    const y = (size.height - height) / 2;
-    context.globalAlpha = 0.4 + 0.6 * value;
-    drawBar(context, x, y, options.barWidth, height, options.barRadius);
+  if (options.mode === "scrolling" && options.variant === "mirror") {
+    drawScrollingMirror(context, size, frame, options, scrollProgress, count);
+  } else {
+    const levels = levelsFor(frame, count, options);
+    const offset = count - levels.length + 1 - scrollProgress;
+    const used = count * pitch - options.barGap;
+    const left = (size.width - used) / 2;
+    for (let index = 0; index < levels.length; index += 1) {
+      const x = left + (offset + index) * pitch;
+      drawLevelBar(context, size, options, x, levels[index] ?? 0);
+    }
   }
   context.globalAlpha = 1;
 };
@@ -285,13 +375,33 @@ export const LiveWaveform = ({
 }: LiveWaveformProps) => {
   const reducedMotion = useReducedMotion();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const visibleRef = useVisibility(canvasRef);
+  // Wakes the painter when there is something new to draw. A drawn canvas
+  // sleeps until then.
+  const wakeRef = useRef<() => void>(noop);
+  const visibleRef = useVisibility(canvasRef, (visible) => {
+    if (visible) {
+      wakeRef.current();
+    }
+  });
   const frameRef = useRef<VisualFrame | null>(null);
   const dirtyRef = useRef(true);
+  const historyPlayback = useMemo(() => createHistoryPlayback(), []);
+  const previousSourceRef = useRef(source);
+
+  useEffect(() => {
+    if (previousSourceRef.current !== source) {
+      historyPlayback.clear();
+      frameRef.current = null;
+      dirtyRef.current = true;
+      previousSourceRef.current = source;
+      wakeRef.current();
+    }
+  }, [historyPlayback, source]);
 
   const paint = useCallback((frame: VisualFrame) => {
     frameRef.current = frame;
     dirtyRef.current = true;
+    wakeRef.current();
   }, []);
 
   useFrameSource(source, paint);
@@ -300,12 +410,14 @@ export const LiveWaveform = ({
     actionsRef,
     () => ({
       clear: () => {
+        historyPlayback.clear();
         frameRef.current = null;
         dirtyRef.current = true;
+        wakeRef.current();
       },
       paint,
     }),
-    [paint]
+    [historyPlayback, paint]
   );
 
   useEffect(() => {
@@ -331,6 +443,8 @@ export const LiveWaveform = ({
     let color = "";
     let framesSinceColor = COLOR_REFRESH_FRAMES;
     let lastPaintMs = 0;
+    let wakeTask = noop;
+    let lastScrollProgress = 1;
     dirtyRef.current = true;
 
     const resize = () => {
@@ -342,12 +456,13 @@ export const LiveWaveform = ({
       canvas.height = Math.max(1, Math.round(rect.height * size.ratio));
       framesSinceColor = COLOR_REFRESH_FRAMES;
       dirtyRef.current = true;
+      wakeTask();
     };
     resize();
     const observer = new ResizeObserver(resize);
     observer.observe(canvas);
 
-    const tick = (nowMs: number) => {
+    const tick = (nowMs: number): boolean => {
       framesSinceColor += 1;
       if (framesSinceColor >= COLOR_REFRESH_FRAMES) {
         framesSinceColor = 0;
@@ -357,14 +472,36 @@ export const LiveWaveform = ({
           dirtyRef.current = true;
         }
       }
+      let frame = frameRef.current;
+      let scrollProgress = 1;
+      if (
+        frame &&
+        options.active &&
+        options.mode === "scrolling" &&
+        !reducedMotion
+      ) {
+        ({ frame, progress: scrollProgress } = historyPlayback.read(
+          frame,
+          nowMs
+        ));
+      } else {
+        historyPlayback.clear();
+      }
+      if (scrollProgress !== lastScrollProgress) {
+        dirtyRef.current = true;
+      }
       // Off screen it stays dirty, so it repaints when it comes back.
-      if (!dirtyRef.current || size.width === 0 || !visibleRef.current) {
-        return;
+      if (size.width === 0 || !visibleRef.current) {
+        return false;
+      }
+      if (!dirtyRef.current) {
+        return scrollProgress < 1;
       }
       if (reducedMotion && nowMs - lastPaintMs < REDUCED_MOTION_INTERVAL_MS) {
-        return;
+        return true;
       }
       lastPaintMs = nowMs;
+      lastScrollProgress = scrollProgress;
       dirtyRef.current = false;
 
       context.setTransform(size.ratio, 0, 0, size.ratio, 0, 0);
@@ -372,25 +509,33 @@ export const LiveWaveform = ({
       context.fillStyle = color;
       context.strokeStyle = color;
 
-      const frame = frameRef.current;
       if (!(options.active && frame)) {
         drawIdle(context, size, options);
-        return;
+        return false;
       }
       if (options.variant === "line") {
-        drawLine(context, size, frame, options);
+        drawLine(context, size, frame, options, scrollProgress);
       } else {
-        drawBars(context, size, frame, options);
+        drawBars(context, size, frame, options, scrollProgress);
       }
       if (options.fadeEdges) {
         fade(context, size, options.fadeWidth);
       }
+      return scrollProgress < 1;
     };
 
-    const unsubscribe = subscribeFrame(tick);
+    const task = createFrameTask(tick);
+    wakeTask = task.wake;
+    wakeRef.current = task.wake;
+    const stopObservingTheme = observeTheme(() => {
+      framesSinceColor = COLOR_REFRESH_FRAMES;
+      task.wake();
+    });
     return () => {
-      unsubscribe();
+      wakeRef.current = noop;
+      task.stop();
       observer.disconnect();
+      stopObservingTheme();
     };
   }, [
     active,
@@ -399,6 +544,7 @@ export const LiveWaveform = ({
     barWidth,
     fadeEdges,
     fadeWidth,
+    historyPlayback,
     lineWidth,
     minBarHeight,
     mode,

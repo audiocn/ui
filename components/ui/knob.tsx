@@ -18,12 +18,15 @@ import type {
   CSSProperties,
   KeyboardEvent,
   PointerEvent,
+  ReactNode,
   RefObject,
 } from "react";
 
 import { useAudioConfig } from "@/hooks/use-audio-config";
 import type { AudioSize } from "@/hooks/use-audio-config";
-import { getSharedAudioContext } from "@/hooks/use-audio-context";
+import { useProvidedAudioContext } from "@/hooks/use-audio-context";
+import { createClickSound } from "@/lib/audio/click";
+import type { ClickSound } from "@/lib/audio/click";
 import { clamp } from "@/lib/audio/decibels";
 import { linearTaper, logTaper } from "@/lib/audio/taper";
 import type { Taper } from "@/lib/audio/types";
@@ -71,6 +74,42 @@ const useKnob = (part: string) => {
   const context = useContext(KnobContext);
   if (!context) {
     throw new Error(`${part} must be used inside Knob.`);
+  }
+  return context;
+};
+
+export interface DialProviderProps {
+  /** The turn shown by the cap and pointer: degrees clockwise from 12 o'clock. */
+  angle: number;
+  /** The cap inside reports its outer radius, or null when it goes away. */
+  onCapRadiusChange?: (radius: number | null) => void;
+  children?: ReactNode;
+}
+
+type DialContextValue = Omit<DialProviderProps, "children">;
+
+const DialContext = createContext<DialContextValue | null>(null);
+
+/**
+ * Lets KnobCap and KnobPointer turn inside any dial, not only a Knob. A dial
+ * that hugs its cap sizes its drag area from `onCapRadiusChange`.
+ */
+export const DialProvider = ({
+  angle,
+  onCapRadiusChange,
+  children,
+}: DialProviderProps) => {
+  const value = useMemo(
+    () => ({ angle, onCapRadiusChange }),
+    [angle, onCapRadiusChange]
+  );
+  return <DialContext.Provider value={value}>{children}</DialContext.Provider>;
+};
+
+const useDial = (part: string) => {
+  const context = useContext(DialContext);
+  if (!context) {
+    throw new Error(`${part} must be used inside a dial, like KnobDial.`);
   }
   return context;
 };
@@ -325,6 +364,7 @@ export const KnobDial = ({
   const dragRef = useRef<DragState | null>(null);
   const [dragging, setDragging] = useState(false);
   useDialWheel(dialRef, dial, disabled);
+  const dialAngle = angleFor(position, arc);
 
   const reset = () => {
     dial.change(dial.resetValue, { reason: "reset" });
@@ -412,7 +452,12 @@ export const KnobDial = ({
       aria-valuenow={value}
       aria-valuetext={format(value)}
       className={cn(
-        "relative size-(--knob-size) cursor-grab touch-none rounded-full outline-none aria-disabled:cursor-default data-dragging:cursor-grabbing",
+        "group/knob-dial pointer-events-none relative size-(--knob-size) touch-none rounded-full outline-none data-dragging:pointer-events-auto",
+        {
+          "data-dragging:cursor-ew-resize": dial.dragDirection === "horizontal",
+          "data-dragging:cursor-grabbing": dial.dragDirection === "circular",
+          "data-dragging:cursor-ns-resize": dial.dragDirection === "vertical",
+        },
         className
       )}
       data-dragging={dragging ? "" : undefined}
@@ -431,7 +476,7 @@ export const KnobDial = ({
       role="slider"
       style={
         {
-          "--knob-angle": `${angleFor(position, arc)}deg`,
+          "--knob-angle": `${dialAngle}deg`,
           ...style,
         } as CSSProperties
       }
@@ -443,7 +488,15 @@ export const KnobDial = ({
         className="size-full overflow-visible"
         viewBox={`0 0 ${VIEWBOX} ${VIEWBOX}`}
       >
-        {children}
+        <DialProvider angle={dialAngle}>{children}</DialProvider>
+        <circle
+          className="[pointer-events:all] cursor-grab touch-none group-aria-disabled/knob-dial:cursor-default group-data-dragging/knob-dial:cursor-[inherit]"
+          cx={CENTER}
+          cy={CENTER}
+          data-slot="knob-hit-area"
+          fill="none"
+          r={CENTER}
+        />
       </svg>
     </div>
   );
@@ -483,8 +536,7 @@ export const KnobPointer = ({
   className,
   ...props
 }: ComponentProps<"line">) => {
-  const { arc, position } = useKnob("KnobPointer");
-  const angle = angleFor(position, arc);
+  const { angle } = useDial("KnobPointer");
   const inner = pointAt(angle, RADIUS * 0.3);
   const outer = pointAt(angle, RADIUS * 0.72);
   return (
@@ -520,14 +572,31 @@ const SCALE = {
   minorInner: 35.5,
   minorOuter: 40.5,
 } as const;
+/**
+ * Radii of the cap, in view box units: inside a KnobScale by default, or
+ * filling the inside of a KnobTrack when mini. The shadow starts at `haloFrom`
+ * of the halo's radius.
+ */
 const CAP = {
-  bezel: 25.5,
-  dot: 1.6,
-  dotDistance: 17,
-  face: 22.5,
-  halo: 34,
-  rim: 23.3,
+  default: {
+    bezel: 25.5,
+    face: 22.5,
+    halo: 34,
+    haloFrom: 0.6,
+    rim: 23.3,
+  },
+  mini: {
+    bezel: 32,
+    face: 28.2,
+    halo: 36,
+    haloFrom: 0.8,
+    rim: 29.2,
+  },
 } as const;
+/** The default cap's indicator dot. */
+const CAP_DOT = { distance: 17, radius: 1.6 } as const;
+/** The mini cap's engraved indicator line, which reads at small sizes. */
+const CAP_LINE = { inner: 8.5, lip: 0.6, outer: 23, width: 3.4 } as const;
 /** Ticks this close to the lit range's ends still count as lit. */
 const TICK_EPSILON = 1e-9;
 
@@ -632,22 +701,108 @@ export const KnobScale = ({
 /** An id that is safe inside `url(#…)`. */
 const useSvgId = () => `knob${useId().replaceAll(/[^\w-]/gu, "")}`;
 
+const knobCapVariants = cva(
+  "[--knob-cap-metal:var(--color-white)] [--knob-cap-shade:var(--color-black)]",
+  {
+    defaultVariants: { variant: "default" },
+    variants: {
+      variant: {
+        default: "[--knob-cap-pitch:0.3px]",
+        mini: "[--knob-cap-pitch:0.9px]",
+      },
+    },
+  }
+);
+
+type KnobCapVariant = "default" | "mini";
+
+/** The value marker: a dot on the default cap, an engraved line on the mini one. */
+const KnobCapIndicator = ({
+  angle,
+  variant,
+}: {
+  angle: number;
+  variant: KnobCapVariant;
+}) => {
+  if (variant === "default") {
+    const dot = pointAt(angle, CAP_DOT.distance);
+    return (
+      <circle
+        className="fill-(--knob-cap-shade)/85 stroke-(--knob-cap-shade)/45"
+        cx={dot.x}
+        cy={dot.y}
+        data-slot="knob-cap-dot"
+        r={CAP_DOT.radius}
+        strokeWidth={0.35}
+      />
+    );
+  }
+  const inner = pointAt(angle, CAP_LINE.inner);
+  const outer = pointAt(angle, CAP_LINE.outer);
+  return (
+    <>
+      {/* Light from above catches the groove's lower wall. */}
+      <line
+        className="stroke-(--knob-cap-metal)/70"
+        strokeLinecap="round"
+        strokeWidth={CAP_LINE.width}
+        x1={inner.x}
+        x2={outer.x}
+        y1={inner.y + CAP_LINE.lip}
+        y2={outer.y + CAP_LINE.lip}
+      />
+      <line
+        className="stroke-(--knob-cap-shade)/80"
+        data-slot="knob-cap-pointer"
+        strokeLinecap="round"
+        strokeWidth={CAP_LINE.width}
+        x1={inner.x}
+        x2={outer.x}
+        y1={inner.y}
+        y2={outer.y}
+      />
+    </>
+  );
+};
+
+export interface KnobCapProps extends ComponentProps<"g"> {
+  /**
+   * `default` sits inside a KnobScale and marks the value with a dot. `mini`
+   * fills the inside of a KnobTrack and marks it with an engraved line, for
+   * small knobs. Default `default`.
+   */
+  variant?: KnobCapVariant;
+}
+
 /**
- * A brushed aluminium cap in a dark bezel, with a dot that turns with the
+ * A brushed aluminium cap in a dark bezel, with a marker that turns with the
  * value. The metal is `--knob-cap-metal` shaded by `--knob-cap-shade`.
  */
-export const KnobCap = ({ className, ...props }: ComponentProps<"g">) => {
-  const { arc, position } = useKnob("KnobCap");
+export const KnobCap = ({
+  variant = "default",
+  className,
+  ...props
+}: KnobCapProps) => {
+  const { angle, onCapRadiusChange } = useDial("KnobCap");
   const id = useSvgId();
-  const angle = angleFor(position, arc);
-  const dot = pointAt(angle, CAP.dotDistance);
+  const cap = CAP[variant];
+
+  // Reported before paint, so a dial sizes its drag area from the first frame.
+  const reportRadius = useEffectEvent((radius: number | null) => {
+    onCapRadiusChange?.(radius);
+  });
+  useLayoutEffect(() => {
+    reportRadius(cap.bezel);
+    return () => {
+      reportRadius(null);
+    };
+  }, [cap.bezel]);
+
   return (
     <g
-      className={cn(
-        "[--knob-cap-metal:var(--color-white)] [--knob-cap-shade:var(--color-black)]",
-        className
-      )}
+      className={cn(knobCapVariants({ variant }), className)}
       data-slot="knob-cap"
+      data-variant={variant}
       {...props}
     >
       <defs>
@@ -664,7 +819,7 @@ export const KnobCap = ({ className, ...props }: ComponentProps<"g">) => {
         <radialGradient id={`${id}-halo`}>
           <stop
             className="[stop-color:var(--knob-cap-shade)]"
-            offset="0.6"
+            offset={cap.haloFrom}
             stopOpacity={0.55}
           />
           <stop
@@ -699,36 +854,36 @@ export const KnobCap = ({ className, ...props }: ComponentProps<"g">) => {
           />
         </linearGradient>
       </defs>
-      <circle cx={CENTER} cy={CENTER} fill={`url(#${id}-halo)`} r={CAP.halo} />
+      <circle cx={CENTER} cy={CENTER} fill={`url(#${id}-halo)`} r={cap.halo} />
       <circle
         className="fill-(--knob-cap-shade)/85 stroke-(--knob-cap-metal)/15"
         cx={CENTER}
         cy={CENTER}
-        r={CAP.bezel}
+        r={cap.bezel}
         strokeWidth={0.4}
       />
       <circle
         cx={CENTER}
         cy={CENTER}
         fill={`url(#${id}-bezel)`}
-        r={CAP.bezel}
+        r={cap.bezel}
       />
       <circle
         className="fill-(--knob-cap-metal)"
         cx={CENTER}
         cy={CENTER}
-        r={CAP.rim}
+        r={cap.rim}
       />
-      <circle cx={CENTER} cy={CENTER} fill={`url(#${id}-rim)`} r={CAP.rim} />
+      <circle cx={CENTER} cy={CENTER} fill={`url(#${id}-rim)`} r={cap.rim} />
       {/* SVG has no conic gradient, so the face is HTML with a CSS one. */}
       <foreignObject
-        height={CAP.face * 2}
-        width={CAP.face * 2}
-        x={CENTER - CAP.face}
-        y={CENTER - CAP.face}
+        height={cap.face * 2}
+        width={cap.face * 2}
+        x={CENTER - cap.face}
+        y={CENTER - cap.face}
       >
         <div
-          className="size-full rounded-full bg-(--knob-cap-metal) bg-[repeating-radial-gradient(circle,var(--knob-cap-brush)_0_0.3px,transparent_0.3px_0.6px),conic-gradient(from_15deg,var(--knob-cap-sheen),transparent_9%,var(--knob-cap-sheen)_21%,transparent_32%,var(--knob-cap-sheen-deep)_46%,transparent_58%,var(--knob-cap-sheen)_70%,transparent_83%,var(--knob-cap-sheen))] [--knob-cap-brush:color-mix(in_oklab,var(--knob-cap-shade)_7%,transparent)] [--knob-cap-sheen-deep:color-mix(in_oklab,var(--knob-cap-shade)_50%,transparent)] [--knob-cap-sheen:color-mix(in_oklab,var(--knob-cap-shade)_34%,transparent)]"
+          className="size-full rounded-full bg-(--knob-cap-metal) bg-[repeating-radial-gradient(circle,var(--knob-cap-brush)_0_var(--knob-cap-pitch),transparent_var(--knob-cap-pitch)_calc(var(--knob-cap-pitch)*2)),conic-gradient(from_15deg,var(--knob-cap-sheen),transparent_9%,var(--knob-cap-sheen)_21%,transparent_32%,var(--knob-cap-sheen-deep)_46%,transparent_58%,var(--knob-cap-sheen)_70%,transparent_83%,var(--knob-cap-sheen))] [--knob-cap-brush:color-mix(in_oklab,var(--knob-cap-shade)_7%,transparent)] [--knob-cap-sheen-deep:color-mix(in_oklab,var(--knob-cap-shade)_50%,transparent)] [--knob-cap-sheen:color-mix(in_oklab,var(--knob-cap-shade)_34%,transparent)]"
           data-slot="knob-cap-face"
         />
       </foreignObject>
@@ -739,17 +894,10 @@ export const KnobCap = ({ className, ...props }: ComponentProps<"g">) => {
         filter={`url(#${id}-grain)`}
         opacity={0.25}
         pointerEvents="none"
-        r={CAP.face}
+        r={cap.face}
         transform={`rotate(${angle} ${CENTER} ${CENTER})`}
       />
-      <circle
-        className="fill-(--knob-cap-shade)/85 stroke-(--knob-cap-shade)/45"
-        cx={dot.x}
-        cy={dot.y}
-        data-slot="knob-cap-dot"
-        r={CAP.dot}
-        strokeWidth={0.35}
-      />
+      <KnobCapIndicator angle={angle} variant={variant} />
     </g>
   );
 };
@@ -934,9 +1082,10 @@ export interface KnobProps extends Omit<
   allowWheel?: boolean;
   /**
    * Plays a soft click on each graduation: KnobScale's long ticks, or every
-   * `largeStep` without a scale. Default false.
+   * `largeStep` without a scale. Pass a `ClickSound` to replace the tick.
+   * Default false.
    */
-  clickSound?: boolean;
+  clickSound?: boolean | ClickSound;
   format?: (value: number) => string;
   /** Reads a typed value. Default: the first number, with "k" as thousands. */
   parse?: (text: string) => number | null;
@@ -946,15 +1095,7 @@ export interface KnobProps extends Omit<
 
 /** Shortest gap between clicks, so a fast turn ticks instead of buzzing. */
 const CLICK_INTERVAL_MS = 30;
-const CLICK_SECONDS = 0.006;
-const CLICK_VOLUME = 0.12;
-/** Each click is pitched a little at random, like a real detent. */
-const CLICK_PITCH_SPREAD = 0.04;
-/** A short noise snap over a high, fast-damped ring: a tick, not a thud. */
-const CLICK_PARTS = [
-  { decay: 0.0004, gain: 0.6, hz: 0 },
-  { decay: 0.0012, gain: 0.4, hz: 4200 },
-] as const;
+const knobClick = createClickSound();
 
 /** Positions this close to a detent count as on it. */
 const DETENT_EPSILON = 1e-9;
@@ -981,71 +1122,6 @@ const reachesMultiple = (
     : Math.ceil(start) > Math.ceil(end);
 };
 
-const clickBuffers = new WeakMap<BaseAudioContext, AudioBuffer>();
-let lastClickAt = Number.NEGATIVE_INFINITY;
-
-/** One synthesised click, made once per audio context. */
-const clickBuffer = (context: BaseAudioContext) => {
-  const cached = clickBuffers.get(context);
-  if (cached) {
-    return cached;
-  }
-  const { sampleRate } = context;
-  const buffer = context.createBuffer(
-    1,
-    Math.ceil(CLICK_SECONDS * sampleRate),
-    sampleRate
-  );
-  const samples = buffer.getChannelData(0);
-  for (let index = 0; index < samples.length; index += 1) {
-    const time = index / sampleRate;
-    let sample = 0;
-    for (const part of CLICK_PARTS) {
-      const wave =
-        part.hz === 0
-          ? Math.random() * 2 - 1
-          : Math.sin(2 * Math.PI * part.hz * time);
-      sample += part.gain * wave * Math.exp(-time / part.decay);
-    }
-    samples[index] = sample;
-  }
-  clickBuffers.set(context, buffer);
-  return buffer;
-};
-
-const resumeContext = async (context: AudioContext) => {
-  try {
-    await context.resume();
-  } catch {
-    // Without a user gesture the browser refuses; the next one tries again.
-  }
-};
-
-/** Plays a click through the shared audio context, at most every 30 ms. */
-const playClick = () => {
-  const now = performance.now();
-  const context = getSharedAudioContext();
-  if (!context || now - lastClickAt < CLICK_INTERVAL_MS) {
-    return;
-  }
-  lastClickAt = now;
-  if (context.state === "suspended") {
-    resumeContext(context);
-  }
-  const source = context.createBufferSource();
-  source.buffer = clickBuffer(context);
-  source.playbackRate.value =
-    1 + (Math.random() - 0.5) * CLICK_PITCH_SPREAD * 2;
-  const gain = context.createGain();
-  gain.gain.value = CLICK_VOLUME;
-  source.connect(gain).connect(context.destination);
-  source.addEventListener("ended", () => {
-    source.disconnect();
-    gain.disconnect();
-  });
-  source.start();
-};
-
 interface KnobValueOptions {
   value: number | undefined;
   defaultValue: number | undefined;
@@ -1055,6 +1131,7 @@ interface KnobValueOptions {
   onValueChange: KnobProps["onValueChange"];
   /** Whether a change between two values should click; null for silence. */
   clicksBetween: ((from: number, to: number) => boolean) | null;
+  playClick: (() => void) | null;
 }
 
 /** Controlled or uncontrolled value with change notifications. */
@@ -1066,6 +1143,7 @@ const useKnobValue = ({
   max,
   onValueChange,
   clicksBetween,
+  playClick,
 }: KnobValueOptions) => {
   const [uncontrolled, setUncontrolled] = useState(() =>
     clamp(defaultValue ?? resetValue, min, max)
@@ -1086,13 +1164,40 @@ const useKnobValue = ({
       }
       onValueChange?.(next, details);
       if (clicksBetween?.(previous, next)) {
-        playClick();
+        playClick?.();
       }
     },
-    [clicksBetween, controlled, latestRef, onValueChange]
+    [clicksBetween, controlled, latestRef, onValueChange, playClick]
   );
 
   return { change, latestRef, value };
+};
+
+const soundFor = (clickSound: boolean | ClickSound): ClickSound | null => {
+  if (clickSound === true) {
+    return knobClick;
+  }
+  if (clickSound === false) {
+    return null;
+  }
+  return clickSound;
+};
+
+/**
+ * Plays the click through the provided audio context, or the shared one,
+ * which is only created when a click plays. Null for silence.
+ */
+const useKnobClick = (clickSound: boolean | ClickSound) => {
+  const context = useProvidedAudioContext();
+  const sound = soundFor(clickSound);
+  return useMemo(
+    () =>
+      sound &&
+      (() => {
+        sound.play({ context, minIntervalMs: CLICK_INTERVAL_MS });
+      }),
+    [context, sound]
+  );
 };
 
 /** Size and disabled, from props or the surrounding strip. */
@@ -1143,8 +1248,9 @@ export const Knob = ({
 
   // Clicks land on KnobScale's long ticks, or every largeStep without one.
   const [detents, setDetents] = useState<readonly number[] | null>(null);
+  const playClick = useKnobClick(clickSound);
   const clicksBetween = useMemo(() => {
-    if (!clickSound) {
+    if (!playClick) {
       return null;
     }
     if (detents) {
@@ -1153,7 +1259,7 @@ export const Knob = ({
     }
     return (from: number, to: number) =>
       reachesMultiple(from, to, min, largeStep);
-  }, [clickSound, detents, largeStep, min, taper]);
+  }, [detents, largeStep, min, playClick, taper]);
 
   const { change, latestRef, value } = useKnobValue({
     clicksBetween,
@@ -1161,6 +1267,7 @@ export const Knob = ({
     max,
     min,
     onValueChange,
+    playClick,
     resetValue: reset,
     value: valueProp,
   });
@@ -1272,4 +1379,4 @@ export const Knob = ({
   );
 };
 
-export { knobVariants };
+export { knobCapVariants, knobVariants };

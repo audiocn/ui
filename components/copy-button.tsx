@@ -6,7 +6,7 @@ import type { ComponentProps } from "react";
 
 import { IconSwap, IconSwapItem } from "@/components/icon-swap";
 import { Button } from "@/components/ui/button";
-import type { CopyState } from "@/hooks/use-copy-to-clipboard";
+import type { CopySource, CopyState } from "@/hooks/use-copy-to-clipboard";
 import { useCopyToClipboard } from "@/hooks/use-copy-to-clipboard";
 import { cn } from "@/lib/utils";
 
@@ -41,8 +41,8 @@ export function CopyStateIcon({
 }
 
 export type CopyButtonProps = ComponentProps<typeof Button> & {
-  /** The text to copy, or a function that returns the text. */
-  text: string | (() => string);
+  /** The text to copy, or a function that returns it, possibly later. */
+  text: CopySource;
   /** Called with the copied text on successful copy. */
   onCopySuccess?: (text: string) => void;
   /** Called with the error if the copy operation fails. */

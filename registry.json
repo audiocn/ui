@@ -7,7 +7,8 @@
       "name": "core",
       "type": "registry:lib",
       "title": "Audio core",
-      "description": "Decibel maths, meter and needle ballistics, zones, fader and VU tapers, band resampling, bar level smoothing, wave line shapes, time formatting, the shared frame loop, frame emitters, shared types and the audio theme tokens. Every audiocn component depends on it.",
+      "description": "Decibel maths, meter and needle ballistics, zones, fader and VU tapers, band resampling, bar level smoothing, wave line shapes, time formatting, the shared frame loop, frame emitters, synthesised click sounds, shared types and the audio theme tokens. Every audiocn component depends on it.",
+      "registryDependencies": ["@audiocn/use-audio-context"],
       "files": [
         {
           "path": "lib/audio/types.ts",
@@ -55,6 +56,18 @@
         },
         {
           "path": "lib/audio/frame-source.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "lib/audio/history.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "lib/audio/history-playback.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "lib/audio/click.ts",
           "type": "registry:lib"
         }
       ],
@@ -138,6 +151,19 @@
       "files": [
         {
           "path": "hooks/use-clip-hold.ts",
+          "type": "registry:hook"
+        }
+      ]
+    },
+    {
+      "name": "use-tap-tempo",
+      "type": "registry:hook",
+      "title": "useTapTempo",
+      "description": "Tap tempo with a rolling average and idle reset.",
+      "registryDependencies": ["@audiocn/core"],
+      "files": [
+        {
+          "path": "hooks/use-tap-tempo.ts",
           "type": "registry:hook"
         }
       ]
@@ -355,6 +381,25 @@
       ]
     },
     {
+      "name": "lcd-meter",
+      "type": "registry:ui",
+      "title": "LCD Meter",
+      "description": "A recorder-style level meter on an LCD Display's screen: block segments in the display's ink that light whole, a held peak segment, per-channel dB readouts, a printed scale with a bracket over the clip zone and a CLIP flag, in light and dark.",
+      "dependencies": ["class-variance-authority"],
+      "registryDependencies": [
+        "@audiocn/core",
+        "@audiocn/db-scale",
+        "@audiocn/lcd-display",
+        "@audiocn/level-meter"
+      ],
+      "files": [
+        {
+          "path": "components/ui/lcd-meter.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
       "name": "bar-visualizer",
       "type": "registry:ui",
       "title": "Bar Visualizer",
@@ -494,10 +539,28 @@
       ]
     },
     {
+      "name": "tempo-control",
+      "type": "registry:ui",
+      "title": "Tempo Control",
+      "description": "An editable BPM input with tap tempo, keyboard stepping and a rolling average.",
+      "dependencies": ["@base-ui/react", "class-variance-authority"],
+      "registryDependencies": [
+        "@audiocn/core",
+        "@audiocn/use-audio-config",
+        "@audiocn/use-tap-tempo"
+      ],
+      "files": [
+        {
+          "path": "components/ui/tempo-control.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
       "name": "knob",
       "type": "registry:ui",
       "title": "Knob",
-      "description": "A rotary control drawn in SVG, with vertical, horizontal or circular dragging, fine adjustment, reset, a bipolar origin, an optional click sound and a volume dial skin with a numbered scale and an aluminium cap.",
+      "description": "A rotary control drawn in SVG, with vertical, horizontal or circular dragging, fine adjustment, reset, a bipolar origin, an optional click sound and a volume dial skin with a numbered scale and an aluminium cap, and a mini aluminium cap for small knobs.",
       "dependencies": ["class-variance-authority"],
       "registryDependencies": [
         "@audiocn/core",
@@ -507,6 +570,19 @@
       "files": [
         {
           "path": "components/ui/knob.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "lcd-display",
+      "type": "registry:ui",
+      "title": "LCD Display",
+      "description": "A dot-matrix screen in a bezel, backlit in the light theme and glowing in the dark one: rows of dim labels and bright values in the theme colour or amber, green, cyan or red, dotted separators, a blinking status pixel and dropdown values built on Base UI's Select.",
+      "dependencies": ["@base-ui/react", "class-variance-authority"],
+      "files": [
+        {
+          "path": "components/ui/lcd-display.tsx",
           "type": "registry:ui"
         }
       ]

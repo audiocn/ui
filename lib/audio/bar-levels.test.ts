@@ -33,6 +33,37 @@ describe("createBarLevels", () => {
     expect(bars.levels[0]).toBeCloseTo(0.86, 2);
   });
 
+  it("settles once every bar reaches its target", () => {
+    const bars = createBarLevels(options({ barCount: 1 }));
+    bars.step(FRAME_MS, [1]);
+    expect(bars.settled).toBe(true);
+
+    let nowMs = FRAME_MS;
+    nowMs += FRAME_MS;
+    bars.step(nowMs, [0]);
+    expect(bars.settled).toBe(false);
+    for (let frame = 0; frame < 120; frame += 1) {
+      nowMs += FRAME_MS;
+      bars.step(nowMs, [0]);
+    }
+    expect(bars.settled).toBe(true);
+  });
+
+  it("never settles while an idle animation or the loading sweep runs", () => {
+    const pulsing = createBarLevels(options({ idle: "pulse" }));
+    const loading = createBarLevels(options({ loading: true }));
+    for (let frame = 1; frame <= 120; frame += 1) {
+      pulsing.step(frame * FRAME_MS, null);
+      loading.step(frame * FRAME_MS, [0.5]);
+    }
+    expect(pulsing.settled).toBe(false);
+    expect(loading.settled).toBe(false);
+
+    // A signal replaces the idle animation, so live bars can settle.
+    pulsing.step(121 * FRAME_MS, [0.5, 0.5, 0.5, 0.5]);
+    expect(pulsing.settled).toBe(true);
+  });
+
   it("drops at once with reduced motion", () => {
     const bars = createBarLevels(options({ barCount: 1, reducedMotion: true }));
     bars.step(FRAME_MS, [1]);

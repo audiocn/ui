@@ -42,6 +42,10 @@ export const AudioContextProvider = ({
   </ProvidedContext.Provider>
 );
 
+/** The context from `AudioContextProvider`, or null. Never creates one. */
+export const useProvidedAudioContext = (): AudioContext | null =>
+  useContext(ProvidedContext);
+
 const GESTURE_EVENTS = ["pointerdown", "keydown", "touchend"] as const;
 
 const noop = () => {
@@ -64,7 +68,7 @@ export interface UseAudioContextResult {
  * first click or key press, which browsers require before audio can start.
  */
 export const useAudioContext = (): UseAudioContextResult => {
-  const provided = useContext(ProvidedContext);
+  const provided = useProvidedAudioContext();
 
   const context = useSyncExternalStore(
     () => noop,

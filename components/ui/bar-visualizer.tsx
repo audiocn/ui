@@ -9,7 +9,7 @@ import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { useVisibility } from "@/hooks/use-visibility";
 import { createBarLevels } from "@/lib/audio/bar-levels";
 import type { BarIdle, BarLevelsOptions } from "@/lib/audio/bar-levels";
-import { subscribeFrame } from "@/lib/audio/frame-loop";
+import { createFrameTask, createPainterClock } from "@/lib/audio/frame-loop";
 import type { FrameSource, Orientation, VisualFrame } from "@/lib/audio/types";
 import { cn } from "@/lib/utils";
 
@@ -56,20 +56,31 @@ interface BarPainterOptions extends BarLevelsOptions {
   visible: RefObject<boolean>;
 }
 
-/** Paints bars outside React, with release smoothing and idle animations. */
+const noop = () => {
+  // Nothing to wake before the painter starts.
+};
+
+/**
+ * Paints bars outside React, with release smoothing and idle animations.
+ * Returns true while it needs another frame: static bars that have settled,
+ * or bars off screen, cost no frames until new levels wake them.
+ */
 const createBarPainter = (options: BarPainterOptions) => {
   const { bars, reducedMotion } = options;
   const barLevels = createBarLevels(options);
   const shown = new Float32Array(options.barCount).fill(-1);
-  let lastPaintMs = 0;
+  const clock = createPainterClock();
+  let lastPaintMs = Number.NEGATIVE_INFINITY;
   let activeShown: boolean | null = null;
 
-  return (nowMs: number) => {
+  return (frameMs: number): boolean => {
+    // Hidden: sleep. Coming back into view wakes the painter.
     if (!options.visible.current) {
-      return;
+      return false;
     }
+    const nowMs = clock(frameMs);
     if (reducedMotion && nowMs - lastPaintMs < REDUCED_MOTION_INTERVAL_MS) {
-      return;
+      return true;
     }
     lastPaintMs = nowMs;
     const active = barLevels.step(nowMs, options.input.current);
@@ -84,6 +95,7 @@ const createBarPainter = (options: BarPainterOptions) => {
         bars[index]?.style.setProperty("--bar-level", value.toFixed(4));
       }
     }
+    return !barLevels.settled;
   };
 };
 
@@ -108,14 +120,22 @@ export const BarVisualizer = ({
   const barsRef = useRef<(HTMLSpanElement | null)[]>([]);
   const inputRef = useRef<ArrayLike<number> | null>(null);
   const rootRef = useRef<HTMLDivElement | null>(null);
-  const visibleRef = useVisibility(rootRef);
+  // Wakes the painter when new levels arrive. Settled bars sleep.
+  const wakeRef = useRef<() => void>(noop);
+  const visibleRef = useVisibility(rootRef, (visible) => {
+    if (visible) {
+      wakeRef.current();
+    }
+  });
 
   const paint = useCallback((next: ArrayLike<number>) => {
     inputRef.current = next;
+    wakeRef.current();
   }, []);
 
   useFrameSource(source, (frame) => {
     inputRef.current = frame.bands;
+    wakeRef.current();
   });
 
   // Clear only when levels go from set to unset, so the bars fall instead of
@@ -129,12 +149,13 @@ export const BarVisualizer = ({
       inputRef.current = null;
       hadLevelsRef.current = false;
     }
+    wakeRef.current();
   }, [levels]);
 
   useImperativeHandle(actionsRef, () => ({ paint }), [paint]);
 
   useEffect(() => {
-    const unsubscribe = subscribeFrame(
+    const task = createFrameTask(
       createBarPainter({
         barCount,
         bars: barsRef.current,
@@ -148,9 +169,11 @@ export const BarVisualizer = ({
         visible: visibleRef,
       })
     );
+    wakeRef.current = task.wake;
     const root = rootRef.current;
     return () => {
-      unsubscribe();
+      wakeRef.current = noop;
+      task.stop();
       if (root) {
         delete root.dataset.active;
       }

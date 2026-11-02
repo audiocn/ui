@@ -113,8 +113,30 @@ export const examples: Record<string, ComponentType | undefined> = {
   "knob-drag-directions": dynamic(
     () => import("@/components/examples/knob-drag-directions")
   ),
+  "knob-metal": dynamic(() => import("@/components/examples/knob-metal")),
   "knob-sizes": dynamic(() => import("@/components/examples/knob-sizes")),
   "knob-volume": dynamic(() => import("@/components/examples/knob-volume")),
+  "lcd-display-demo": dynamic(
+    () => import("@/components/examples/lcd-display-demo")
+  ),
+  "lcd-display-font": dynamic(
+    () => import("@/components/examples/lcd-display-font")
+  ),
+  "lcd-display-variants": dynamic(
+    () => import("@/components/examples/lcd-display-variants")
+  ),
+  "lcd-meter-demo": dynamic(
+    () => import("@/components/examples/lcd-meter-demo")
+  ),
+  "lcd-meter-inks": dynamic(
+    () => import("@/components/examples/lcd-meter-inks")
+  ),
+  "lcd-meter-microphone": dynamic(
+    () => import("@/components/examples/lcd-meter-microphone")
+  ),
+  "lcd-meter-segments": dynamic(
+    () => import("@/components/examples/lcd-meter-segments")
+  ),
   "level-meter-ballistics": dynamic(
     () => import("@/components/examples/level-meter-ballistics")
   ),
@@ -220,6 +242,18 @@ export const examples: Record<string, ComponentType | undefined> = {
   ),
   "system-audio-settings-demo": dynamic(
     () => import("@/components/examples/system-audio-settings-demo")
+  ),
+  "tempo-control-controlled": dynamic(
+    () => import("@/components/examples/tempo-control-controlled")
+  ),
+  "tempo-control-demo": dynamic(
+    () => import("@/components/examples/tempo-control-demo")
+  ),
+  "tempo-control-pad": dynamic(
+    () => import("@/components/examples/tempo-control-pad")
+  ),
+  "tempo-control-states": dynamic(
+    () => import("@/components/examples/tempo-control-states")
   ),
   "track-list-demo": dynamic(
     () => import("@/components/examples/track-list-demo")

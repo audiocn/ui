@@ -5079,8 +5079,8 @@ packages:
   ufo@1.6.4:
     resolution: {integrity: sha512-JFNbkD1Svwe0KvGi8GOeLcP4kAWQ609twvCdcHxq1oSL8svv39ZuSvajcD8B+5D0eL4+s1Is2D/O6KN3qcTeRA==}
 
-  uint8array-extras@1.5.0:
-    resolution: {integrity: sha512-rvKSBiC5zqCCiDZ9kAOszZcDvdAHwwIKJG33Ykj43OKcWsnmcBRL09YTU4nOeHZ8Y2a7l1MgTd08SBe9A8Qj6A==}
+  uint8array-extras@1.6.0:
+    resolution: {integrity: sha512-8iAasVS4wUx0gPLjH8Xtz2PeDzTSiy8QiLGu2DT3X5GU+egFEQhpnbtkehbAwjvDcxIERmCYcysiODFmE3Ud0Q==}
     engines: {node: '>=18'}
 
   ultracite@7.12.2:
@@ -7600,7 +7600,7 @@ snapshots:
       env-paths: 3.0.0
       json-schema-typed: 8.0.2
       semver: 7.8.5
-      uint8array-extras: 1.5.0
+      uint8array-extras: 1.6.0
 
   confbox@0.1.8: {}
 
@@ -10289,7 +10289,7 @@ snapshots:
 
   ufo@1.6.4: {}
 
-  uint8array-extras@1.5.0: {}
+  uint8array-extras@1.6.0: {}
 
   ultracite@7.12.2(eslint@10.11.0(jiti@2.7.0))(oxfmt@0.71.0)(oxlint@1.86.0)(prettier@3.9.9):
     dependencies:

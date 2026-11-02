@@ -1,0 +1,149 @@
+import { expect, test } from "@playwright/test";
+
+const PAGE = "/docs/components/bar-visualizer";
+const INSTALL = "npx shadcn@latest add @audiocn/bar-visualizer";
+
+test("a component page serves a Markdown twin written for agents", async ({
+  request,
+}) => {
+  const response = await request.get(`${PAGE}.md`);
+  expect(response.status()).toBe(200);
+  expect(response.headers()["content-type"]).toContain("text/markdown");
+
+  const markdown = await response.text();
+  expect(markdown).toContain(
+    "# Add Bar Visualizer from audiocn to this project"
+  );
+  expect(markdown).toContain(INSTALL);
+  // The demo the page leads with, inlined from its file.
+  expect(markdown).toContain("components/examples/bar-visualizer-demo.tsx");
+  expect(markdown).toContain("| Prop | Type | Default | Description |");
+  expect(markdown).toContain("@/components/ui/bar-visualizer");
+  // Every MDX component has a Markdown form, so none leak as JSX.
+  expect(markdown).not.toMatch(/<(?:ComponentPreview|PropsTable|Callout)\b/u);
+});
+
+test("the examples become links to the page's own anchors", async ({
+  page,
+  request,
+}) => {
+  const response = await request.get(`${PAGE}.md`);
+  const markdown = await response.text();
+
+  expect(markdown).not.toContain("## Examples");
+  expect(markdown).toContain("## Resources");
+  expect(markdown).toContain(
+    `- Idle and loading: https://audiocn.dev${PAGE}#idle-and-loading`
+  );
+  // The demo files the section used to inline.
+  expect(markdown).not.toContain("bar-visualizer-states.tsx");
+
+  // Each anchor has to exist on the rendered page.
+  await page.goto(PAGE);
+  const anchors = markdown
+    .split("\n")
+    .filter((line) => line.includes(`${PAGE}#`))
+    .map((line) => line.slice(line.lastIndexOf("#") + 1));
+  expect(anchors.length).toBeGreaterThan(0);
+  await Promise.all(
+    anchors.map((anchor) => expect(page.locator(`#${anchor}`)).toHaveCount(1))
+  );
+});
+
+test("a page with no registry item still has a Markdown twin", async ({
+  request,
+}) => {
+  const response = await request.get("/docs/concepts/decibels.md");
+  expect(response.status()).toBe(200);
+  const markdown = await response.text();
+  expect(markdown).toContain("# Decibels and levels");
+  expect(markdown).not.toContain("npx shadcn@latest add");
+});
+
+test("llms-full.txt renders the MDX components rather than their tags", async ({
+  request,
+}) => {
+  const response = await request.get("/llms-full.txt");
+  const markdown = await response.text();
+  expect(markdown).toContain(INSTALL);
+  expect(markdown).not.toMatch(/<(?:ComponentPreview|PropsTable|Callout)\b/u);
+});
+
+test("the copy button puts the page's prompt on the clipboard", async ({
+  context,
+  page,
+}) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await page.goto(PAGE);
+
+  await page
+    .getByRole("button", { exact: true, name: "Copy prompt for AI" })
+    .click();
+  await expect(
+    page.getByText("Prompt for Bar Visualizer copied")
+  ).toBeVisible();
+
+  const copied = await page.evaluate(() => navigator.clipboard.readText());
+  expect(copied).toContain("# Add Bar Visualizer from audiocn to this project");
+  expect(copied).toContain(INSTALL);
+});
+
+test("the menu copies the install command and links out to the chat tools", async ({
+  context,
+  page,
+}) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await page.goto(PAGE);
+  await page
+    .getByRole("button", { name: "More actions for AI agents" })
+    .click();
+
+  const menu = page.getByRole("menu");
+  await expect(
+    menu.getByRole("menuitem", { name: "Open in v0" })
+  ).toHaveAttribute("href", /v0\.dev\/chat\/api\/open\?url=.+bar-visualizer/u);
+
+  await menu.getByRole("menuitem", { name: "Copy install command" }).click();
+  await expect(page.getByText("Install command copied")).toBeVisible();
+  // pnpm is the default the docs show.
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
+    "pnpm dlx shadcn@latest add @audiocn/bar-visualizer"
+  );
+});
+
+test("the menu copies the component source off this deployment", async ({
+  context,
+  page,
+}) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await page.goto(PAGE);
+  await page
+    .getByRole("button", { name: "More actions for AI agents" })
+    .click();
+  await page
+    .getByRole("menu")
+    .getByRole("menuitem", { name: "Copy component source" })
+    .click();
+  // The source is fetched, so wait for the copy to land.
+  await expect(page.getByText("Component source copied")).toBeVisible();
+
+  const copied = await page.evaluate(() => navigator.clipboard.readText());
+  expect(copied).toContain("export const BarVisualizer");
+  // The real file, not the registry JSON that wraps it.
+  expect(copied).not.toContain('"$schema"');
+
+  const item = await page.request.get("/r/bar-visualizer.json");
+  const { files } = (await item.json()) as { files: { content: string }[] };
+  expect(copied).toBe(files[0]?.content);
+});
+
+test("pages that document no item have no prompt button", async ({ page }) => {
+  await page.goto("/docs/concepts/decibels");
+  await expect(
+    page.getByRole("button", { name: "Copy prompt for AI" })
+  ).toHaveCount(0);
+  await page.goto("/docs/hooks/use-level");
+  await expect(
+    page.getByRole("button", { exact: true, name: "Copy prompt for AI" })
+  ).toBeVisible();
+});
