@@ -1,6 +1,6 @@
 # 013 — VU meter
 
-Status: IMPLEMENTED (2026-10-02). See [Outcome](#outcome). Follows plan 002; reuses the meter plumbing from plan 004.
+Status: IMPLEMENTED (2026-10-02). See [Outcome](#outcome). Follows plan 002; reuses the meter plumbing from plan 004. The needle ballistics, painting and data props were replaced by [plan 022](022-vu-needle-in-audio-thread.md): the needle now runs on the audio thread and takes an audio `input`.
 
 An analog VU meter: a backlit face in a dark bezel, a printed scale from −10 to +3 VU with a red section above 0, and a needle that swings with real VU ballistics. One meter shows one channel; a stereo pair is two meters side by side, labelled L and R.
 
