@@ -135,6 +135,10 @@
     "alt": "Volume Control — audiocn: a volume slider with a mute control and numeric value.",
     "url": "/og/components-volume-control-79e0b12eedf6.png"
   },
+  "/docs/components/vu-meter": {
+    "alt": "VU Meter — audiocn: a stereo pair of analog VU meters with backlit faces and needles.",
+    "url": "/og/components-vu-meter-1f184c662cc3.png"
+  },
   "/docs/components/waveform": {
     "alt": "audiocn Waveform: an audio clip with a mirrored waveform, a playhead, a selected region and a marker.",
     "url": "/og/waveform-a632811591d8.png"
@@ -218,6 +222,10 @@
   "/docs/hooks/use-visibility": {
     "alt": "useVisibility — audiocn: a frequency-band bar visualizer with an active signal.",
     "url": "/og/hooks-use-visibility-b4d005870ea6.png"
+  },
+  "/docs/hooks/use-vu-needle": {
+    "alt": "useVuNeedle — audiocn: a stereo pair of analog VU meters with backlit faces and needles.",
+    "url": "/og/hooks-use-vu-needle-7c7a5b5dd388.png"
   },
   "/docs/hooks/use-waveform-data": {
     "alt": "useWaveformData — audiocn: a mirrored waveform with a playhead, selected region and marker.",

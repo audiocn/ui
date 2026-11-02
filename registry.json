@@ -7,7 +7,7 @@
       "name": "core",
       "type": "registry:lib",
       "title": "Audio core",
-      "description": "Decibel maths, meter ballistics, zones, fader tapers, band resampling, bar level smoothing, wave line shapes, time formatting, the shared frame loop, frame emitters, synthesised click sounds, shared types and the audio theme tokens. Every audiocn component depends on it.",
+      "description": "Decibel maths, meter and needle ballistics, zones, fader and VU tapers, band resampling, bar level smoothing, wave line shapes, time formatting, the shared frame loop, frame emitters, synthesised click sounds, shared types and the audio theme tokens. Every audiocn component depends on it.",
       "registryDependencies": ["@audiocn/use-audio-context"],
       "files": [
         {
@@ -20,6 +20,10 @@
         },
         {
           "path": "lib/audio/ballistics.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "lib/audio/needle.ts",
           "type": "registry:lib"
         },
         {
@@ -240,6 +244,27 @@
       ]
     },
     {
+      "name": "use-vu-needle",
+      "type": "registry:hook",
+      "title": "useVuNeedle",
+      "description": "A VU needle on the audio thread: |x| through a resonant low-pass with pins, every sample, calibrated to a reference level. Reports the needle's scale position several times a frame.",
+      "registryDependencies": [
+        "@audiocn/core",
+        "@audiocn/use-audio-context",
+        "@audiocn/use-audio-analyser"
+      ],
+      "files": [
+        {
+          "path": "hooks/use-vu-needle.ts",
+          "type": "registry:hook"
+        },
+        {
+          "path": "lib/audio/vu-worklet.ts",
+          "type": "registry:lib"
+        }
+      ]
+    },
+    {
       "name": "use-audio-devices",
       "type": "registry:hook",
       "title": "useAudioDevices",
@@ -351,6 +376,26 @@
       "files": [
         {
           "path": "components/ui/level-meter.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "vu-meter",
+      "type": "registry:ui",
+      "title": "VU Meter",
+      "description": "An analog VU meter: a backlit face in a dark bezel, a needle that reads the audio on the audio thread with real VU ballistics (a resonant low-pass and a bounce off the upper pin) that pivots from the bottom or hangs from the top, a calibrated scale linear in amplitude, and slots for a badge, legend and channel label. Classic and flat variants.",
+      "dependencies": ["class-variance-authority"],
+      "registryDependencies": [
+        "@audiocn/core",
+        "@audiocn/use-audio-config",
+        "@audiocn/use-reduced-motion",
+        "@audiocn/use-visibility",
+        "@audiocn/use-vu-needle"
+      ],
+      "files": [
+        {
+          "path": "components/ui/vu-meter.tsx",
           "type": "registry:ui"
         }
       ]

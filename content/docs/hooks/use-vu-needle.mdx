@@ -1,0 +1,99 @@
+---
+title: useVuNeedle
+description: A VU needle on the audio thread, calibrated to a reference level, that reports its position several times a frame.
+---
+
+[VU Meter](/docs/components/vu-meter) uses this hook to move its needle. Use it to drive a needle, a lamp or any other meter of your own with real VU ballistics.
+
+```npm
+npx shadcn@latest add @audiocn/use-vu-needle
+```
+
+## Usage
+
+```tsx
+import { useRef } from "react";
+
+import { useSound } from "@/hooks/use-sound";
+import { useVuNeedle } from "@/hooks/use-vu-needle";
+
+export const NeedleBar = () => {
+  const sound = useSound("/sounds/peon-work-work-loop.wav", { loop: true });
+  const bar = useRef<HTMLSpanElement>(null);
+  useVuNeedle(sound.output, (position) => {
+    const level = Math.min(1, Math.max(0, position));
+    bar.current?.style.setProperty("--level", String(level));
+  });
+  return (
+    <button onClick={sound.play} type="button">
+      Play
+      <span
+        className="block h-2 w-40 origin-left scale-x-(--level) bg-primary"
+        ref={bar}
+      />
+    </button>
+  );
+};
+```
+
+## How it moves
+
+The hook taps `input` with a silent `AudioWorklet`. On every sample, the rectified signal (`|x|`) goes through one resonant 2nd-order low-pass, written as a mass on a spring:
+
+- `lowPassCutoffHz` sets the speed. At the default 2 Hz, a step reaches 99% in about 340 ms.
+- `lowPassQ` sets the overshoot. 0.5 never overshoots; the default 0.6 overshoots by about 1%.
+- At 1.04, just past the right end of the scale, the needle hits a pin and bounces back with `rebound` of its speed. The spring keeps pulling, so the bounces die out and the needle rests on the pin.
+- At −0.04, just under the left end, it stops.
+
+A sine at `referenceDb` (RMS) settles on 0 VU. `minDb` and `maxDb` are the ends of the scale, in VU, and set the position the needle reports: 0 at `minDb`, 1 at `maxDb`, linear in amplitude.
+
+## Positions
+
+`onPosition` runs every `intervalMs` (about 8 ms by default), outside React. Write the position to the DOM there rather than to state. Changes to the needle and scale options reach the audio thread as `AudioParam` values, so the needle keeps its place. A new `input`, `channel` or `intervalMs` builds a new node, which starts at rest.
+
+The hook returns `{ status, error, reset }`. `status` is `idle` with no input, `loading` while the processor loads, `running`, `suspended` while the audio context waits for a click, or `error`, with `error` saying why: no Web Audio, a closed context, a processor that could not load, or one that stopped on the audio thread. `reset()` puts the needle back at rest.
+
+<PropsTable
+  rows={[
+    [
+      "input",
+      "AudioNode | HTMLMediaElement | MediaStream | null",
+      null,
+      "The audio to meter.",
+    ],
+    [
+      "onPosition",
+      "(position: number) => void",
+      null,
+      "The needle's scale position, from the audio thread.",
+    ],
+    [
+      "options.channel",
+      '0 | 1 | "max"',
+      '"max"',
+      "Which channel moves the needle, or the louder one.",
+    ],
+    ["options.lowPassCutoffHz", "number", "2", "Speed."],
+    ["options.lowPassQ", "number", "0.6", "Overshoot. 0.5 never overshoots."],
+    [
+      "options.rebound",
+      "number",
+      "0.5",
+      "Share of its speed the needle keeps off the right pin.",
+    ],
+    [
+      "options.referenceDb",
+      "number",
+      "-18",
+      "The RMS level in dBFS that reads 0 VU.",
+    ],
+    ["options.minDb", "number", "-10", "Left end of the scale, in VU."],
+    ["options.maxDb", "number", "3", "Right end of the scale, in VU."],
+    [
+      "options.intervalMs",
+      "number",
+      "1000 / 120",
+      "How often the audio thread reports.",
+    ],
+  ]}
+/>

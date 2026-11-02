@@ -2,6 +2,7 @@ export type SocialPreviewName =
   | "home"
   | "mixer"
   | "meters"
+  | "vu"
   | "knobs"
   | "lcd"
   | "lcd-meter"
@@ -135,6 +136,7 @@ export const componentPreviews: Record<string, SocialPreviewName | undefined> =
     "tempo-control": "tempo",
     "track-list": "tracks",
     "volume-control": "volume",
+    "vu-meter": "vu",
     waveform: "waveform",
   };
 
@@ -172,6 +174,7 @@ const contextualPreviews: Record<string, SocialPreviewName | undefined> = {
   "/docs/hooks/use-system-audio": "system-settings",
   "/docs/hooks/use-tap-tempo": "tempo",
   "/docs/hooks/use-visibility": "bars",
+  "/docs/hooks/use-vu-needle": "vu",
   "/docs/hooks/use-waveform-data": "waveform",
   "/docs/hooks/use-web-audio-mixer": "system-mixer",
   "/docs/installation": "collection",
@@ -220,6 +223,7 @@ const previewDescriptions: Record<SocialPreviewName, string> = {
   toggles: "mute, solo and monitor controls with their pressed states",
   tracks: "a track list with active and playing states",
   volume: "a volume slider with a mute control and numeric value",
+  vu: "a stereo pair of analog VU meters with backlit faces and needles",
   waveform: "a mirrored waveform with a playhead, selected region and marker",
 };
 

@@ -5,6 +5,7 @@ import {
   linearTaper,
   logTaper,
   resolveTaper,
+  vuTaper,
 } from "@/lib/audio/taper";
 
 const positions = [0, 0.1, 0.25, 0.5, 0.74, 0.75, 0.9, 1];
@@ -69,6 +70,46 @@ describe("logTaper", () => {
     expect(taper.toPosition(200)).toBeCloseTo(1 / 3, 6);
     expect(taper.toPosition(2000)).toBeCloseTo(2 / 3, 6);
     expect(taper.toValue(0.5)).toBeCloseTo(632.46, 1);
+  });
+});
+
+describe("vuTaper", () => {
+  const taper = vuTaper(-10, 3);
+
+  it("spaces the marks by amplitude, like a VU scale", () => {
+    const marks: [number, number][] = [
+      [-10, 0],
+      [-7, 0.119],
+      [-5, 0.224],
+      [-3, 0.357],
+      [-1, 0.525],
+      [0, 0.624],
+      [2, 0.86],
+      [3, 1],
+    ];
+    for (const [vu, position] of marks) {
+      expect(taper.toPosition(vu)).toBeCloseTo(position, 3);
+    }
+  });
+
+  it("round-trips across the scale", () => {
+    for (const position of positions) {
+      expect(taper.toPosition(taper.toValue(position))).toBeCloseTo(
+        position,
+        6
+      );
+    }
+  });
+
+  it("puts silence below the start of the scale, where a needle rests", () => {
+    expect(taper.toPosition(Number.NEGATIVE_INFINITY)).toBeCloseTo(-0.288, 3);
+  });
+
+  it("is clamped to 0..1 when resolved by name", () => {
+    const named = resolveTaper("vu", -10, 3);
+    expect(named.toPosition(Number.NEGATIVE_INFINITY)).toBe(0);
+    expect(named.toPosition(6)).toBe(1);
+    expect(named.toPosition(0)).toBeCloseTo(0.624, 3);
   });
 });
 

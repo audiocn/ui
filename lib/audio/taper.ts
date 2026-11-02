@@ -1,4 +1,9 @@
-import { clamp, DEFAULT_MIN_DB } from "@/lib/audio/decibels";
+import {
+  clamp,
+  dbToGain,
+  DEFAULT_MIN_DB,
+  gainToDb,
+} from "@/lib/audio/decibels";
 import type { Taper } from "@/lib/audio/types";
 
 const DEFAULT_FADER_MAX_DB = 6;
@@ -79,7 +84,22 @@ export const logTaper = (min: number, max: number): Taper => {
   };
 };
 
-export type TaperInput = "linear" | "audio" | "log" | Taper;
+/**
+ * The law of a VU meter's scale: equal distance per unit of amplitude, so
+ * the top few dB take most of the travel. Below `min` the position goes
+ * negative instead of stopping at 0, so a needle can rest past the end of
+ * the scale; callers that need 0..1 clamp it.
+ */
+export const vuTaper = (minDb: number, maxDb: number): Taper => {
+  const low = dbToGain(minDb);
+  const span = dbToGain(maxDb) - low;
+  return {
+    toPosition: (db) => (dbToGain(db) - low) / span,
+    toValue: (position) => gainToDb(low + clamp(position, 0, 1) * span),
+  };
+};
+
+export type TaperInput = "linear" | "audio" | "log" | "vu" | Taper;
 
 /** Resolves a taper name or object for a range. */
 export const resolveTaper = (
@@ -95,6 +115,10 @@ export const resolveTaper = (
   }
   if (taper === "log") {
     return logTaper(min, max);
+  }
+  if (taper === "vu") {
+    const vu = vuTaper(min, max);
+    return { ...vu, toPosition: (db) => clamp(vu.toPosition(db), 0, 1) };
   }
   return linearTaper(min, max);
 };

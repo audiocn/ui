@@ -8,7 +8,7 @@ import {
   WaveformIcon,
 } from "@phosphor-icons/react";
 import { useMemo } from "react";
-import type { ComponentType } from "react";
+import type { ComponentType, CSSProperties } from "react";
 
 import KnobsTile from "@/components/home/tiles/knobs-tile";
 import { BarVisualizer } from "@/components/ui/bar-visualizer";
@@ -47,6 +47,14 @@ import { SmoothWaveform } from "@/components/ui/smooth-waveform";
 import { Spectrum } from "@/components/ui/spectrum";
 import { TempoControl } from "@/components/ui/tempo-control";
 import {
+  VuMeter,
+  VuMeterFace,
+  VuMeterLabel,
+  VuMeterLegend,
+  VuMeterNeedle,
+  VuMeterScale,
+} from "@/components/ui/vu-meter";
+import {
   Waveform,
   WaveformCanvas,
   WaveformCursor,
@@ -54,6 +62,7 @@ import {
   WaveformRegion,
 } from "@/components/ui/waveform";
 import { formatDb } from "@/lib/audio/decibels";
+import { vuTaper } from "@/lib/audio/taper";
 import type { MeterFrame } from "@/lib/audio/types";
 import type { SocialPreviewName } from "@/lib/social-catalog";
 import {
@@ -334,6 +343,30 @@ const SmoothPreview = () => (
     />
   </div>
 );
+const VU_TAPER = vuTaper(-10, 3);
+const VU_SIDES = [
+  { label: "L", name: "Left channel", vu: -1.5 },
+  { label: "R", name: "Right channel", vu: 1 },
+];
+const VuPreview = () => (
+  <div className="grid w-full grid-cols-2 gap-10">
+    {VU_SIDES.map((side) => (
+      <VuMeter
+        aria-label={side.name}
+        aria-valuenow={side.vu}
+        key={side.label}
+        style={{ "--vu-level": VU_TAPER.toPosition(side.vu) } as CSSProperties}
+      >
+        <VuMeterFace>
+          <VuMeterScale />
+          <VuMeterNeedle />
+          <VuMeterLegend>VU</VuMeterLegend>
+          <VuMeterLabel>{side.label}</VuMeterLabel>
+        </VuMeterFace>
+      </VuMeter>
+    ))}
+  </div>
+);
 const SpectrumPreview = () => (
   <Spectrum className="h-64 w-full" peakHold source={socialVisualSource} />
 );
@@ -412,6 +445,7 @@ const previews: Record<SocialPreviewName, ComponentType> = {
   toggles: TogglesPreview,
   tracks: TracksPreview,
   volume: VolumePreview,
+  vu: VuPreview,
   waveform: WaveformPreview,
 };
 
