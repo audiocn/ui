@@ -1,153 +1,130 @@
-import { clamp } from "@/lib/audio/decibels";
-
-/** How a meter needle moves. */
+/** How a VU needle moves: one resonant low-pass, and a bounce off the upper stop. */
 export interface NeedleOptions {
-  /** Time to reach 99% of a step, in milliseconds. 0 follows the target exactly. */
-  riseMs: number;
-  /** How far past a step the needle swings, as a fraction of the step. 0 never overshoots. */
-  overshoot: number;
+  /** Cutoff of the 2nd-order low-pass, in Hz. Lower is slower. */
+  lowPassCutoffHz: number;
+  /** Resonance of the low-pass. 0.5 never overshoots; higher overshoots more. */
+  lowPassQ: number;
+  /** Share of its speed the needle keeps when it hits the upper stop, 0..1. */
+  rebound: number;
 }
 
-/** `vu` is the standard volume indicator: 99% in 300 ms, 1.5% overshoot. */
-export const NEEDLE_BALLISTICS = {
-  instant: { overshoot: 0, riseMs: 0 },
-  vu: { overshoot: 0.015, riseMs: 300 },
-} as const satisfies Record<string, NeedleOptions>;
-
-export type NeedlePreset = keyof typeof NEEDLE_BALLISTICS;
-
-export type NeedleInput = NeedlePreset | Partial<NeedleOptions>;
-
-export const resolveNeedle = (input: NeedleInput = "vu"): NeedleOptions => {
-  if (typeof input === "string") {
-    return NEEDLE_BALLISTICS[input];
-  }
-  return { ...NEEDLE_BALLISTICS.vu, ...input };
+/** 99% of a step in about 340 ms, about 1% overshoot. */
+export const VU_BALLISTICS: NeedleOptions = {
+  lowPassCutoffHz: 2,
+  lowPassQ: 0.6,
+  rebound: 0.5,
 };
 
-/** The pins a needle can't move past, in scale positions. */
-export interface NeedleStops {
-  min: number;
-  max: number;
+/** The printed scale and its calibration, as on `VuMeter`. */
+export interface NeedleScale {
+  /** The RMS level in dBFS that reads 0 VU. */
+  referenceDb: number;
+  /** Left end of the scale, in VU. */
+  minDb: number;
+  /** Right end of the scale, in VU. */
+  maxDb: number;
 }
 
-export interface Needle {
-  /** Moves toward `target`, a scale position, and returns where the needle is. */
-  step: (target: number, nowMs: number) => number;
-  /** Puts the needle back at rest against the low pin. */
-  reset: () => void;
+/** 0 VU at −18 dBFS (EBU R68), printed from −10 to +3 VU. */
+export const VU_SCALE: NeedleScale = {
+  maxDb: 3,
+  minDb: -10,
+  referenceDb: -18,
+};
+
+/** Where the needle rests: just under the left end of the scale. */
+export const NEEDLE_REST = -0.04;
+/** The upper stop: just past the right end of the scale. */
+export const NEEDLE_PIN = 1.04;
+
+/** Coefficients for `stepNeedle`. Positions are scale positions: 0 and 1 are the ends of the arc. */
+export interface NeedleConstants {
+  /** Natural frequency, rad/s. */
+  omega: number;
+  /** Damping ratio. */
+  damping: number;
+  restitution: number;
+  /** Scale position per unit of rectified signal. */
+  gain: number;
+  /** Scale position of silence. */
+  offset: number;
+  lower: number;
+  upper: number;
 }
 
-const SETTLED = 0.99;
-const MAX_OVERSHOOT = 0.5;
-const SEARCH_STEP = 0.01;
-const SEARCH_ROUNDS = 40;
-const SUBSTEP_MS = 1;
-const UNBOUNDED: NeedleStops = {
-  max: Number.POSITIVE_INFINITY,
-  min: Number.NEGATIVE_INFINITY,
-};
-/** After a longer gap (a hidden tab, an off-screen meter), jump to the target. */
-const MAX_GAP_MS = 500;
+export interface NeedleState {
+  position: number;
+  velocity: number;
+}
 
-/** The damping ratio that gives this much overshoot on a step. */
-const dampingFor = (overshoot: number) => {
-  if (overshoot <= 0) {
-    return 1;
-  }
-  const decay = Math.log(Math.min(overshoot, MAX_OVERSHOOT));
-  return -decay / Math.hypot(Math.PI, decay);
-};
+export const restingNeedle = (): NeedleState => ({
+  position: NEEDLE_REST,
+  velocity: 0,
+});
 
-/** A unit step response at natural frequency 1, at time `t`. */
-const stepResponse = (damping: number, t: number) => {
-  if (damping >= 1) {
-    return 1 - Math.exp(-t) * (1 + t);
-  }
-  const ringing = Math.sqrt(1 - damping ** 2);
-  return (
-    1 -
-    Math.exp(-damping * t) *
-      (Math.cos(ringing * t) + (damping / ringing) * Math.sin(ringing * t))
-  );
-};
+/*
+ * needleConstants and stepNeedle run in the AudioWorklet too, which gets
+ * their source text. Keep them self-contained: no imports, no outer names.
+ */
 
-/** When the unit step response first reaches 99%, at natural frequency 1. */
-const settleTime = (damping: number) => {
-  let high = SEARCH_STEP;
-  while (stepResponse(damping, high) < SETTLED) {
-    high += SEARCH_STEP;
-  }
-  let low = high - SEARCH_STEP;
-  for (let round = 0; round < SEARCH_ROUNDS; round += 1) {
-    const middle = (low + high) / 2;
-    if (stepResponse(damping, middle) < SETTLED) {
-      low = middle;
-    } else {
-      high = middle;
-    }
-  }
-  return high;
+/** Turns needle options and a calibrated scale into `stepNeedle` coefficients. */
+export const needleConstants = (
+  options: NeedleOptions,
+  scale: NeedleScale
+): NeedleConstants => {
+  const low = 10 ** (scale.minDb / 20);
+  const span = 10 ** (scale.maxDb / 20) - low;
+  // The mean of a full-wave rectified sine is 2√2/π times its RMS.
+  const referenceMean =
+    ((2 * Math.SQRT2) / Math.PI) * 10 ** (scale.referenceDb / 20);
+  return {
+    damping: 1 / (2 * options.lowPassQ),
+    gain: 1 / (referenceMean * span),
+    lower: -0.04,
+    offset: -low / span,
+    omega: 2 * Math.PI * options.lowPassCutoffHz,
+    restitution: Math.min(1, Math.max(0, options.rebound)),
+    upper: 1.04,
+  };
 };
 
 /**
- * Creates a meter needle: a damped spring that swings toward its target,
- * overshoots a little and settles, and stops against a pin at each end of
- * the scale. Feed it positions that are linear in amplitude, as a real
- * movement is.
+ * Moves the needle by one sample, `dt` seconds, driven by the rectified
+ * signal. A 2nd-order low-pass written as a mass on a spring, so the stops
+ * can act on its position and velocity. Mutates `state`.
  */
-export const createNeedle = (
-  input?: NeedleInput,
-  stops: NeedleStops = UNBOUNDED
-): Needle => {
-  const { overshoot, riseMs } = resolveNeedle(input);
-  const damping = dampingFor(overshoot);
-  // Radians per millisecond, so the step response reaches 99% at riseMs.
-  const frequency = riseMs > 0 ? settleTime(damping) / riseMs : 0;
-  const rest = Number.isFinite(stops.min) ? stops.min : null;
-  let position: number | null = rest;
-  let velocity = 0;
-  let lastMs: number | null = null;
-
-  const pin = (next: number) => {
-    const pinned = clamp(next, stops.min, stops.max);
-    if (pinned !== next) {
-      velocity = 0;
+export const stepNeedle = (
+  state: NeedleState,
+  drive: number,
+  constants: NeedleConstants,
+  dt: number
+): void => {
+  const { damping, gain, lower, offset, omega, restitution, upper } = constants;
+  const target = drive * gain + offset;
+  const acceleration =
+    omega * omega * (target - state.position) -
+    2 * damping * omega * state.velocity;
+  // Semi-implicit Euler: speed first, then position, so it stays stable.
+  const velocity = state.velocity + acceleration * dt;
+  const position = state.position + velocity * dt;
+  if (position > upper) {
+    const reboundSpeed = Math.max(0, velocity) * restitution;
+    // Rest on the stop once a bounce would be shorter than one step;
+    // otherwise the integration keeps adding tiny bounces.
+    if (reboundSpeed <= Math.max(0, acceleration) * dt) {
+      state.position = upper;
+      state.velocity = 0;
+    } else {
+      state.position = upper - (position - upper) * restitution;
+      state.velocity = -reboundSpeed;
     }
-    return pinned;
-  };
-
-  const reset = () => {
-    position = rest;
-    velocity = 0;
-    lastMs = null;
-  };
-
-  const step = (target: number, nowMs: number) => {
-    const elapsedMs = lastMs === null ? 0 : Math.max(0, nowMs - lastMs);
-    lastMs = nowMs;
-
-    if (position === null || frequency === 0 || elapsedMs > MAX_GAP_MS) {
-      velocity = 0;
-      position = pin(target);
-      return position;
-    }
-
-    let current = position;
-    let remainingMs = elapsedMs;
-    while (remainingMs > 0) {
-      const dt = Math.min(SUBSTEP_MS, remainingMs);
-      const acceleration =
-        frequency ** 2 * (target - current) -
-        2 * damping * frequency * velocity;
-      // Semi-implicit Euler: speed first, then position, so it stays stable.
-      velocity += acceleration * dt;
-      current = pin(current + velocity * dt);
-      remainingMs -= dt;
-    }
-    position = current;
-    return position;
-  };
-
-  return { reset, step };
+    return;
+  }
+  if (position < lower) {
+    state.position = lower;
+    state.velocity = 0;
+    return;
+  }
+  state.position = position;
+  state.velocity = velocity;
 };

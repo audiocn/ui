@@ -1,120 +1,166 @@
 import { describe, expect, it } from "vitest";
 
-import { createNeedle, resolveNeedle } from "@/lib/audio/needle";
-import type { Needle } from "@/lib/audio/needle";
+import { dbToGain } from "@/lib/audio/decibels";
+import {
+  NEEDLE_PIN,
+  NEEDLE_REST,
+  needleConstants,
+  restingNeedle,
+  stepNeedle,
+  VU_BALLISTICS,
+} from "@/lib/audio/needle";
+import type { NeedleOptions, NeedleScale } from "@/lib/audio/needle";
+import { vuTaper } from "@/lib/audio/taper";
 
-const FRAME_MS = 16;
-const STOPS = { max: 1.04, min: -0.04 };
+const SAMPLE_RATE = 48_000;
+const SAMPLES_PER_MS = SAMPLE_RATE / 1000;
+const TONE_HZ = 1000;
+const SCALE: NeedleScale = { maxDb: 3, minDb: -10, referenceDb: -18 };
+const ZERO_VU = vuTaper(-10, 3).toPosition(0);
+/** On the stop, each half-cycle of the tone tugs the needle off it by less than this. */
+const STOP_CHATTER = 1e-3;
 
-interface Swing {
-  /** When the needle first reached 99% of the step, in ms. */
-  settledMs: number;
-  /** The furthest it went past the target, as a fraction of the step. */
-  overshoot: number;
-  /** Where it ended up. */
-  final: number;
+/** A sine at `rmsDb` (null for silence) for `ms`, sampled once per millisecond. */
+interface Segment {
+  rmsDb: number | null;
+  ms: number;
 }
 
-const swing = (
-  needle: Needle,
-  target: number,
-  frameMs = FRAME_MS,
-  durationMs = 1500
-): Swing => {
-  const start = needle.step(0, 0);
-  let settledMs = Number.POSITIVE_INFINITY;
-  let furthest = start;
-  let position = start;
-  for (let now = frameMs; now <= durationMs; now += frameMs) {
-    position = needle.step(target, now);
-    furthest = Math.max(furthest, position);
-    if (settledMs === Number.POSITIVE_INFINITY && position >= target * 0.99) {
-      settledMs = now;
+const simulate = (
+  segments: Segment[],
+  options: Partial<NeedleOptions> = {},
+  scale: NeedleScale = SCALE
+) => {
+  const constants = needleConstants({ ...VU_BALLISTICS, ...options }, scale);
+  const state = restingNeedle();
+  const positions: number[] = [];
+  let sample = 0;
+  for (const { ms, rmsDb } of segments) {
+    const peak = rmsDb === null ? 0 : dbToGain(rmsDb) * Math.SQRT2;
+    for (let i = 0; i < ms * SAMPLES_PER_MS; i += 1, sample += 1) {
+      const x = peak * Math.sin((2 * Math.PI * TONE_HZ * sample) / SAMPLE_RATE);
+      stepNeedle(state, Math.abs(x), constants, 1 / SAMPLE_RATE);
+      if (sample % SAMPLES_PER_MS === 0) {
+        positions.push(state.position);
+      }
     }
   }
-  return {
-    final: position,
-    overshoot: (furthest - target) / (target - start),
-    settledMs,
-  };
+  return positions;
 };
 
-describe("createNeedle", () => {
-  it("rises to 99% in 300 ms with the vu preset", () => {
-    const { settledMs } = swing(createNeedle("vu"), 0.6, 1);
-    expect(settledMs).toBeGreaterThanOrEqual(285);
-    expect(settledMs).toBeLessThanOrEqual(315);
+const settled = (positions: number[]) => positions.at(-1) ?? Number.NaN;
+
+/** Lowest position after the needle first reaches the upper stop. */
+const deepestBounce = (positions: number[]) => {
+  const hit = positions.findIndex((p) => p >= NEEDLE_PIN - 0.005);
+  return hit === -1 ? Number.NaN : Math.min(...positions.slice(hit));
+};
+
+describe("needleConstants", () => {
+  it("puts the stops just outside the printed scale", () => {
+    const constants = needleConstants(VU_BALLISTICS, SCALE);
+    expect(constants.lower).toBe(NEEDLE_REST);
+    expect(constants.upper).toBe(NEEDLE_PIN);
+    expect(NEEDLE_REST).toBeCloseTo(-0.04, 6);
+    expect(NEEDLE_PIN).toBeCloseTo(1.04, 6);
   });
 
-  it("overshoots a step by 1 to 1.5% and settles on it", () => {
-    const { final, overshoot } = swing(createNeedle("vu"), 0.6);
-    expect(overshoot).toBeGreaterThan(0.01);
-    expect(overshoot).toBeLessThanOrEqual(0.015);
-    expect(final).toBeCloseTo(0.6, 4);
-  });
-
-  it("moves the same with fast and slow frames", () => {
-    const fast = swing(createNeedle("vu"), 0.6, 8);
-    const slow = swing(createNeedle("vu"), 0.6, 33);
-    expect(Math.abs(fast.settledMs - slow.settledMs)).toBeLessThanOrEqual(33);
-    expect(slow.overshoot).toBeCloseTo(fast.overshoot, 2);
-  });
-
-  it("starts at rest against the low pin", () => {
-    const needle = createNeedle("vu", STOPS);
-    expect(needle.step(0.5, 0)).toBe(-0.04);
-    expect(needle.step(0.5, FRAME_MS)).toBeGreaterThan(-0.04);
-  });
-
-  it("stops against the pins and loses its speed there", () => {
-    const needle = createNeedle("vu", STOPS);
-    let position = needle.step(5, 0);
-    for (let now = FRAME_MS; now <= 1000; now += FRAME_MS) {
-      position = needle.step(5, now);
-      expect(position).toBeLessThanOrEqual(1.04);
-    }
-    expect(position).toBe(1.04);
-    // Pinned with no speed left, it leaves the pin as soon as the level drops.
-    expect(needle.step(0.5, 1000 + FRAME_MS)).toBeLessThan(1.04);
-    for (let now = 1000; now <= 3000; now += FRAME_MS) {
-      position = needle.step(-1, now);
-      expect(position).toBeGreaterThanOrEqual(-0.04);
-    }
-    expect(position).toBe(-0.04);
-  });
-
-  it("jumps to the target after a long gap", () => {
-    const needle = createNeedle("vu", STOPS);
-    needle.step(0.2, 0);
-    expect(needle.step(0.7, 2000)).toBe(0.7);
-  });
-
-  it("follows the target exactly with the instant preset", () => {
-    const needle = createNeedle("instant", STOPS);
-    expect(needle.step(0.3, 0)).toBe(0.3);
-    expect(needle.step(0.8, FRAME_MS)).toBe(0.8);
-    expect(needle.step(3, FRAME_MS * 2)).toBe(1.04);
-  });
-
-  it("goes back to rest on reset", () => {
-    const needle = createNeedle("vu", STOPS);
-    swing(needle, 0.8);
-    needle.reset();
-    expect(needle.step(0.8, 5000)).toBe(-0.04);
-  });
-
-  it("never overshoots with no overshoot asked for", () => {
-    const { final, overshoot } = swing(createNeedle({ overshoot: 0 }), 0.5);
-    expect(overshoot).toBeLessThanOrEqual(0);
-    expect(final).toBeCloseTo(0.5, 3);
+  it("defaults to a 2 Hz low-pass at Q 0.6 with half the speed kept on impact", () => {
+    expect(VU_BALLISTICS).toEqual({
+      lowPassCutoffHz: 2,
+      lowPassQ: 0.6,
+      rebound: 0.5,
+    });
   });
 });
 
-describe("resolveNeedle", () => {
-  it("merges partial options over the vu preset", () => {
-    expect(resolveNeedle({ riseMs: 600 })).toEqual({
-      overshoot: 0.015,
-      riseMs: 600,
-    });
+describe("stepNeedle", () => {
+  it("starts at rest against the lower stop", () => {
+    expect(restingNeedle()).toEqual({ position: NEEDLE_REST, velocity: 0 });
+  });
+
+  it.each([
+    [1, 0.5],
+    [2, 0.6],
+    [5, Math.SQRT1_2],
+    [10, 1],
+  ])(
+    "settles on 0 VU at the reference level, at %s Hz and Q %s",
+    (lowPassCutoffHz, lowPassQ) => {
+      const positions = simulate([{ ms: 3000, rmsDb: -18 }], {
+        lowPassCutoffHz,
+        lowPassQ,
+      });
+      expect(settled(positions)).toBeCloseTo(ZERO_VU, 2);
+    }
+  );
+
+  it("reads relative to referenceDb", () => {
+    const positions = simulate(
+      [{ ms: 3000, rmsDb: -18 }],
+      {},
+      {
+        ...SCALE,
+        referenceDb: -20,
+      }
+    );
+    expect(settled(positions)).toBeCloseTo(vuTaper(-10, 3).toPosition(2), 2);
+  });
+
+  it("rises like a 2nd-order low-pass: 99% in about 340 ms, about 1% over", () => {
+    const positions = simulate([{ ms: 2000, rmsDb: -18 }]);
+    const final = settled(positions);
+    const travel = final - NEEDLE_REST;
+    const rise = positions.findIndex((p) => p >= NEEDLE_REST + 0.99 * travel);
+    const overshoot = (Math.max(...positions) - final) / travel;
+    expect(rise).toBeGreaterThan(320);
+    expect(rise).toBeLessThan(360);
+    expect(overshoot).toBeGreaterThan(0.005);
+    expect(overshoot).toBeLessThan(0.015);
+  });
+
+  it("never overshoots at Q 0.5", () => {
+    const positions = simulate([{ ms: 3000, rmsDb: -18 }], { lowPassQ: 0.5 });
+    expect(Math.max(...positions)).toBeLessThanOrEqual(
+      settled(positions) + 1e-6
+    );
+  });
+
+  it("holds still on a steady tone", () => {
+    const tail = simulate([{ ms: 3000, rmsDb: -18 }]).slice(-500);
+    expect(Math.max(...tail) - Math.min(...tail)).toBeLessThan(1e-4);
+  });
+
+  it("rests on the upper stop for a steady tone just over the top", () => {
+    const positions = simulate([{ ms: 2000, rmsDb: -14.5 }]);
+    expect(NEEDLE_PIN - settled(positions)).toBeLessThan(STOP_CHATTER);
+    expect(Math.max(...positions)).toBeLessThanOrEqual(NEEDLE_PIN);
+  });
+
+  it("bounces further off the upper stop the harder it hits", () => {
+    const hard = deepestBounce(simulate([{ ms: 1000, rmsDb: -6 }]));
+    const soft = deepestBounce(simulate([{ ms: 1000, rmsDb: -12 }]));
+    expect(hard).toBeLessThan(soft);
+    expect(soft).toBeLessThan(NEEDLE_PIN - STOP_CHATTER);
+  });
+
+  it("comes to rest on the upper stop after bouncing", () => {
+    const positions = simulate([{ ms: 1500, rmsDb: -6 }]);
+    const tail = positions.slice(-500);
+    expect(NEEDLE_PIN - Math.min(...tail)).toBeLessThan(STOP_CHATTER);
+  });
+
+  it("stops dead on the upper stop with no rebound", () => {
+    const positions = simulate([{ ms: 1000, rmsDb: -6 }], { rebound: 0 });
+    expect(NEEDLE_PIN - deepestBounce(positions)).toBeLessThan(STOP_CHATTER);
+  });
+
+  it("falls back to rest in silence, never past the lower stop", () => {
+    const positions = simulate([
+      { ms: 1500, rmsDb: -18 },
+      { ms: 1500, rmsDb: null },
+    ]);
+    expect(Math.min(...positions)).toBeGreaterThanOrEqual(NEEDLE_REST);
+    expect(settled(positions)).toBe(NEEDLE_REST);
   });
 });

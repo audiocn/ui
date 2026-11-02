@@ -6,7 +6,6 @@ import {
   useCallback,
   useContext,
   useEffect,
-  useEffectEvent,
   useId,
   useImperativeHandle,
   useMemo,
@@ -14,24 +13,16 @@ import {
 } from "react";
 import type { ComponentProps, Ref, RefObject } from "react";
 
-import { readChannel } from "@/components/ui/db-readout";
+import type { AnalyserInput } from "@/hooks/use-audio-analyser";
 import { useAudioConfig } from "@/hooks/use-audio-config";
-import { useFrameSource } from "@/hooks/use-frame-source";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { useVisibility } from "@/hooks/use-visibility";
-import { formatDb, SILENCE_DB } from "@/lib/audio/decibels";
-import { subscribeFrame } from "@/lib/audio/frame-loop";
-import { createNeedle, resolveNeedle } from "@/lib/audio/needle";
-import type { NeedleInput } from "@/lib/audio/needle";
+import { useVuNeedle } from "@/hooks/use-vu-needle";
+import { formatDb } from "@/lib/audio/decibels";
+import { NEEDLE_PIN, NEEDLE_REST, VU_SCALE } from "@/lib/audio/needle";
+import type { NeedleOptions } from "@/lib/audio/needle";
 import { vuTaper } from "@/lib/audio/taper";
-import type {
-  ChannelLevel,
-  FrameSource,
-  MeterFrame,
-  MeterZone,
-  MeterZoneName,
-  Taper,
-} from "@/lib/audio/types";
+import type { MeterZone, MeterZoneName, Taper } from "@/lib/audio/types";
 import { zoneForDb } from "@/lib/audio/zones";
 import { cn } from "@/lib/utils";
 
@@ -40,9 +31,9 @@ const REDUCED_MOTION_INTERVAL_MS = 250;
 const POSITION_EPSILON = 0.0005;
 
 /** The level that reads 0 VU, in dBFS (EBU R68). */
-export const DEFAULT_REFERENCE_DB = -18;
-const DEFAULT_MIN_VU = -10;
-const DEFAULT_MAX_VU = 3;
+export const DEFAULT_REFERENCE_DB = VU_SCALE.referenceDb;
+const DEFAULT_MIN_VU = VU_SCALE.minDb;
+const DEFAULT_MAX_VU = VU_SCALE.maxDb;
 
 /** The printed scale's normal range is ink; from 0 VU it is red. */
 export const VU_ZONES: MeterZone[] = [
@@ -109,9 +100,6 @@ const NEEDLE_TURN: Record<VuMeterPivot, string> = {
 const VIEW_WIDTH = 200;
 const VIEW_HEIGHT = 100;
 const VIEW_BOX = `0 0 ${VIEW_WIDTH} ${VIEW_HEIGHT}`;
-/** How far past each end of the scale the pins sit, as a share of the sweep. */
-const PIN = 0.04;
-const REST = -PIN;
 const NEEDLE_SHADOW_OFFSET = 1.8;
 const NEEDLE_SHADOW_REGION = 6;
 const COVER_SHADOW = 1.5;
@@ -184,9 +172,7 @@ export const formatVu = (vu: number): string => {
 export type VuMeterVariant = "classic" | "flat";
 
 export interface VuMeterActions {
-  /** Paint a frame directly, for callers that own their own frame loop. */
-  paint: (frame: MeterFrame) => void;
-  /** Send silence: the needle falls back to rest. */
+  /** Puts the needle back at rest. */
   reset: () => void;
 }
 
@@ -213,54 +199,15 @@ const useVuMeter = (part: string) => {
 /** An id that is safe inside `url(#…)`. */
 const useSvgId = () => `vu${useId().replaceAll(/[^\w-]/gu, "")}`;
 
-const serializeLevels = (
-  channels: ChannelLevel[] | undefined,
-  peakDb: number | undefined,
-  rmsDb: number | undefined
-): string => {
-  if (channels) {
-    return channels.map((level) => `${level.peakDb}:${level.rmsDb}`).join("|");
-  }
-  if (peakDb === undefined && rmsDb === undefined) {
-    return "";
-  }
-  return `${peakDb ?? rmsDb ?? SILENCE_DB}:${rmsDb}`;
-};
-
-const parseNumber = (text: string | undefined): number | undefined => {
-  const value = Number(text);
-  return text === undefined || Number.isNaN(value) ? undefined : value;
-};
-
-const parseLevels = (key: string): MeterFrame | null => {
-  if (key === "") {
-    return null;
-  }
-  return {
-    channels: key.split("|").map((entry) => {
-      const [peak, rms] = entry.split(":");
-      return {
-        peakDb: parseNumber(peak) ?? SILENCE_DB,
-        rmsDb: parseNumber(rms),
-      };
-    }),
-  };
-};
-
-/** Read on every paint, so changing it doesn't rebuild the needle. */
+/** Read on every paint, so changing it doesn't touch the audio thread. */
 interface NeedleReading {
-  channel: number | "max";
   maxDb: number;
-  measure: "peak" | "rms";
   minDb: number;
-  referenceDb: number;
   taper: Taper;
   zones: MeterZone[];
 }
 
 interface PainterOptions {
-  ballistics: NeedleInput;
-  latest: RefObject<MeterFrame | null>;
   reducedMotion: boolean;
   root: RefObject<HTMLElement | null>;
   visible: RefObject<boolean>;
@@ -289,14 +236,10 @@ const writeAria = (
 };
 
 /**
- * Paints the needle outside React: steps its ballistics, writes `--vu-level`
- * and the data attributes, and throttles ARIA updates.
+ * Paints the positions the audio thread sends, outside React: writes
+ * `--vu-level` and the data attributes, and throttles ARIA updates.
  */
 const createNeedlePainter = (options: PainterOptions) => {
-  const needle = createNeedle(
-    options.reducedMotion ? "instant" : options.ballistics,
-    { max: 1 + PIN, min: REST }
-  );
   let level = Number.NaN;
   // Null until first painted, so a new painter always writes them.
   let zone: MeterZoneName | null = null;
@@ -315,24 +258,27 @@ const createNeedlePainter = (options: PainterOptions) => {
       zone = nextZone;
       root.dataset.zone = nextZone;
     }
-    const nextActive = position > REST + POSITION_EPSILON;
+    const nextActive = position > NEEDLE_REST + POSITION_EPSILON;
     if (nextActive !== active) {
       active = nextActive;
       root.toggleAttribute("data-active", nextActive);
     }
-    const nextPinned = position >= 1 + PIN - POSITION_EPSILON;
+    const nextPinned = position >= NEEDLE_PIN - POSITION_EPSILON;
     if (nextPinned !== pinned) {
       pinned = nextPinned;
       root.toggleAttribute("data-pinned", nextPinned);
     }
   };
 
-  return (nowMs: number, reading: NeedleReading) => {
+  /** `force` paints even off screen or between reduced-motion paints. */
+  return (position: number, reading: NeedleReading, force = false) => {
     const root = options.root.current;
-    if (!(root && options.visible.current)) {
+    if (!(root && (force || options.visible.current))) {
       return;
     }
+    const nowMs = performance.now();
     if (
+      !force &&
       options.reducedMotion &&
       nowMs - lastPaintMs < REDUCED_MOTION_INTERVAL_MS
     ) {
@@ -340,19 +286,12 @@ const createNeedlePainter = (options: PainterOptions) => {
     }
     lastPaintMs = nowMs;
 
-    const frame = options.latest.current;
-    const db = frame
-      ? readChannel(frame, reading.measure, reading.channel)
-      : SILENCE_DB;
-    const target = reading.taper.toPosition(db - reading.referenceDb);
-    const position = needle.step(target, nowMs);
-
     if (!(Math.abs(position - level) <= POSITION_EPSILON)) {
       level = position;
       root.style.setProperty("--vu-level", position.toFixed(4));
     }
     writeState(root, position, reading);
-    if (nowMs - lastAriaMs >= ARIA_INTERVAL_MS) {
+    if (force || nowMs - lastAriaMs >= ARIA_INTERVAL_MS) {
       lastAriaMs = nowMs;
       writeAria(root, position, reading);
     }
@@ -665,19 +604,11 @@ const vuMeterVariants = cva(
 );
 
 export interface VuMeterProps extends ComponentProps<"div"> {
-  /** A meter source; the meter subscribes and paints itself without re-rendering React. */
-  source?: FrameSource<MeterFrame> | null;
-  /** Mono peak level in dBFS, for declarative use. */
-  peakDb?: number;
-  /** Mono RMS level in dBFS, for declarative use. */
-  rmsDb?: number;
-  /** Levels per channel, for declarative multi-channel use. */
-  channels?: ChannelLevel[];
-  /** Which channel the needle shows, or the loudest. Default `max`. */
-  channel?: number | "max";
-  /** Which reading moves the needle. RMS falls back to peak. Default `rms`. */
-  measure?: "rms" | "peak";
-  /** The level in dBFS that reads 0 VU. Default −18 (EBU R68); SMPTE uses −20. */
+  /** The audio to meter: a node, a media element or a stream. */
+  input?: AnalyserInput;
+  /** Which channel moves the needle, or the louder of the two. Default `max`. */
+  channel?: 0 | 1 | "max";
+  /** The RMS level in dBFS that reads 0 VU. Default −18 (EBU R68); SMPTE uses −20. */
   referenceDb?: number;
   /** Left end of the printed scale, in VU. Default −10. */
   minDb?: number;
@@ -685,8 +616,8 @@ export interface VuMeterProps extends ComponentProps<"div"> {
   maxDb?: number;
   /** Colour zones, in VU. Default ink, then red from 0 VU. */
   zones?: MeterZone[];
-  /** How the needle moves. Default `vu`: 99% in 300 ms with 1.5% overshoot. */
-  ballistics?: NeedleInput;
+  /** How the needle moves. Default: a 2 Hz low-pass at Q 0.6, keeping half its speed off the upper stop. */
+  ballistics?: Partial<NeedleOptions>;
   /** `classic` is a backlit face in a dark bezel; `flat` follows the theme. Default `classic`. */
   variant?: VuMeterVariant;
   /** Where the needle turns: `bottom`, as on most meters, or `top`, hanging from above. Default `bottom`. */
@@ -695,17 +626,13 @@ export interface VuMeterProps extends ComponentProps<"div"> {
 }
 
 export const VuMeter = ({
-  source,
-  peakDb,
-  rmsDb,
-  channels,
+  input = null,
   channel = "max",
-  measure = "rms",
   referenceDb = DEFAULT_REFERENCE_DB,
   minDb = DEFAULT_MIN_VU,
   maxDb = DEFAULT_MAX_VU,
   zones = VU_ZONES,
-  ballistics = "vu",
+  ballistics,
   variant = "classic",
   pivot = "bottom",
   actionsRef,
@@ -716,60 +643,56 @@ export const VuMeter = ({
 }: VuMeterProps) => {
   const config = useAudioConfig();
   const reducedMotion = useReducedMotion();
-  const latestRef = useRef<MeterFrame | null>(null);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const visibleRef = useVisibility(rootRef);
-
-  const accept = useCallback((frame: MeterFrame) => {
-    latestRef.current = frame;
-  }, []);
-
-  useFrameSource(source, accept);
-
-  const declarativeKey = serializeLevels(channels, peakDb, rmsDb);
-  useEffect(() => {
-    const frame = parseLevels(declarativeKey);
-    if (frame) {
-      accept(frame);
-    }
-  }, [accept, declarativeKey]);
-
   const taper = useMemo(() => vuTaper(minDb, maxDb), [minDb, maxDb]);
 
-  // Scale and calibration changes reach the painter on its next frame
-  // instead of rebuilding it and throwing the needle back to rest.
+  // Scale changes reach the painter on its next position.
   const reading = useMemo<NeedleReading>(
-    () => ({ channel, maxDb, measure, minDb, referenceDb, taper, zones }),
-    [channel, maxDb, measure, minDb, referenceDb, taper, zones]
+    () => ({ maxDb, minDb, taper, zones }),
+    [maxDb, minDb, taper, zones]
   );
-  const readReading = useEffectEvent(() => reading);
-
-  const ballisticsKey = JSON.stringify(
-    typeof ballistics === "string" ? ballistics : resolveNeedle(ballistics)
-  );
-
+  const readingRef = useRef(reading);
   useEffect(() => {
-    const paint = createNeedlePainter({
-      ballistics: JSON.parse(ballisticsKey) as NeedleInput,
-      latest: latestRef,
+    readingRef.current = reading;
+  }, [reading]);
+
+  const paintRef = useRef<ReturnType<typeof createNeedlePainter> | null>(null);
+  useEffect(() => {
+    paintRef.current = createNeedlePainter({
       reducedMotion,
       root: rootRef,
       visible: visibleRef,
     });
-    return subscribeFrame((nowMs) => {
-      paint(nowMs, readReading());
-    });
-  }, [ballisticsKey, reducedMotion, visibleRef]);
+  }, [reducedMotion, visibleRef]);
 
+  const needle = useVuNeedle(
+    input,
+    (position) => paintRef.current?.(position, readingRef.current),
+    { ...ballistics, channel, maxDb, minDb, referenceDb }
+  );
+
+  // When the input goes away, drop to rest. With no input from the start,
+  // leave --vu-level alone, so a static needle can be set with CSS.
+  const hadInputRef = useRef(false);
+  useEffect(() => {
+    if (!input && hadInputRef.current) {
+      paintRef.current?.(NEEDLE_REST, readingRef.current, true);
+    }
+    hadInputRef.current = input !== null;
+  }, [input]);
+
+  const { reset: resetNeedle } = needle;
   useImperativeHandle(
     actionsRef,
     () => ({
-      paint: accept,
       reset: () => {
-        accept({ channels: [] });
+        resetNeedle();
+        // Paint rest now: a suspended context sends no more positions.
+        paintRef.current?.(NEEDLE_REST, readingRef.current, true);
       },
     }),
-    [accept]
+    [resetNeedle]
   );
 
   const contextValue = useMemo<VuMeterContextValue>(
@@ -799,6 +722,7 @@ export const VuMeter = ({
         data-dimmed={config.dimmed ? "" : undefined}
         data-pivot={pivot}
         data-slot="vu-meter"
+        data-status={needle.status}
         data-variant={variant}
         ref={setRootRef}
         role="meter"

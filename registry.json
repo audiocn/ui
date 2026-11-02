@@ -244,6 +244,27 @@
       ]
     },
     {
+      "name": "use-vu-needle",
+      "type": "registry:hook",
+      "title": "useVuNeedle",
+      "description": "A VU needle on the audio thread: |x| through a resonant low-pass with pins, every sample, calibrated to a reference level. Reports the needle's scale position several times a frame.",
+      "registryDependencies": [
+        "@audiocn/core",
+        "@audiocn/use-audio-context",
+        "@audiocn/use-audio-analyser"
+      ],
+      "files": [
+        {
+          "path": "hooks/use-vu-needle.ts",
+          "type": "registry:hook"
+        },
+        {
+          "path": "lib/audio/vu-worklet.ts",
+          "type": "registry:lib"
+        }
+      ]
+    },
+    {
       "name": "use-audio-devices",
       "type": "registry:hook",
       "title": "useAudioDevices",
@@ -363,15 +384,14 @@
       "name": "vu-meter",
       "type": "registry:ui",
       "title": "VU Meter",
-      "description": "An analog VU meter: a backlit face in a dark bezel, a needle with real VU ballistics (99% in 300 ms, 1.5% overshoot) that pivots from the bottom or hangs from the top, a calibrated scale linear in amplitude, and slots for a badge, legend and channel label. Classic and flat variants.",
+      "description": "An analog VU meter: a backlit face in a dark bezel, a needle that reads the audio on the audio thread with real VU ballistics (a resonant low-pass and a bounce off the upper pin) that pivots from the bottom or hangs from the top, a calibrated scale linear in amplitude, and slots for a badge, legend and channel label. Classic and flat variants.",
       "dependencies": ["class-variance-authority"],
       "registryDependencies": [
         "@audiocn/core",
         "@audiocn/use-audio-config",
-        "@audiocn/use-frame-source",
         "@audiocn/use-reduced-motion",
-        "@audiocn/db-readout",
-        "@audiocn/use-visibility"
+        "@audiocn/use-visibility",
+        "@audiocn/use-vu-needle"
       ],
       "files": [
         {

@@ -8,7 +8,7 @@ import {
   WaveformIcon,
 } from "@phosphor-icons/react";
 import { useMemo } from "react";
-import type { ComponentType } from "react";
+import type { ComponentType, CSSProperties } from "react";
 
 import KnobsTile from "@/components/home/tiles/knobs-tile";
 import { BarVisualizer } from "@/components/ui/bar-visualizer";
@@ -62,6 +62,7 @@ import {
   WaveformRegion,
 } from "@/components/ui/waveform";
 import { formatDb } from "@/lib/audio/decibels";
+import { vuTaper } from "@/lib/audio/taper";
 import type { MeterFrame } from "@/lib/audio/types";
 import type { SocialPreviewName } from "@/lib/social-catalog";
 import {
@@ -342,18 +343,19 @@ const SmoothPreview = () => (
     />
   </div>
 );
+const VU_TAPER = vuTaper(-10, 3);
 const VU_SIDES = [
-  { label: "L", name: "Left channel", rmsDb: -19.5 },
-  { label: "R", name: "Right channel", rmsDb: -17 },
+  { label: "L", name: "Left channel", vu: -1.5 },
+  { label: "R", name: "Right channel", vu: 1 },
 ];
 const VuPreview = () => (
   <div className="grid w-full grid-cols-2 gap-10">
     {VU_SIDES.map((side) => (
       <VuMeter
         aria-label={side.name}
-        ballistics="instant"
+        aria-valuenow={side.vu}
         key={side.label}
-        rmsDb={side.rmsDb}
+        style={{ "--vu-level": VU_TAPER.toPosition(side.vu) } as CSSProperties}
       >
         <VuMeterFace>
           <VuMeterScale />
