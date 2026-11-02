@@ -1,10 +1,20 @@
 import { renderHook } from "@testing-library/react";
+import type { ReactNode } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { Mock } from "vitest";
 
-import { createDemoSignal, useDemoSignal } from "@/hooks/use-demo-signal";
+import {
+  DemoSignalProvider,
+  createDemoSignal,
+  useDemoSignal,
+} from "@/hooks/use-demo-signal";
+import { dbToGain, gainToDb } from "@/lib/audio/decibels";
 import type { MeterFrame, VisualFrame } from "@/lib/audio/types";
+import { createFakeInput } from "@/test/fake-audio";
 import { advance, useFakeFrames } from "@/test/fake-frames";
+
+const LIVE_SAMPLE = 0.5;
+const TONE_DB = -12;
 
 const latest = <T,>(listener: Mock<(frame: T) => void>): T => {
   const call = listener.mock.lastCall;
@@ -89,6 +99,109 @@ it("updates hook gain without replacing sources or resetting the signal pattern"
   } finally {
     stopInput();
     stopOutput();
+    unmount();
+  }
+});
+
+it("meters a live input through one gain stage, connected only while subscribed", () => {
+  const { audio, input, node } = createFakeInput(LIVE_SAMPLE);
+  const signal = createDemoSignal({ channels: 2, gainDb: -6, input: node });
+  expect(input.connect).not.toHaveBeenCalled();
+
+  const meter = vi.fn<(frame: MeterFrame) => void>();
+  const visual = vi.fn<(frame: VisualFrame) => void>();
+  const stopMeter = signal.meter.subscribe(meter);
+  const stopVisual = signal.visual.subscribe(visual);
+  expect(audio.gains).toHaveLength(1);
+  const [stage] = audio.gains;
+  expect(input.connect).toHaveBeenCalledWith(stage);
+  expect(stage.gain.value).toBeCloseTo(dbToGain(-6));
+  // A mono microphone reaches both sides of a stereo meter.
+  expect(stage).toMatchObject({
+    channelCount: 2,
+    channelCountMode: "explicit",
+    channelInterpretation: "speakers",
+  });
+
+  advance(32);
+  expect(latest(meter).channels).toHaveLength(2);
+  expect(latest(meter).channels[1].peakDb).toBeCloseTo(gainToDb(LIVE_SAMPLE));
+  expect(latest(visual).peakDb).toBeCloseTo(gainToDb(LIVE_SAMPLE));
+
+  signal.configure({ gainDb: 3 });
+  expect(stage.gain.value).toBeCloseTo(dbToGain(3));
+  signal.configure({ playing: false });
+  expect(stage.gain.value).toBe(0);
+  expect(audio.gains).toHaveLength(1);
+
+  stopMeter();
+  expect(input.disconnect).not.toHaveBeenCalled();
+  stopVisual();
+  expect(input.disconnect).toHaveBeenCalledWith(stage);
+});
+
+it("switches to a live input and back without dropping subscribers", () => {
+  const { audio, input, node } = createFakeInput(LIVE_SAMPLE);
+  const signal = createDemoSignal({ kind: "tone" });
+  const meter = vi.fn<(frame: MeterFrame) => void>();
+  const stop = signal.meter.subscribe(meter);
+  try {
+    advance(32);
+    expect(latest(meter).channels[0].peakDb).toBeCloseTo(TONE_DB);
+
+    signal.configure({ input: node });
+    advance(32);
+    expect(latest(meter).channels[0].peakDb).toBeCloseTo(gainToDb(LIVE_SAMPLE));
+
+    // A new analysis shape rebuilds the nodes and releases the old ones.
+    signal.configure({ bands: 16 });
+    expect(audio.gains).toHaveLength(2);
+    expect(input.disconnect).toHaveBeenCalledWith(audio.gains[0]);
+
+    signal.configure({ input: null });
+    expect(input.disconnect).toHaveBeenCalledWith(audio.gains[1]);
+    advance(32);
+    expect(latest(meter).channels[0].peakDb).toBeCloseTo(TONE_DB);
+  } finally {
+    stop();
+  }
+});
+
+it("useDemoSignal meters the provider's input unless it passes its own", () => {
+  const { input, node } = createFakeInput(LIVE_SAMPLE);
+  const provided: { input: AudioNode | null } = { input: node };
+  const wrapper = ({ children }: { children: ReactNode }) => (
+    <DemoSignalProvider input={provided.input}>{children}</DemoSignalProvider>
+  );
+  const { result, rerender, unmount } = renderHook(
+    ({ own }: { own?: AudioNode | null }) =>
+      useDemoSignal({ input: own, kind: "tone" }),
+    { initialProps: {}, wrapper }
+  );
+  const signal = result.current;
+  const meter = vi.fn<(frame: MeterFrame) => void>();
+  const stop = signal.meter.subscribe(meter);
+  try {
+    advance(32);
+    expect(latest(meter).channels[0].peakDb).toBeCloseTo(gainToDb(LIVE_SAMPLE));
+
+    rerender({ own: null });
+    advance(32);
+    expect(input.disconnect).toHaveBeenCalledTimes(1);
+    expect(latest(meter).channels[0].peakDb).toBeCloseTo(TONE_DB);
+
+    rerender({});
+    advance(32);
+    expect(latest(meter).channels[0].peakDb).toBeCloseTo(gainToDb(LIVE_SAMPLE));
+
+    provided.input = null;
+    rerender({});
+    advance(32);
+    expect(result.current).toBe(signal);
+    expect(input.disconnect).toHaveBeenCalledTimes(2);
+    expect(latest(meter).channels[0].peakDb).toBeCloseTo(TONE_DB);
+  } finally {
+    stop();
     unmount();
   }
 });

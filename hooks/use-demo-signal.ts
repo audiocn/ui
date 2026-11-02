@@ -1,9 +1,19 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import {
+  createContext,
+  createElement,
+  useContext,
+  useEffect,
+  useMemo,
+} from "react";
+import type { ReactNode } from "react";
 
+import { createAnalyserTap, disconnectFrom } from "@/hooks/use-audio-analyser";
+import type { AnalyserTap } from "@/hooks/use-audio-analyser";
 import { clamp, dbToGain, dbToLevel, gainToDb } from "@/lib/audio/decibels";
 import { subscribeFrame } from "@/lib/audio/frame-loop";
+import { createFrameRelay } from "@/lib/audio/frame-source";
 import { appendHistory } from "@/lib/audio/history";
 import type { FrameSource, MeterFrame, VisualFrame } from "@/lib/audio/types";
 
@@ -26,6 +36,12 @@ export interface DemoSignalOptions {
   gainDb?: number;
   /** When false the signal falls silent. Default true. */
   playing?: boolean;
+  /**
+   * Live audio, such as a microphone source node, to meter in place of the
+   * synthetic signal. Every option but `kind` and `seed` still applies.
+   * Default null.
+   */
+  input?: AudioNode | null;
 }
 
 export interface DemoSignal {
@@ -177,9 +193,97 @@ const sampleWave = (kind: DemoSignalKind, seed: number, time: number) => {
   }
 };
 
+interface LiveInputShape {
+  bands: number;
+  channels: number;
+  historyIntervalMs: number;
+  historySize: number;
+}
+
+interface LiveInput {
+  meter: FrameSource<MeterFrame>;
+  visual: FrameSource<VisualFrame>;
+  setGain: (gain: number) => void;
+}
+
+/**
+ * Meters `input` through a gain stage of its own, so `gainDb` and `playing`
+ * act on live audio too. The nodes are connected only while something is
+ * subscribed.
+ */
+const createLiveInput = (
+  input: AudioNode,
+  { bands, channels, historyIntervalMs, historySize }: LiveInputShape,
+  initialGain: number
+): LiveInput => {
+  const stereo = channels > 1;
+  let gain = initialGain;
+  let graph: { stage: GainNode; tap: AnalyserTap } | null = null;
+  let listeners = 0;
+
+  const open = () => {
+    listeners += 1;
+    if (graph) {
+      return graph;
+    }
+    const { context } = input;
+    const stage = context.createGain();
+    stage.gain.value = gain;
+    if (stereo) {
+      // Up-mixing to two channels feeds a mono microphone to both sides.
+      stage.channelCount = 2;
+      stage.channelCountMode = "explicit";
+      stage.channelInterpretation = "speakers";
+    }
+    input.connect(stage);
+    const tap = createAnalyserTap(context, stage, {
+      bands,
+      channels: stereo ? "stereo" : "mono",
+      historyIntervalMs,
+      historySize,
+    });
+    graph = { stage, tap };
+    return graph;
+  };
+
+  const close = () => {
+    listeners -= 1;
+    if (listeners > 0 || !graph) {
+      return;
+    }
+    graph.tap.dispose();
+    disconnectFrom(input, graph.stage);
+    graph = null;
+  };
+
+  const sourceFor = <T>(
+    pick: (tap: AnalyserTap) => FrameSource<T>
+  ): FrameSource<T> => ({
+    subscribe: (listener) => {
+      const unsubscribe = pick(open().tap).subscribe(listener);
+      return () => {
+        unsubscribe();
+        close();
+      };
+    },
+  });
+
+  return {
+    meter: sourceFor((tap) => tap.meter),
+    setGain: (next) => {
+      gain = next;
+      if (graph) {
+        graph.stage.gain.value = next;
+      }
+    },
+    visual: sourceFor((tap) => tap.visual),
+  };
+};
+
 /**
  * Creates a synthetic signal as frame sources, so meters and visualizers can
  * move without a microphone. It only runs while something is subscribed.
+ * Pass `input` to meter live audio through the same sources instead.
  */
 export const createDemoSignal = (
   initialOptions: DemoSignalOptions = {}
@@ -207,29 +311,8 @@ export const createDemoSignal = (
   const meterSubscribers = new Set<(frame: MeterFrame) => void>();
   const visualSubscribers = new Set<(frame: VisualFrame) => void>();
   let stopLoop: (() => void) | null = null;
-
-  const configure = (options: DemoSignalOptions) => {
-    kind = options.kind ?? kind;
-    channels = clamp(Math.round(options.channels ?? channels), 1, 8);
-    seed = options.seed ?? seed;
-    playing = options.playing ?? playing;
-    gainDb = options.gainDb ?? gainDb;
-    historyIntervalMs = options.historyIntervalMs ?? historyIntervalMs;
-    if (options.bands !== undefined && options.bands !== bands.length) {
-      bands = new Float32Array(options.bands);
-      visualFrame.bands = bands;
-    }
-    if (
-      options.historySize !== undefined &&
-      options.historySize !== history.length
-    ) {
-      history = new Float32Array(options.historySize);
-      visualFrame.historyStart = 0;
-      visualFrame.historyLength = 0;
-      visualFrame.historyPreviousLevel = undefined;
-      visualFrame.history = history;
-    }
-  };
+  let input: AudioNode | null = null;
+  let live: { input: AudioNode; key: string; source: LiveInput } | null = null;
 
   const produce = (nowMs: number) => {
     startMs ??= nowMs;
@@ -303,18 +386,102 @@ export const createDemoSignal = (
     },
   });
 
-  configure(initialOptions);
-
-  return {
-    configure,
+  const synthetic = {
     meter: sourceFor(meterSubscribers),
     visual: sourceFor(visualSubscribers),
   };
+  // Subscribers stay attached while the audio behind them switches.
+  const meter = createFrameRelay<MeterFrame>();
+  const visual = createFrameRelay<VisualFrame>();
+
+  const route = () => {
+    if (!input) {
+      live = null;
+      meter.setSource(synthetic.meter);
+      visual.setSource(synthetic.visual);
+      return;
+    }
+    const gain = playing ? dbToGain(gainDb) : 0;
+    const shape: LiveInputShape = {
+      bands: bands.length,
+      channels: Math.min(channels, 2),
+      historyIntervalMs,
+      historySize: history.length,
+    };
+    // Only a different input or analysis shape needs new nodes.
+    const key = Object.values(shape).join(",");
+    if (live?.input === input && live.key === key) {
+      live.source.setGain(gain);
+      return;
+    }
+    live = { input, key, source: createLiveInput(input, shape, gain) };
+    meter.setSource(live.source.meter);
+    visual.setSource(live.source.visual);
+  };
+
+  const configure = (options: DemoSignalOptions) => {
+    kind = options.kind ?? kind;
+    channels = clamp(Math.round(options.channels ?? channels), 1, 8);
+    seed = options.seed ?? seed;
+    playing = options.playing ?? playing;
+    gainDb = options.gainDb ?? gainDb;
+    historyIntervalMs = options.historyIntervalMs ?? historyIntervalMs;
+    input = options.input === undefined ? input : options.input;
+    if (options.bands !== undefined && options.bands !== bands.length) {
+      bands = new Float32Array(options.bands);
+      visualFrame.bands = bands;
+    }
+    if (
+      options.historySize !== undefined &&
+      options.historySize !== history.length
+    ) {
+      history = new Float32Array(options.historySize);
+      visualFrame.historyStart = 0;
+      visualFrame.historyLength = 0;
+      visualFrame.historyPreviousLevel = undefined;
+      visualFrame.history = history;
+    }
+    route();
+  };
+
+  configure(initialOptions);
+
+  return { configure, meter, visual };
 };
 
-/** A synthetic signal for previews, prototypes and tests. */
+const DemoSignalInputContext = createContext<AudioNode | null>(null);
+
+export interface DemoSignalProviderProps {
+  /**
+   * Live audio that every `useDemoSignal` below meters in place of its
+   * synthetic signal. Null keeps the synthetic signals.
+   */
+  input: AudioNode | null;
+  children?: ReactNode;
+}
+
+/**
+ * Feeds live audio, such as a microphone, to every `useDemoSignal` below it,
+ * so previews built on demo signals can be tried with a real input.
+ */
+export const DemoSignalProvider = ({
+  input,
+  children,
+}: DemoSignalProviderProps) =>
+  createElement(DemoSignalInputContext.Provider, { value: input }, children);
+
+/** The live input from the nearest `DemoSignalProvider`, or null. */
+export const useDemoSignalInput = (): AudioNode | null =>
+  useContext(DemoSignalInputContext);
+
+/**
+ * A synthetic signal for previews, prototypes and tests. Inside a
+ * `DemoSignalProvider` with an input, it meters that input instead, unless
+ * `input` is passed here.
+ */
 export const useDemoSignal = (options: DemoSignalOptions = {}): DemoSignal => {
   const signal = useMemo(() => createDemoSignal(), []);
+  const providedInput = useDemoSignalInput();
   const {
     bands,
     channels,
@@ -325,6 +492,7 @@ export const useDemoSignal = (options: DemoSignalOptions = {}): DemoSignal => {
     playing,
     seed,
   } = options;
+  const input = options.input === undefined ? providedInput : options.input;
 
   useEffect(() => {
     signal.configure({
@@ -333,6 +501,7 @@ export const useDemoSignal = (options: DemoSignalOptions = {}): DemoSignal => {
       gainDb,
       historyIntervalMs,
       historySize,
+      input,
       kind,
       playing,
       seed,
@@ -344,6 +513,7 @@ export const useDemoSignal = (options: DemoSignalOptions = {}): DemoSignal => {
     gainDb,
     historyIntervalMs,
     historySize,
+    input,
     kind,
     playing,
     seed,
