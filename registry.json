@@ -7,7 +7,7 @@
       "name": "core",
       "type": "registry:lib",
       "title": "Audio core",
-      "description": "Decibel maths, meter ballistics, zones, fader tapers, band resampling, bar level smoothing, wave line shapes, time formatting, the shared frame loop, frame emitters, synthesised click sounds, shared types and the audio theme tokens. Every audiocn component depends on it.",
+      "description": "Decibel maths, meter ballistics, zones, fader tapers, band resampling, bar level smoothing, wave line shapes, time formatting, the shared frame loop, frame emitters, synthesised click sounds, mouse-wheel and trackpad stepping, shared types and the audio theme tokens. Every audiocn component depends on it.",
       "registryDependencies": ["@audiocn/use-audio-context"],
       "files": [
         {
@@ -64,6 +64,10 @@
         },
         {
           "path": "lib/audio/click.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "lib/audio/wheel.ts",
           "type": "registry:lib"
         }
       ],

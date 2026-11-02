@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { createEvent, fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { describe, expect, it, onTestFinished, vi } from "vitest";
@@ -159,6 +159,132 @@ describe("Knob", () => {
     const dial = screen.getByRole("slider");
     expect(dial.style.getPropertyValue("--knob-angle")).not.toBe("");
     expect(dial.style.getPropertyValue("--from-test")).toBe("1");
+  });
+
+  it("turns with the wheel by default while focused", () => {
+    const onValueChange = vi.fn();
+    render(
+      <Knob aria-label="Gain" defaultValue={50} onValueChange={onValueChange} />
+    );
+    const dial = screen.getByRole("slider");
+    dial.focus();
+    const wheel = createEvent.wheel(dial, { deltaY: -100 });
+    fireEvent(dial, wheel);
+    expect(onValueChange).toHaveBeenLastCalledWith(51, {
+      event: wheel,
+      reason: "wheel",
+    });
+    expect(wheel.defaultPrevented).toBe(true);
+  });
+
+  it("leaves the wheel to the page while unfocused", () => {
+    const onValueChange = vi.fn();
+    render(
+      <Knob aria-label="Gain" defaultValue={50} onValueChange={onValueChange} />
+    );
+    const dial = screen.getByRole("slider");
+    const wheel = createEvent.wheel(dial, { deltaY: -100 });
+    fireEvent(dial, wheel);
+    expect(onValueChange).not.toHaveBeenCalled();
+    expect(wheel.defaultPrevented).toBe(false);
+  });
+
+  it("lets go of the wheel when the dial loses focus", () => {
+    const onValueChange = vi.fn();
+    render(
+      <Knob aria-label="Gain" defaultValue={50} onValueChange={onValueChange} />
+    );
+    const dial = screen.getByRole("slider");
+    dial.focus();
+    fireEvent.wheel(dial, { deltaY: -100 });
+    expect(onValueChange).toHaveBeenCalledTimes(1);
+    dial.blur();
+    const wheel = createEvent.wheel(dial, { deltaY: -100 });
+    fireEvent(dial, wheel);
+    expect(onValueChange).toHaveBeenCalledTimes(1);
+    expect(wheel.defaultPrevented).toBe(false);
+  });
+
+  it("lets go of the wheel while disabled, and takes it back with focus kept", () => {
+    const onValueChange = vi.fn();
+    const knob = (disabled: boolean) => (
+      <Knob
+        aria-label="Gain"
+        defaultValue={50}
+        disabled={disabled}
+        onValueChange={onValueChange}
+      />
+    );
+    const { rerender } = render(knob(false));
+    const dial = screen.getByRole("slider");
+    dial.focus();
+    rerender(knob(true));
+    const ignored = createEvent.wheel(dial, { deltaY: -100 });
+    fireEvent(dial, ignored);
+    expect(ignored.defaultPrevented).toBe(false);
+    rerender(knob(false));
+    fireEvent.wheel(dial, { deltaY: -100 });
+    expect(onValueChange).toHaveBeenCalledTimes(1);
+  });
+
+  it("blocks the page scroll on a focused dial while a trackpad adds up", () => {
+    const onValueChange = vi.fn();
+    render(
+      <Knob aria-label="Gain" defaultValue={50} onValueChange={onValueChange} />
+    );
+    const dial = screen.getByRole("slider");
+    dial.focus();
+    const wheel = createEvent.wheel(dial, { deltaY: -10 });
+    fireEvent(dial, wheel);
+    expect(onValueChange).not.toHaveBeenCalled();
+    expect(wheel.defaultPrevented).toBe(true);
+  });
+
+  it("adds up trackpad movement across renders", () => {
+    const onValueChange = vi.fn();
+    const knob = (className: string) => (
+      <Knob
+        aria-label="Gain"
+        className={className}
+        defaultValue={50}
+        onValueChange={onValueChange}
+      />
+    );
+    const { rerender } = render(knob("a"));
+    const dial = screen.getByRole("slider");
+    dial.focus();
+    fireEvent.wheel(dial, { deltaY: -20 });
+    rerender(knob("b"));
+    fireEvent.wheel(dial, { deltaY: -20 });
+    expect(onValueChange).toHaveBeenCalledTimes(1);
+    expect(onValueChange).toHaveBeenLastCalledWith(51, expect.anything());
+  });
+
+  it("turns by fineStep with Shift+wheel, which some systems turn sideways", () => {
+    const onValueChange = vi.fn();
+    render(
+      <Knob aria-label="Gain" defaultValue={50} onValueChange={onValueChange} />
+    );
+    const dial = screen.getByRole("slider");
+    dial.focus();
+    fireEvent.wheel(dial, { deltaX: -100, shiftKey: true });
+    expect(onValueChange).toHaveBeenLastCalledWith(50.1, expect.anything());
+  });
+
+  it("ignores the wheel when allowWheel is false", () => {
+    const onValueChange = vi.fn();
+    render(
+      <Knob
+        allowWheel={false}
+        aria-label="Gain"
+        defaultValue={50}
+        onValueChange={onValueChange}
+      />
+    );
+    const dial = screen.getByRole("slider");
+    dial.focus();
+    fireEvent.wheel(dial, { deltaY: -100 });
+    expect(onValueChange).not.toHaveBeenCalled();
   });
 
   it("resets on Alt+click", () => {

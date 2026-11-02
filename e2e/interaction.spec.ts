@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import type { Page } from "@playwright/test";
 
 const SAMPLE_MS = 1500;
 const SAMPLE_EVERY_MS = 50;
@@ -208,4 +209,69 @@ test("knobs reset with Alt+click and take typed values", async ({ page }) => {
     "aria-valuetext",
     "L40"
   );
+});
+
+const scrollY = (page: Page) => page.evaluate(() => window.scrollY);
+
+/** The vertical knob, with the mouse over its centre. */
+const verticalKnob = async (page: Page) => {
+  await page.goto("/docs/components/knob#drag-directions");
+  const dial = page.getByRole("slider", { exact: true, name: "Vertical" });
+  await dial.scrollIntoViewIfNeeded();
+  const box = await dial.boundingBox();
+  if (!box) {
+    throw new Error("The knob is not visible.");
+  }
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  return dial;
+};
+
+test("a focused knob steps once per wheel notch, without scrolling", async ({
+  page,
+}) => {
+  const dial = await verticalKnob(page);
+  await dial.focus();
+  const before = await scrollY(page);
+  await page.mouse.wheel(0, -100);
+  await expect(dial).toHaveAttribute("aria-valuenow", "1");
+  await page.mouse.wheel(0, -100);
+  await expect(dial).toHaveAttribute("aria-valuenow", "2");
+  expect(await scrollY(page)).toBe(before);
+});
+
+test("a focused knob stops early in a dense decaying wheel stream", async ({
+  page,
+}) => {
+  const dial = await verticalKnob(page);
+  await dial.focus();
+  // A swipe up, then its momentum: 369 px, or 12 steps of 30 px unfiltered.
+  const deltas = [
+    4, 12, 24, 36, 40, 38, 35, 31, 27, 23, 19, 16, 13, 11, 9, 7, 6, 5, 4, 3, 2,
+    2, 1, 1,
+  ].map((delta) => -delta);
+  await dial.evaluate((element, stream) => {
+    const start = performance.now();
+    for (const [index, deltaY] of stream.entries()) {
+      const event = new WheelEvent("wheel", {
+        bubbles: true,
+        cancelable: true,
+        deltaY,
+      });
+      // 8 ms apart, like a trackpad, whatever the test machine's timers do.
+      Object.defineProperty(event, "timeStamp", { value: start + index * 8 });
+      element.dispatchEvent(event);
+    }
+  }, deltas);
+  const turned = () => dial.getAttribute("aria-valuenow").then(Number);
+  await expect.poll(turned).toBeGreaterThanOrEqual(3);
+  expect(await turned()).toBeLessThanOrEqual(5);
+});
+
+test("an unfocused knob lets the wheel scroll the page", async ({ page }) => {
+  const dial = await verticalKnob(page);
+  await expect(dial).not.toBeFocused();
+  const before = await scrollY(page);
+  await page.mouse.wheel(0, 100);
+  await expect.poll(() => scrollY(page)).toBeGreaterThan(before);
+  await expect(dial).toHaveAttribute("aria-valuenow", "0");
 });
