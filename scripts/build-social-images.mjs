@@ -23,6 +23,11 @@ const readmeDirectory = path.join(root, ".github/readme");
 const readmeScale = 2;
 const port = Number(process.env.AUDIOCN_SOCIAL_PORT ?? 3107);
 const verify = process.argv.includes("--verify");
+// Only pages with no card in the manifest yet. Existing cards stay as they are.
+const onlyNew = process.argv.includes("--new");
+// Linux desktops may turn on subpixel text, which colours glyph edges. This
+// keeps the system fonts and forces grayscale, as a headless machine renders.
+const fontConfig = path.join(root, "scripts/social-fonts.conf");
 if (!Number.isInteger(port) || port < 1024 || port > 65_535) {
   throw new Error("AUDIOCN_SOCIAL_PORT must be a port between 1024 and 65535.");
 }
@@ -139,6 +144,49 @@ const capture = async (card, deviceScaleFactor = 1) => {
   }
 };
 
+/**
+ * Adds entries to a manifest without moving the existing ones. Each goes after
+ * the closest page before it in the catalog, where a full build would put it.
+ */
+const withNewEntries = (manifest, added, catalog) => {
+  const entries = Object.entries(manifest);
+  const order = catalog.map((card) => card.pathname);
+  for (const [pathname, image] of added) {
+    const earlier = new Set(order.slice(0, order.indexOf(pathname)));
+    let at = 0;
+    for (const [index, [key]] of entries.entries()) {
+      if (earlier.has(key)) {
+        at = index + 1;
+      }
+    }
+    entries.splice(at, 0, [pathname, image]);
+  }
+  return Object.fromEntries(entries);
+};
+
+/** Writes a full build's manifest and removes the images it superseded. */
+const saveFullManifest = async (previous, manifest) => {
+  await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+  // Only remove assets owned by the previous manifest, after all captures succeed.
+  const currentUrls = new Set(
+    Object.values(manifest).map((image) => image.url)
+  );
+  for (const image of Object.values(previous)) {
+    if (
+      /^\/og\/[a-z0-9-]+\.png$/u.test(image.url) &&
+      !currentUrls.has(image.url)
+    ) {
+      await unlink(path.join(root, "public", image.url.slice(1))).catch(
+        (error) => {
+          if (error.code !== "ENOENT") {
+            throw error;
+          }
+        }
+      );
+    }
+  }
+};
+
 try {
   await waitForServer();
   const catalogResponse = await fetch(`${baseUrl}/api/social-cards`);
@@ -149,6 +197,10 @@ try {
   if (!Array.isArray(socialCards) || socialCards.length === 0) {
     throw new Error("The social card catalog is empty or invalid.");
   }
+  const previous = JSON.parse(await readFile(manifestPath, "utf-8"));
+  const cards = onlyNew
+    ? socialCards.filter((card) => !Object.hasOwn(previous, card.pathname))
+    : socialCards;
   browser = await chromium.launch({
     // Software rasterization keeps canvas antialiasing identical across captures.
     args: [
@@ -160,9 +212,10 @@ try {
       "--disable-threaded-scrolling",
     ],
     channel: "chrome",
+    env: { ...process.env, FONTCONFIG_FILE: fontConfig },
   });
   const captures = [];
-  for (const card of socialCards) {
+  for (const card of cards) {
     const result = await capture(card);
     if (verify) {
       const repeated = await capture(card);
@@ -185,12 +238,12 @@ try {
     }
     captures.push(result);
     console.log(
-      `social image: ${card.id} (${captures.length}/${socialCards.length})${verify ? " — verified identical" : ""}`
+      `social image: ${card.id} (${captures.length}/${cards.length})${verify ? ", verified identical" : ""}`
     );
   }
   const readmeFiles = new Set(await readdir(readmeDirectory));
   const readmeCaptures = [];
-  for (const card of socialCards) {
+  for (const card of cards) {
     const filename = `${path.basename(card.pathname) || "home"}.png`;
     if (readmeFiles.has(filename)) {
       const result = await capture(card, readmeScale);
@@ -204,38 +257,33 @@ try {
       console.log(`README image: ${filename}`);
     }
   }
-  const previous = JSON.parse(await readFile(manifestPath, "utf-8"));
-  const manifest = {};
   await mkdir(outputDirectory, { recursive: true });
-  for (const { bytes, card, filename } of captures) {
+  for (const { bytes, filename } of captures) {
     await writeFile(path.join(outputDirectory, filename), bytes);
-    manifest[card.pathname] = { alt: card.alt, url: `/og/${filename}` };
   }
   for (const { bytes, filename } of readmeCaptures) {
     await writeFile(path.join(readmeDirectory, filename), bytes);
   }
-  await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
-  // Only remove assets owned by the previous manifest, after all captures succeed.
-  const currentUrls = new Set(
-    Object.values(manifest).map((image) => image.url)
-  );
-  for (const image of Object.values(previous)) {
-    if (
-      /^\/og\/[a-z0-9-]+\.png$/u.test(image.url) &&
-      !currentUrls.has(image.url)
-    ) {
-      await unlink(path.join(root, "public", image.url.slice(1))).catch(
-        (error) => {
-          if (error.code !== "ENOENT") {
-            throw error;
-          }
-        }
-      );
+  const entries = captures.map(({ card, filename }) => [
+    card.pathname,
+    { alt: card.alt, url: `/og/${filename}` },
+  ]);
+  if (onlyNew) {
+    if (entries.length > 0) {
+      const manifest = withNewEntries(previous, entries, socialCards);
+      await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
     }
+    console.log(
+      entries.length > 0
+        ? `Saved ${entries.length} new social images and their manifest entries. Existing cards are unchanged.`
+        : "No new social cards: every page already has one."
+    );
+  } else {
+    await saveFullManifest(previous, Object.fromEntries(entries));
+    console.log(
+      `Saved ${captures.length} social images, their manifest and ${readmeCaptures.length} README images.`
+    );
   }
-  console.log(
-    `Saved ${captures.length} social images, their manifest and ${readmeCaptures.length} README images.`
-  );
 } finally {
   await browser?.close();
   if (server.exitCode === null) {
