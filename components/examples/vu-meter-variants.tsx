@@ -1,7 +1,10 @@
 "use client";
 
+import { PlayIcon, StopIcon } from "@phosphor-icons/react";
+
+import { Button } from "@/components/ui/button";
 import { VuMeter } from "@/components/ui/vu-meter";
-import { useDemoSignal } from "@/hooks/use-demo-signal";
+import { useSound } from "@/hooks/use-sound";
 
 const meters = [
   { caption: "classic", className: undefined, variant: "classic" },
@@ -15,23 +18,39 @@ const meters = [
 ] as const;
 
 const VuMeterVariants = () => {
-  const signal = useDemoSignal({ kind: "music", seed: 4 });
+  const sound = useSound("/sounds/peon-work-work-loop.wav", { loop: true });
 
   return (
-    <div className="grid w-full max-w-3xl gap-4 sm:grid-cols-3">
-      {meters.map((meter) => (
-        <figure className="grid gap-2" key={meter.caption}>
-          <VuMeter
-            aria-label={`${meter.caption} VU meter`}
-            className={meter.className}
-            source={signal.meter}
-            variant={meter.variant}
-          />
-          <figcaption className="text-muted-foreground text-xs">
-            {meter.caption}
-          </figcaption>
-        </figure>
-      ))}
+    <div className="flex w-full max-w-3xl flex-col gap-4">
+      <div className="grid gap-4 sm:grid-cols-3">
+        {meters.map((meter) => (
+          <figure className="grid gap-2" key={meter.caption}>
+            <VuMeter
+              aria-label={`${meter.caption} VU meter`}
+              className={meter.className}
+              input={sound.output}
+              variant={meter.variant}
+            />
+            <figcaption className="text-muted-foreground text-xs">
+              {meter.caption}
+            </figcaption>
+          </figure>
+        ))}
+      </div>
+      <Button
+        className="self-start"
+        disabled={!sound.isLoaded}
+        onClick={sound.isPlaying ? sound.stop : sound.play}
+        size="sm"
+        variant="outline"
+      >
+        {sound.isPlaying ? (
+          <StopIcon data-icon="inline-start" />
+        ) : (
+          <PlayIcon data-icon="inline-start" />
+        )}
+        {sound.isPlaying ? "Stop" : "Play"}
+      </Button>
     </div>
   );
 };

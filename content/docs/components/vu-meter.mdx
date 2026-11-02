@@ -1,6 +1,6 @@
 ---
 title: VU Meter
-description: An analog VU meter with a backlit face, a needle that swings with real VU ballistics, and a calibrated scale.
+description: An analog VU meter with a backlit face, a needle that reads the audio with real VU ballistics, and a calibrated scale.
 seoDescription: Add an analog VU meter to your React app, with a needle that swings and settles like real hardware, a calibrated scale and a backlit face. Copy and customize the audiocn VU Meter.
 ---
 
@@ -19,12 +19,12 @@ import { VuMeter } from "@/components/ui/vu-meter";
 ```
 
 ```tsx
-<VuMeter aria-label="Program level" source={analyser.meter} />
+<VuMeter aria-label="Program level" input={sound.output} />
 ```
 
 With no children, `VuMeter` renders the face, the scale, the needle and a "VU" legend. It fills the width of its container and keeps its shape; size it with a class such as `max-w-md`.
 
-The needle moves like a real VU meter: it reaches 99% of a new level in 300 ms, swings 1.5% past it and settles. At silence it rests against the pin left of the scale, and a level above +3 VU pins it against the right one.
+The needle moves like a real VU meter. It reads the audio itself, on the audio thread, every sample: it reaches 99% of a new level in about 340 ms, swings about 1% past it and settles. At silence it rests against the pin left of the scale. A level above +3 VU drives it against the right pin, where it bounces and comes to rest; the harder it hits, the further it bounces.
 
 ## Anatomy
 
@@ -52,13 +52,13 @@ Most VU meters pivot from below: the needle rises from under a lip in the bezel 
 
 ### Stereo
 
-One meter shows one channel. Set `channel` on a pair of meters for left and right.
+One meter shows one channel. Set `channel` on a pair of meters for left and right. With the default `"max"`, the needle follows the louder channel. The sample here is mono, panned left.
 
 <ComponentPreview name="vu-meter-stereo" />
 
 ### Calibration
 
-A VU meter reads relative to a reference level. `referenceDb` is the dBFS level that reads 0 VU: −18 by default (EBU R68), −20 for SMPTE. Each meter below is fed the same −18 dBFS RMS level.
+A VU meter reads relative to a reference level. `referenceDb` is the RMS level in dBFS that reads 0 VU: −18 by default (EBU R68), −20 for SMPTE. A sine at that level settles on 0 VU. Each meter below gets the same sound.
 
 <ComponentPreview name="vu-meter-calibration" />
 
@@ -74,30 +74,31 @@ A VU meter reads relative to a reference level. `referenceDb` is the dBFS level 
 
 <ComponentPreview name="vu-meter-microphone" />
 
-## Feeding data
+## Input
 
-A VU meter accepts levels three ways. See [Feeding data](/docs/concepts/feeding-data).
+`input` takes an `AudioNode`, an `HTMLMediaElement` or a `MediaStream`, such as the output of [useSound](/docs/hooks/use-sound) or a microphone stream. The meter taps it with a silent `AudioWorklet` and does not change what you hear.
 
 ```tsx
-// A source: subscribes and paints itself, no React renders.
-<VuMeter source={analyser.meter} />
+const sound = useSound("/sounds/peon-work-work-loop.wav", { loop: true });
+<VuMeter input={sound.output} />;
 
-// Values: for slow data. The needle swings to each new value.
-<VuMeter rmsDb={-18} />
-
-// A handle: for callers that own their own frame loop.
-const meter = useRef<VuMeterActions>(null);
-meter.current?.paint({ channels: [{ peakDb: -9, rmsDb: -18 }] });
-<VuMeter actionsRef={meter} />
+const microphone = useMicrophone();
+<VuMeter input={microphone.stream} />;
 ```
 
-The needle follows the RMS level, as a VU meter averages the signal. Frames without RMS fall back to the peak level; set `measure="peak"` to follow peaks instead.
+Without `input`, the needle stays where `--vu-level` puts it, so a static meter needs only CSS. Set `aria-valuenow` to the same reading, in VU:
+
+```tsx
+<VuMeter aria-valuenow={0} style={{ "--vu-level": 0.62 } as CSSProperties} />
+```
+
+`useVuNeedle(input, onPosition, options)` runs the same needle without the face, for a meter of your own. `onPosition` gets the scale position several times a frame, outside React.
 
 ## Scale law
 
 A VU needle swings in proportion to the signal's amplitude, so the scale isn't linear in dB: −10 to −7 is squeezed at the left, and 0 VU sits about 62% of the way across. The same law is available as `vuTaper`, and as `taper="vu"` on [Level Meter](/docs/components/level-meter) and [dB Scale](/docs/components/db-scale).
 
-The needle's movement is `createNeedle` in `lib/audio/needle.ts`: a damped spring, solved so a step reaches 99% at `riseMs` and overshoots by `overshoot`.
+The needle's movement is in `lib/audio/needle.ts`. The rectified signal (`|x|`) goes through one resonant 2nd-order low-pass: `lowPassCutoffHz` sets the speed, and `lowPassQ` the overshoot (0.5 never overshoots). The filter runs as a mass on a spring, so the pins act on the needle's speed: at the right pin it bounces back with `rebound` of its speed, and at the left pin it stops.
 
 ## Theming
 
@@ -117,6 +118,7 @@ The needle's movement is `createNeedle` in `lib/audio/needle.ts`: a damped sprin
 | `data-zone` | root, ticks, numbers, arcs | `ok`, `warn` or `clip`; on the root, where the needle points |
 | `data-active` | root | The needle has left the rest pin |
 | `data-pinned` | root | The needle is against the right pin |
+| `data-status` | root | `idle` (no input), `loading`, `running`, `suspended` (the audio context waits for a click) or `error` (the audio thread could not start or stopped) |
 | `data-major` | ticks | A numbered tick |
 | `data-slot="vu-meter-cover"` | needle | The bezel lip over a bottom pivot. Hide it with `[&_[data-slot=vu-meter-cover]]:hidden` |
 | `data-dimmed` | root | Inside a muted or silenced channel strip |
@@ -128,7 +130,7 @@ Text in the corners is sized in container units (`cqw`), so a small meter and a 
 - The root has `role="meter"` with `aria-valuemin`, `aria-valuemax` and `aria-valuenow` in VU, and `aria-valuetext` such as "−3.0 VU". These update at most four times a second.
 - Give every meter a name with `aria-label` or `aria-labelledby`, including the channel for a stereo pair.
 - The scale, needle and badge are hidden from assistive technology.
-- With reduced motion, the needle shows the current level four times a second instead of swinging.
+- With reduced motion, the needle moves to the current position four times a second instead of swinging.
 
 ## API reference
 
@@ -137,32 +139,18 @@ Text in the corners is sized in container units (`cqw`), so a small meter and a 
 <PropsTable
   rows={[
     [
-      "source",
-      "FrameSource<MeterFrame> | null",
+      "input",
+      "AudioNode | HTMLMediaElement | MediaStream | null",
       null,
-      "Subscribes and paints without re-rendering React.",
-    ],
-    ["peakDb", "number", null, "Mono peak level in dBFS, for declarative use."],
-    ["rmsDb", "number", null, "Mono RMS level in dBFS."],
-    [
-      "channels",
-      "ChannelLevel[]",
-      null,
-      "Levels per channel, for declarative multi-channel use.",
+      "The audio to meter. Without it, the needle stays at --vu-level.",
     ],
     [
       "channel",
-      'number | "max"',
+      '0 | 1 | "max"',
       '"max"',
-      "Which channel the needle shows, or the loudest.",
+      "Which channel moves the needle, or the louder one.",
     ],
-    [
-      "measure",
-      '"rms" | "peak"',
-      '"rms"',
-      "Which reading moves the needle. RMS falls back to peak.",
-    ],
-    ["referenceDb", "number", "-18", "The dBFS level that reads 0 VU."],
+    ["referenceDb", "number", "-18", "The RMS level in dBFS that reads 0 VU."],
     ["minDb", "number", "-10", "Left end of the printed scale, in VU."],
     ["maxDb", "number", "3", "Right end of the printed scale, in VU."],
     [
@@ -173,9 +161,9 @@ Text in the corners is sized in container units (`cqw`), so a small meter and a 
     ],
     [
       "ballistics",
-      '"vu" | "instant" | Partial<NeedleOptions>',
-      '"vu"',
-      "How the needle moves. NeedleOptions: riseMs (300), overshoot (0.015).",
+      "Partial<NeedleOptions>",
+      "VU_BALLISTICS",
+      "How the needle moves: lowPassCutoffHz (2), lowPassQ (0.6), rebound (0.5).",
     ],
     ["variant", '"classic" | "flat"', '"classic"', null],
     [
@@ -184,7 +172,12 @@ Text in the corners is sized in container units (`cqw`), so a small meter and a 
       '"bottom"',
       "Where the needle turns: from below, as on most meters, or hanging from above.",
     ],
-    ["actionsRef", "Ref<VuMeterActions>", null, "{ paint(frame), reset() }."],
+    [
+      "actionsRef",
+      "Ref<VuMeterActions>",
+      null,
+      "{ reset() }: the needle back to rest.",
+    ],
   ]}
 />
 
