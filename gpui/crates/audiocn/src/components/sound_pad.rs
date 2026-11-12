@@ -13,12 +13,107 @@ use gpui::{
 };
 
 use crate::audio::frame_source::FrameSource;
-use crate::theme::{ActiveTheme, mix};
+use crate::theme::{ActiveTheme, oklcha, to_oklab};
 use crate::ui::Kbd;
 use crate::ui::icons::Icon;
 use crate::ui::styles::{TextSize, provide, radius_xl, ring_overlay, use_context};
 
 type Handler = Rc<dyn Fn(&mut Window, &mut App) + 'static>;
+
+/// Hue is missing after a conversion into OKLCH when chroma is at most this.
+///
+/// CSS Color 4's published epsilon is `C <= 0.000004`. The Chrome that renders
+/// audiocn.dev (156) is wider: converting a rectangular colour (sRGB, lab,
+/// oklab) into OKLCH yields `hue: none` for `C <= 0.02`, and it keeps the
+/// chroma. A hue written in `oklch()` itself is not powerless. Dark `--muted`
+/// survives as chroma ~0.007, so its hue drops out and a pad mixed with a far
+/// accent stays on that accent's hue (Ding is rgb(43, 54, 67), not the short
+/// arc through red).
+const OKLCH_POWERLESS_CHROMA: f32 = 0.02;
+
+struct Oklch {
+    l: f32,
+    c: f32,
+    /// `None` when the hue is powerless (missing).
+    h: Option<f32>,
+    alpha: f32,
+}
+
+/// OKLab → OKLCH, with powerless hue turned into a missing component.
+fn to_oklch(color: Hsla) -> Oklch {
+    let (l, a, b, alpha) = to_oklab(color);
+    let chroma = (a * a + b * b).sqrt();
+    // Lightness 0 or 1, or a chroma under [`OKLCH_POWERLESS_CHROMA`], makes the
+    // hue powerless. The chroma is kept: Chrome reports `oklch(0.268 0.007 none)`
+    // for the compiled muted token, and the mix still uses that 0.007.
+    let powerless = chroma <= OKLCH_POWERLESS_CHROMA || l <= 0.0 || l >= 1.0;
+    Oklch {
+        l,
+        c: chroma,
+        h: if powerless {
+            None
+        } else {
+            Some(b.atan2(a).to_degrees().rem_euclid(360.0))
+        },
+        alpha,
+    }
+}
+
+/// CSS `color-mix(in oklch, b weight_b, a)`: `weight_b` is b's share (0..1),
+/// the same argument order as [`crate::theme::mix`].
+///
+/// Hue takes the shorter arc. A powerless hue is missing and is filled from
+/// the other colour before interpolation, so a grey mixed with a blue stays
+/// on the blue hue instead of walking the short arc through red.
+fn mix_oklch(a: Hsla, b: Hsla, weight_b: f32) -> Hsla {
+    let t = weight_b.clamp(0.0, 1.0);
+    let mut first = to_oklch(a);
+    let mut second = to_oklch(b);
+    if first.h.is_none() {
+        first.h = second.h;
+    }
+    if second.h.is_none() {
+        second.h = first.h;
+    }
+    let mut h1 = first.h.unwrap_or(0.0);
+    let mut h2 = second.h.unwrap_or(0.0);
+    // `shorter`: adjust so h2 - h1 is in [-180, 180].
+    let diff = h2 - h1;
+    if diff > 180.0 {
+        h1 += 360.0;
+    } else if diff < -180.0 {
+        h2 += 360.0;
+    }
+    // Premultiply L and C. Hue is an angle and is not premultiplied.
+    let l1 = first.l * first.alpha;
+    let c1 = first.c * first.alpha;
+    let l2 = second.l * second.alpha;
+    let c2 = second.c * second.alpha;
+    let alpha = first.alpha * (1.0 - t) + second.alpha * t;
+    if alpha <= 0.0 {
+        return gpui::transparent_black();
+    }
+    let l = (l1 * (1.0 - t) + l2 * t) / alpha;
+    let c = (c1 * (1.0 - t) + c2 * t) / alpha;
+    let h = (h1 * (1.0 - t) + h2 * t).rem_euclid(360.0);
+    oklcha(l, c, h, alpha)
+}
+
+/// Words of a pad label. Wrapping happens between these, never inside one.
+fn label_words(text: &str) -> Vec<String> {
+    let words: Vec<&str> = text.split_whitespace().collect();
+    words
+        .iter()
+        .enumerate()
+        .map(|(index, word)| {
+            if index + 1 == words.len() {
+                (*word).to_string()
+            } else {
+                format!("{word} ")
+            }
+        })
+        .collect()
+}
 
 /// `SoundPadMode`: how presses map to trigger and stop.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
@@ -631,9 +726,10 @@ impl RenderOnce for SoundPad {
         let radius = radius_xl(t);
         let (min_h, padding) = self.size.metrics();
         let (bg, hover_bg, border) = match self.variant {
+            // `color-mix(in oklch, var(--pad-accent) 14%, var(--muted))`.
             SoundPadVariant::Default => (
-                Some(mix(t.muted, accent, 0.14)),
-                mix(t.muted, accent, 0.22),
+                Some(mix_oklch(t.muted, accent, 0.14)),
+                mix_oklch(t.muted, accent, 0.22),
                 None,
             ),
             SoundPadVariant::Ghost => (None, t.muted, None),
@@ -865,9 +961,13 @@ impl RenderOnce for SoundPadIcon {
 /// ```ignore
 /// SoundPadLabel::new().child("Airhorn")
 /// ```
+///
+/// `line-clamp-2` clips at two lines and does not break a word
+/// (`overflow-wrap: normal`). A word wider than the pad overflows and is
+/// clipped; GPUI's `line_clamp` would split it ("Applau" / "se").
 #[derive(IntoElement, Default)]
 pub struct SoundPadLabel {
-    children: Vec<AnyElement>,
+    text: SharedString,
     style: StyleRefinement,
 }
 
@@ -875,11 +975,19 @@ impl SoundPadLabel {
     pub fn new() -> Self {
         Self::default()
     }
-}
 
-impl ParentElement for SoundPadLabel {
-    fn extend(&mut self, elements: impl IntoIterator<Item = AnyElement>) {
-        self.children.extend(elements);
+    /// Append label text. Separate calls are joined with a space.
+    pub fn child(mut self, text: impl Into<SharedString>) -> Self {
+        let text = text.into();
+        if text.is_empty() {
+            return self;
+        }
+        if !self.text.is_empty() {
+            self.text = format!("{} {text}", self.text).into();
+        } else {
+            self.text = text;
+        }
+        self
     }
 }
 
@@ -891,20 +999,43 @@ impl Styled for SoundPadLabel {
 
 impl RenderOnce for SoundPadLabel {
     fn render(self, _: &mut Window, _: &mut App) -> impl IntoElement {
+        // `text-sm` is 14/20, and `line-clamp-2` keeps two of those lines.
+        const LINE: f32 = 20.0;
         // `group-has-data-[variant=ring]:pe-6`: room for a ring progress.
         let ring = use_context::<SoundPadContext>().is_some_and(|c| c.has_ring.get());
+        let words = label_words(&self.text);
         let mut label = div()
             .relative()
-            .line_clamp(2)
+            .flex()
+            .flex_wrap()
+            .w_full()
+            .min_w_0()
+            .overflow_hidden()
+            .max_h(px(LINE * 2.0))
             .text_sm_()
             .font_weight(FontWeight::MEDIUM)
             .when(ring, |el| el.pr(px(24.0)))
-            .children(self.children);
+            .children(words.into_iter().map(|word| {
+                div()
+                    .min_w_0()
+                    .max_w_full()
+                    .overflow_hidden()
+                    .whitespace_nowrap()
+                    .child(word)
+            }));
         label.style().refine(&self.style);
         // `mt-auto`, as a box that takes the free space and bottom-aligns the
         // text (Taffy also applies the pad's `justify-between` after an auto
-        // margin, which pushes the label out of the pad).
-        div().flex().flex_1().flex_col().justify_end().child(label)
+        // margin, which pushes the label out of the pad). `w_full` gives the
+        // clamp a definite width so a long word clips instead of widening the pad.
+        div()
+            .flex()
+            .flex_1()
+            .flex_col()
+            .justify_end()
+            .w_full()
+            .min_w_0()
+            .child(label)
     }
 }
 
@@ -1130,7 +1261,8 @@ impl RenderOnce for SoundPadProgress {
                         3.0,
                         0.0,
                         1.0,
-                        accent.opacity(accent.a * 0.2),
+                        // `color-mix(in oklch, var(--pad-accent) 20%, transparent)`.
+                        mix_oklch(gpui::transparent_black(), accent, 0.2),
                         window,
                     );
                     paint_ring_sector(bounds, 3.0, 0.0, progress, accent, window);
@@ -1174,6 +1306,7 @@ impl RenderOnce for SoundPadProgress {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::theme::{oklch, to_oklab};
 
     #[test]
     fn toggles_in_toggle_mode() {
@@ -1214,5 +1347,59 @@ mod tests {
         assert_eq!(corner_rise(50.0, 100.0, 14.0), 0.0);
         assert!((corner_rise(0.0, 100.0, 14.0) - 14.0).abs() < 1e-4);
         assert!((corner_rise(100.0, 100.0, 14.0) - 14.0).abs() < 1e-4);
+    }
+
+    #[test]
+    fn label_words_keep_spaces_between_words_only() {
+        assert_eq!(label_words("Applause"), vec!["Applause".to_string()]);
+        assert_eq!(
+            label_words("Drum roll"),
+            vec!["Drum ".to_string(), "roll".to_string()]
+        );
+        assert!(label_words("   ").is_empty());
+    }
+
+    fn hue_of(color: Hsla) -> f32 {
+        let (_, a, b, _) = to_oklab(color);
+        b.atan2(a).to_degrees().rem_euclid(360.0)
+    }
+
+    fn hue_delta(hue: f32, target: f32) -> f32 {
+        let delta = (hue - target).rem_euclid(360.0);
+        delta.min(360.0 - delta)
+    }
+
+    #[test]
+    fn oklch_mix_takes_the_shorter_hue_arc() {
+        // Both chromas are above the powerless cutoff, so the hues are real.
+        // From 30° to 250° the short arc runs backwards; the midpoint is 320°.
+        let mixed = mix_oklch(oklch(0.6, 0.2, 30.0), oklch(0.7, 0.15, 250.0), 0.5);
+        assert!(
+            hue_delta(hue_of(mixed), 320.0) < 8.0,
+            "hue {}",
+            hue_of(mixed)
+        );
+    }
+
+    #[test]
+    fn oklch_mix_fills_a_powerless_hue_from_the_other_colour() {
+        // Dark muted (chroma 0.007) loses its hue on the way into OKLCH. Ding's
+        // accent then paints the whole mix: rgb(43, 54, 67) on the site.
+        let mixed = mix_oklch(oklch(0.268, 0.007, 34.298), oklch(0.7, 0.15, 250.0), 0.14);
+        let rgb = mixed.to_rgb();
+        let (r, g, b) = (
+            (rgb.r * 255.0).round(),
+            (rgb.g * 255.0).round(),
+            (rgb.b * 255.0).round(),
+        );
+        assert!(
+            hue_delta(hue_of(mixed), 250.0) < 8.0,
+            "hue {}",
+            hue_of(mixed)
+        );
+        assert!(
+            (r - 43.0).abs() <= 1.0 && (g - 54.0).abs() <= 1.0 && (b - 67.0).abs() <= 1.0,
+            "rgb {r} {g} {b}"
+        );
     }
 }

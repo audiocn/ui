@@ -61,8 +61,13 @@ const SETTLE_EPSILON: f32 = 0.001;
 const SOURCE_POLL_MS: u64 = 16;
 /// `[--meter-gap:0.25rem]`.
 const METER_GAP: f32 = 4.0;
-/// `[--meter-scale-size:1rem]`.
+/// `[--meter-scale-size:1rem]`, the CSS box.
 const SCALE_SIZE: f32 = 16.0;
+/// Ink under a horizontal meter: a 6px major mark, the 2px `gap-0.5`, and a
+/// 10px `leading-none` line. That stack overflows [`SCALE_SIZE`] by 2px. The
+/// site paints the overflow; this height keeps it inside the padding instead
+/// of clipping the labels short.
+const SCALE_INK: f32 = SCALE_SIZE + 2.0;
 /// The gap between a segment and the next (`calc(100% / n - 2px)`).
 const SEGMENT_GAP: f32 = 2.0;
 /// Length of one step of a blended (`Gradient`) zone fill, in pixels.
@@ -1055,12 +1060,13 @@ impl RenderOnce for LevelMeterScale {
                 scale.format(move |db| format(db))
             })
             // `absolute top-[calc(100%+var(--meter-gap))] left-0 h-(--meter-scale-size)`.
+            // The box is 16px; the tick ink is [`SCALE_INK`] and must not be clipped.
             .when(horizontal, |scale| {
                 scale
                     .absolute()
                     .left_0()
-                    .bottom(px(-(SCALE_SIZE + METER_GAP)))
-                    .h(px(SCALE_SIZE))
+                    .bottom(px(-(SCALE_INK + METER_GAP)))
+                    .h(px(SCALE_INK))
             });
         scale.style().refine(&self.style);
         scale
@@ -1810,7 +1816,7 @@ impl RenderOnce for LevelMeter {
                     el.w_full()
                         .flex_row()
                         .items_center()
-                        .when(scale_padding, |el| el.pb(px(SCALE_SIZE + METER_GAP)))
+                        .when(scale_padding, |el| el.pb(px(SCALE_INK + METER_GAP)))
                 } else {
                     el.min_h(px(128.0)).flex_col().items_center()
                 }

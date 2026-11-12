@@ -63,7 +63,8 @@ use crate::config::{AudioConfig, AudioSize};
 use crate::theme::ActiveTheme;
 use crate::ui::icons::Icon;
 use crate::ui::styles::{
-    TextSize, provide, radius_lg, radius_xl, ring_overlay, shadow_xs, use_context,
+    TextSize, provide, radius_lg, radius_xl, ring_overlay, ring_overlay_bordered, shadow_xs,
+    use_context,
 };
 use crate::ui::{Badge, BadgeVariant};
 
@@ -666,10 +667,23 @@ impl gpui::RenderOnce for ChannelStrip {
                     .rounded(radius)
                     .border(px(border))
                     .border_color(t.border)
-                    .child(ring_overlay(radius, 1.0, t.primary.opacity(0.1))),
+                    // `ring-1 ring-primary/10` sits outside the border. A plain
+                    // overlay is placed from the padding box, so it covers the
+                    // 1px border and the master reads as a single line.
+                    .child(ring_overlay_bordered(
+                        radius,
+                        1.0,
+                        border,
+                        t.primary.opacity(0.1),
+                    )),
             })
             .when(self.selected, |el| {
-                el.child(ring_overlay(radius, 2.0, t.ring.opacity(0.4)))
+                let ring = t.ring.opacity(0.4);
+                if border > 0.0 {
+                    el.child(ring_overlay_bordered(radius, 2.0, border, ring))
+                } else {
+                    el.child(ring_overlay(radius, 2.0, ring))
+                }
             })
             .when(disabled, |el| el.opacity(0.6))
             .when_some(self.accent, |el, accent| {
@@ -882,9 +896,14 @@ impl ChannelStripHeader {
                     el.flex_wrap()
                 }
             })
+            // `*:max-w-full` on the console header. The wrapper is a full-width
+            // row so `ml-auto` on the actions (and `w_full` + `justify_end`
+            // below) reaches the header's right edge. A shrink-wrapped row
+            // has no free space, and the switch stays centred.
             .children(self.children.into_iter().map(|child| {
                 if vertical {
                     div()
+                        .w_full()
                         .max_w_full()
                         .flex()
                         .justify_center()
@@ -1132,12 +1151,23 @@ parent_styled!(ChannelStripActions);
 
 impl gpui::RenderOnce for ChannelStripActions {
     fn render(self, _: &mut Window, _: &mut App) -> impl IntoElement {
+        // A row header is `ml-auto` at the end of the flex line. A console
+        // header is a column that centres each child in a full-width row, so
+        // the actions span that row and pack to its end (`ml-auto` on the
+        // cross axis of the React column).
+        let vertical = strip_orientation() == Orientation::Vertical;
         let mut el = div()
-            .ml_auto()
             .flex()
             .flex_shrink_0()
             .items_center()
             .gap(px(4.0))
+            .map(|el| {
+                if vertical {
+                    el.w_full().justify_end()
+                } else {
+                    el.ml_auto()
+                }
+            })
             .children(self.children);
         el.style().refine(&self.style);
         el

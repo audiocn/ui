@@ -286,6 +286,10 @@ impl gpui::RenderOnce for Mixer {
                 .child(cell(channels))
                 .child(cell(areas.separator))
                 .child(cell(areas.master)),
+            // CSS grid stretches `channels`, `separator` and `master` to the
+            // `minmax(0, 1fr)` row. The cells are flex columns, so the areas
+            // have to grow (`h_full` + `flex_1`) or the strips stay at their
+            // content height (`min-h-72`) and leave a gap under a tall mixer.
             Orientation::Vertical => div()
                 .flex()
                 .flex_col()
@@ -294,13 +298,14 @@ impl gpui::RenderOnce for Mixer {
                 .child(
                     div()
                         .flex()
+                        .items_stretch()
                         .flex_1()
                         .min_h_0()
                         .w_full()
                         .gap(px(AREA_GAP))
-                        .child(cell(channels).flex_1())
-                        .child(cell(areas.separator))
-                        .child(cell(areas.master)),
+                        .child(cell(channels).flex_1().h_full())
+                        .child(cell(areas.separator).h_full())
+                        .child(cell(areas.master).h_full()),
                 ),
         };
         let mut root = layout.id(self.id).min_w_0().children(areas.other);
@@ -529,7 +534,9 @@ impl MixerChannels {
                 if horizontal {
                     el.flex_col()
                 } else {
-                    el.flex_row()
+                    // Stretch console strips to this row (`align-items: stretch`
+                    // plus `h-full` on each strip).
+                    el.flex_row().h_full().flex_1().items_stretch()
                 }
             })
             .when(scrollable, |el| {
@@ -637,7 +644,7 @@ impl MixerMaster {
                 if horizontal {
                     el.flex_col()
                 } else {
-                    el.flex_row()
+                    el.flex_row().h_full().flex_1().items_stretch()
                 }
             })
             .children(self.children);
