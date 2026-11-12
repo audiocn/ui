@@ -1,0 +1,22 @@
+[workspace]
+resolver = "3"
+members = ["crates/audiocn", "crates/gallery"]
+
+[workspace.package]
+edition = "2024"
+license = "MIT"
+repository = "https://github.com/radiumcoders/audiocn-gpui"
+homepage = "https://audiocn.dev"
+
+[workspace.dependencies]
+gpui = { package = "gpui-pre", version = "0.3.9" }
+gpui_platform = { package = "gpui-pre-platform", version = "=0.3.9" }
+audiocn = { path = "crates/audiocn" }
+
+[profile.dev.package."*"]
+opt-level = 2
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
