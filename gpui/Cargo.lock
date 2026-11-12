@@ -465,6 +465,7 @@ version = "0.1.0"
 dependencies = [
  "cpal",
  "gpui-pre",
+ "lyon",
  "parking_lot",
  "rustfft",
  "symphonia",

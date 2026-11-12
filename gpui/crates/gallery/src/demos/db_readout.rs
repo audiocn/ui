@@ -7,13 +7,12 @@ use audiocn::signal::demo_signal::{DemoSignalKind, DemoSignalOptions, use_demo_s
 use audiocn::theme::ActiveTheme;
 use audiocn::{DbReadout, DbReadoutMeasure, MeterZoneName};
 
-use super::{Demo, Section, id};
+use super::{Demo, id};
 
 pub const DEMO: Demo = Demo {
     slug: "db-readout",
     title: "dB Readout",
     description: "A numeric level label that updates at a readable rate and never shifts the layout.",
-    section: Section::Components,
     variants: &["default", "zones"],
     render,
 };

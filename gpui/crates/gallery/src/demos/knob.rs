@@ -9,13 +9,12 @@ use audiocn::{
     KnobRange, KnobScale, KnobScaleType, KnobTrack, KnobValue, format_pan, parse_pan,
 };
 
-use super::{Demo, Section, id};
+use super::{Demo, id};
 
 pub const DEMO: Demo = Demo {
     slug: "knob",
     title: "Knob",
     description: "A rotary control for dense layouts, drawn in SVG.",
-    section: Section::Components,
     variants: &["default", "drag-directions", "metal", "sizes", "volume"],
     render,
 };

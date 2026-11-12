@@ -17,13 +17,12 @@ use audiocn::signal::waveform_data::compute_peaks;
 use audiocn::ui::{Button, ButtonSize, ButtonVariant};
 use audiocn::{MusicPlayer, MusicTrack};
 
-use super::{Demo, Section, id};
+use super::{Demo, id};
 
 pub const DEMO: Demo = Demo {
     slug: "music-player",
     title: "Music Player",
     description: "A playlist player with a waveform seek bar, shuffle, repeat and ducking under the microphone.",
-    section: Section::Blocks,
     variants: &["default", "ducking"],
     render,
 };

@@ -12,13 +12,12 @@ use audiocn::{
     FaderValue, FaderVariant, LevelMeter, Orientation,
 };
 
-use super::{Demo, Section, id};
+use super::{Demo, id};
 
 pub const DEMO: Demo = Demo {
     slug: "fader",
     title: "Fader",
     description: "A volume fader in decibels, with tapers, detents, a scale, reset and an editable value.",
-    section: Section::Components,
     variants: &[
         "default",
         "bipolar",

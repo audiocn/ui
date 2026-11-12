@@ -9,13 +9,12 @@ use gpui::{AnyElement, App, IntoElement, Styled, Window, px};
 use audiocn::theme::oklch;
 use audiocn::{Soundboard, SoundboardSound};
 
-use super::{Demo, Section, id};
+use super::{Demo, id};
 
 pub const DEMO: Demo = Demo {
     slug: "soundboard",
     title: "Soundboard",
     description: "Sound pads with hotkeys, modes, volume, stop all and drag-and-drop.",
-    section: Section::Blocks,
     variants: &["default"],
     render,
 };

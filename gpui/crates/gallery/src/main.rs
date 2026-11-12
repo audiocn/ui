@@ -106,7 +106,7 @@ impl Gallery {
 
         let mut last = None;
         for (index, demo) in demos::ALL.iter().enumerate() {
-            if last != Some(demo.section) {
+            if last != Some(demos::group(demo.slug)) {
                 list = list.child(
                     div()
                         .px_2()
@@ -115,9 +115,9 @@ impl Gallery {
                         .text_xs()
                         .font_weight(FontWeight::MEDIUM)
                         .text_color(theme.muted_foreground)
-                        .child(demo.section.label()),
+                        .child(demos::group(demo.slug)),
                 );
-                last = Some(demo.section);
+                last = Some(demos::group(demo.slug));
             }
             let active = index == self.selected;
             list = list.child(
@@ -356,6 +356,9 @@ fn run(app: gpui::Application, options: Options) {
     app.run(move |cx: &mut App| {
         load_fonts(cx);
         audiocn::init(cx);
+        // With the `device` feature, `AudioPlayer::new(..).src(..)` plays for real.
+        #[cfg(all(feature = "device", not(target_family = "wasm")))]
+        audiocn::io::install_audio_player_backend(cx);
         audiocn::theme::set_theme(if dark { Theme::dark() } else { Theme::light() }, cx);
         cx.bind_keys([
             KeyBinding::new("tab", FocusNext, None),

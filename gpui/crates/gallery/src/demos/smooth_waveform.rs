@@ -14,13 +14,12 @@ use audiocn::theme::ActiveTheme;
 use audiocn::ui::{Button, ButtonSize, ButtonVariant};
 use audiocn::{SmoothWaveform, SmoothWaveformMode};
 
-use super::{Demo, Section, id};
+use super::{Demo, id};
 
 pub const DEMO: Demo = Demo {
     slug: "smooth-waveform",
     title: "Smooth Waveform",
     description: "One clean line across the width that follows the sound, as a flowing wave or an oscilloscope trace.",
-    section: Section::Components,
     variants: &["default", "microphone", "modes", "states"],
     render,
 };

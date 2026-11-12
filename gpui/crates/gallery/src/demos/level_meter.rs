@@ -18,13 +18,12 @@ use audiocn::{
     LevelMeterVariant, MeterZone, MeterZoneName, Orientation, use_level_meter,
 };
 
-use super::{Demo, Section, id};
+use super::{Demo, id};
 
 pub const DEMO: Demo = Demo {
     slug: "level-meter",
     title: "Level Meter",
     description: "A peak and RMS level meter with zones, peak hold, a scale, a readout and a clip light.",
-    section: Section::Components,
     variants: &[
         "default",
         "ballistics",

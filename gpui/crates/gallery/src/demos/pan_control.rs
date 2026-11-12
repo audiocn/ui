@@ -8,13 +8,12 @@ use audiocn::{
     format_pan, parse_pan,
 };
 
-use super::{Demo, Section, id};
+use super::{Demo, id};
 
 pub const DEMO: Demo = Demo {
     slug: "pan-control",
     title: "Pan Control",
     description: "Left and right balance with a fill from the centre and a centre detent.",
-    section: Section::Components,
     variants: &["default", "knob"],
     render,
 };

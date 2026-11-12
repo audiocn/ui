@@ -8,13 +8,12 @@ use audiocn::ui::{Button, ButtonSize, ButtonVariant};
 use audiocn::{Spectrum, SpectrumVariant};
 use gpui::{AnyElement, App, IntoElement, ParentElement, Styled, Window, div, px};
 
-use super::{Demo, Section, id};
+use super::{Demo, id};
 
 pub const DEMO: Demo = Demo {
     slug: "spectrum",
     title: "Spectrum",
     description: "A frequency spectrum analyser with axes, a grid and peak hold.",
-    section: Section::Components,
     variants: &["default", "microphone", "variants"],
     render,
 };

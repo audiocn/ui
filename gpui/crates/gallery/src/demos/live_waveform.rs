@@ -14,13 +14,12 @@ use audiocn::theme::ActiveTheme;
 use audiocn::ui::{Button, ButtonSize, ButtonVariant};
 use audiocn::{LiveWaveform, LiveWaveformMode, LiveWaveformVariant};
 
-use super::{Demo, Section, id};
+use super::{Demo, id};
 
 pub const DEMO: Demo = Demo {
     slug: "live-waveform",
     title: "Live Waveform",
     description: "A canvas waveform of a live signal, as scrolling history or the current frame.",
-    section: Section::Components,
     variants: &["default", "idle", "microphone", "variants"],
     render,
 };

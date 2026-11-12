@@ -11,13 +11,12 @@ use gpui::{AnyElement, App, IntoElement, ParentElement, Styled, Window, div, px}
 use audiocn::QuickAudioPopover;
 use audiocn::ui::{Button, ButtonSize, ButtonVariant};
 
-use super::{Demo, Section, id};
+use super::{Demo, id};
 
 pub const DEMO: Demo = Demo {
     slug: "quick-audio-popover",
     title: "Quick Audio Popover",
     description: "Microphone and system audio controls behind one toolbar button that shows a live level.",
-    section: Section::Blocks,
     variants: &["default"],
     render,
 };

@@ -10,13 +10,12 @@ use audiocn::{
     ParameterSliderMarks, ParameterSliderReset, ParameterSliderValue,
 };
 
-use super::{Demo, Section, id};
+use super::{Demo, id};
 
 pub const DEMO: Demo = Demo {
     slug: "parameter-slider",
     title: "Parameter Slider",
     description: "A labelled slider with a numeric input, unit, marks and reset, for everything that is not a volume.",
-    section: Section::Components,
     variants: &["default", "frequency"],
     render,
 };

@@ -10,13 +10,12 @@ use audiocn::{
     ChannelToggle, ChannelToggleSize, ChannelToggleVariant, MonitorToggle, MuteToggle, SoloToggle,
 };
 
-use super::{Demo, Section, id};
+use super::{Demo, id};
 
 pub const DEMO: Demo = Demo {
     slug: "channel-toggle",
     title: "Channel Toggle",
     description: "Mute, solo and monitor toggle buttons with their own pressed colours.",
-    section: Section::Components,
     variants: &["default", "variants"],
     render,
 };

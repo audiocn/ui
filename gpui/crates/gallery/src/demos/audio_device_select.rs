@@ -11,13 +11,12 @@ use audiocn::{
     LiveWaveform, LiveWaveformMode,
 };
 
-use super::{Demo, Section, id};
+use super::{Demo, id};
 
 pub const DEMO: Demo = Demo {
     slug: "audio-device-select",
     title: "Audio Device Select",
     description: "A microphone, speaker or source picker with permission, loading and disconnected states.",
-    section: Section::Components,
     variants: &["default", "states"],
     render,
 };

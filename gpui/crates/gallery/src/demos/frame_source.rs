@@ -20,13 +20,12 @@ use gpui::{
     AnyElement, App, IntoElement, ParentElement, SharedString, Styled, Task, Window, div, px,
 };
 
-use super::{Demo, Section, id};
+use super::{Demo, id};
 
 pub const DEMO: Demo = Demo {
     slug: "frame-source",
     title: "Frame Source",
     description: "Push frames from any engine: a socket, a worker, an audio thread or a test.",
-    section: Section::Concepts,
     variants: &["default"],
     render,
 };

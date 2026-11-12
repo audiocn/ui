@@ -21,13 +21,12 @@ use audiocn::{
     MixerMaster, MixerSeparator, MixerTitle, MuteToggle, Orientation, SoloToggle,
 };
 
-use super::{Demo, Section, id};
+use super::{Demo, id};
 
 pub const DEMO: Demo = Demo {
     slug: "mixer",
     title: "Mixer",
     description: "The container for channel strips, with shared meter settings and keyboard navigation.",
-    section: Section::Components,
     variants: &["default", "console", "empty"],
     render,
 };

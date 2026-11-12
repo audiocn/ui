@@ -7,13 +7,12 @@ use audiocn::signal::demo_signal::{DemoSignalKind, DemoSignalOptions, use_demo_s
 use audiocn::ui::{Button, ButtonSize, ButtonVariant};
 use audiocn::{ClipIndicator, ClipIndicatorActions};
 
-use super::{Demo, Section, id};
+use super::{Demo, id};
 
 pub const DEMO: Demo = Demo {
     slug: "clip-indicator",
     title: "Clip Indicator",
     description: "A clip light that holds after the signal clips, with an optional count and click to reset.",
-    section: Section::Components,
     variants: &["default", "latching"],
     render,
 };

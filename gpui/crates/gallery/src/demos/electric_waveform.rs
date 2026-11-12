@@ -9,13 +9,12 @@ use audiocn::theme::ActiveTheme;
 use audiocn::ui::{Button, ButtonSize, ButtonVariant};
 use gpui::{AnyElement, App, IntoElement, ParentElement, SharedString, Styled, Window, div, px};
 
-use super::{Demo, Section, id};
+use super::{Demo, id};
 
 pub const DEMO: Demo = Demo {
     slug: "electric-waveform",
     title: "Electric Waveform",
     description: "One electric line across the width, with a crackling white-hot core, a tall glow, forks off the peaks and sparks.",
-    section: Section::Components,
     variants: &["default", "intensity", "microphone", "modes", "states"],
     render,
 };

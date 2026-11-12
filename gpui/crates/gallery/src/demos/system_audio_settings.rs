@@ -4,13 +4,12 @@ use gpui::{AnyElement, App, IntoElement, Styled, Window, px};
 
 use audiocn::SystemAudioSettings;
 
-use super::{Demo, Section, id};
+use super::{Demo, id};
 
 pub const DEMO: Demo = Demo {
     slug: "system-audio-settings",
     title: "System Audio Settings",
     description: "Turn system audio capture on, set its level and see what the browser captures.",
-    section: Section::Blocks,
     variants: &["default"],
     render,
 };

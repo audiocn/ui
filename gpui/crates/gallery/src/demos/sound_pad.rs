@@ -14,13 +14,12 @@ use audiocn::{
     UseAudioPlayerOptions, use_simulated_player,
 };
 
-use super::{Demo, Section, id};
+use super::{Demo, id};
 
 pub const DEMO: Demo = Demo {
     slug: "sound-pad",
     title: "Sound Pad",
     description: "A trigger pad with modes, a hotkey, playback progress and an accent colour.",
-    section: Section::Components,
     variants: &["default", "grid"],
     render,
 };

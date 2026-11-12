@@ -17,13 +17,12 @@ use audiocn::{
     LcdMeterTrack, LcdMeterValue,
 };
 
-use super::{Demo, Section, id};
+use super::{Demo, id};
 
 pub const DEMO: Demo = Demo {
     slug: "lcd-meter",
     title: "LCD Meter",
     description: "A level meter on an LCD Display's screen, with block segments, a held peak, readouts, a printed scale and a CLIP flag.",
-    section: Section::Components,
     variants: &["default", "inks", "microphone", "segments"],
     render,
 };

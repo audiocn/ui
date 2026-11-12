@@ -4,13 +4,12 @@ use gpui::{AnyElement, App, IntoElement, Styled, Window, px};
 
 use audiocn::MicSetup;
 
-use super::{Demo, Section, id};
+use super::{Demo, id};
 
 pub const DEMO: Demo = Demo {
     slug: "mic-setup",
     title: "Mic Setup",
     description: "Choose and check a microphone, with a live preview, a meter, gain, mute and a level check.",
-    section: Section::Blocks,
     variants: &["default"],
     render,
 };

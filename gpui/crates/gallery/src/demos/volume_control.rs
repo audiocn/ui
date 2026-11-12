@@ -12,13 +12,12 @@ use audiocn::{
     VolumeLevel,
 };
 
-use super::{Demo, Section, id};
+use super::{Demo, id};
 
 pub const DEMO: Demo = Demo {
     slug: "volume-control",
     title: "Volume Control",
     description: "A simple volume slider with a mute button, for players.",
-    section: Section::Components,
     variants: &["default", "popover"],
     render,
 };

@@ -10,13 +10,12 @@ use audiocn::{
     TrackListItemDuration, TrackListItemIndex, TrackListItemTitle, TrackListVariant,
 };
 
-use super::{Demo, Section, id};
+use super::{Demo, id};
 
 pub const DEMO: Demo = Demo {
     slug: "track-list",
     title: "Track List",
     description: "A list of tracks with active and playing states and arrow-key navigation.",
-    section: Section::Components,
     variants: &["default"],
     render,
 };

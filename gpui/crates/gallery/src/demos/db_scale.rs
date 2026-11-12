@@ -6,13 +6,12 @@ use gpui::{AnyElement, App, IntoElement, ParentElement, Styled, Window, div, px}
 use audiocn::audio::taper::TaperInput;
 use audiocn::{DbScale, DbScaleSide, DbScaleTick, Orientation};
 
-use super::{Demo, Section};
+use super::Demo;
 
 pub const DEMO: Demo = Demo {
     slug: "db-scale",
     title: "dB Scale",
     description: "Tick marks and labels for a decibel range, shared by meters and faders.",
-    section: Section::Components,
     variants: &["default", "vertical"],
     render,
 };

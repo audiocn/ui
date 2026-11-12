@@ -23,13 +23,12 @@ use audiocn::{
     DbReadout, Fader, LevelMeter, MuteToggle, Orientation, SoloToggle,
 };
 
-use super::{Demo, Section, id};
+use super::{Demo, id};
 
 pub const DEMO: Demo = Demo {
     slug: "channel-strip",
     title: "Channel Strip",
     description: "One channel of a mixer, as a row or a console strip, composed from the parts you need.",
-    section: Section::Components,
     variants: &["default", "console", "notices"],
     render,
 };

@@ -15,13 +15,12 @@ use audiocn::{
     AudioPlayerVolume, UseAudioPlayerOptions, use_simulated_player,
 };
 
-use super::{Demo, Section, id};
+use super::{Demo, id};
 
 pub const DEMO: Demo = Demo {
     slug: "audio-player",
     title: "Audio Player",
     description: "A composable audio player with transport, seeking, time, volume, rate, loop and keyboard shortcuts.",
-    section: Section::Components,
     variants: &["default", "compact"],
     render,
 };

@@ -11,13 +11,12 @@ use audiocn::{
     AudioSize, SoundPad, SoundPadLabel, TempoControl, TempoControlInput, TempoControlTap,
 };
 
-use super::{Demo, Section, id};
+use super::{Demo, id};
 
 pub const DEMO: Demo = Demo {
     slug: "tempo-control",
     title: "Tempo Control",
     description: "An editable BPM input with tap tempo, keyboard stepping and a rolling average.",
-    section: Section::Components,
     variants: &["default", "controlled", "pad", "states"],
     render,
 };

@@ -11,13 +11,12 @@ use gpui::{
     AnyElement, App, Hsla, IntoElement, ParentElement, SharedString, Styled, Window, div, px,
 };
 
-use super::{Demo, Section, id};
+use super::{Demo, id};
 
 pub const DEMO: Demo = Demo {
     slug: "electric-bar-visualizer",
     title: "Electric Bar Visualizer",
     description: "Frequency-band bars drawn as crackling filaments, with arcs between loud neighbours and sparks on sudden rises.",
-    section: Section::Components,
     variants: &[
         "default",
         "colors",

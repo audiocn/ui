@@ -8,13 +8,12 @@ use audiocn::ui::{Badge, BadgeVariant};
 use audiocn::{BarVisualizer, BarVisualizerAlign};
 use gpui::{AnyElement, App, IntoElement, ParentElement, Styled, Window, div, px};
 
-use super::{Demo, Section, id};
+use super::{Demo, id};
 
 pub const DEMO: Demo = Demo {
     slug: "bar-visualizer",
     title: "Bar Visualizer",
     description: "A row of bars driven by frequency bands, with idle, loading and mirrored modes.",
-    section: Section::Components,
     variants: &["default", "align", "mini", "mirrored", "states"],
     render,
 };

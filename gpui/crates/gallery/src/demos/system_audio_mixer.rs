@@ -11,13 +11,12 @@ use gpui::{AnyElement, App, IntoElement, Styled, Window, px};
 use audiocn::theme::oklch;
 use audiocn::{MixerSound, MixerTrack, Orientation, SystemAudioMixer};
 
-use super::{Demo, Section, id};
+use super::{Demo, id};
 
 pub const DEMO: Demo = Demo {
     slug: "system-audio-mixer",
     title: "System Audio Mixer",
     description: "The complete mixer, with microphone, system audio, music, sound pads and a master, running on Web Audio.",
-    section: Section::Blocks,
     variants: &["default", "console"],
     render,
 };

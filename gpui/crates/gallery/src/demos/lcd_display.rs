@@ -14,13 +14,12 @@ use audiocn::{
     LcdDisplayStatusState, LcdDisplayValue, LcdDisplayVariant,
 };
 
-use super::{Demo, Section, id};
+use super::{Demo, id};
 
 pub const DEMO: Demo = Demo {
     slug: "lcd-display",
     title: "LCD Display",
     description: "A dot-matrix screen for labelled readouts and settings, backlit in the light theme and glowing in the dark one, with dropdown values.",
-    section: Section::Components,
     variants: &["default", "font", "variants"],
     render,
 };

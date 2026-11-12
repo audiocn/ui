@@ -12,6 +12,8 @@ description = "Audio UI components for GPUI: meters, visualizers, faders, knobs,
 
 [dependencies]
 gpui.workspace = true
+# Same lyon as GPUI's PathBuilder: gives round line joins and caps (`StrokeOptions::with_line_join`).
+lyon = "1.0"
 parking_lot = "0.12"
 web-time = "1"
 # Native audio I/O (`device` feature): streams + devices, FFT, file decoding.

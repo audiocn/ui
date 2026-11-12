@@ -26,13 +26,12 @@ use audiocn::{
     WaveformRegionValue, WaveformVariant,
 };
 
-use super::{Demo, Section, id};
+use super::{Demo, id};
 
 pub const DEMO: Demo = Demo {
     slug: "waveform",
     title: "Waveform",
     description: "A static waveform of a clip with a smooth playhead, seeking, hover time, regions and markers.",
-    section: Section::Components,
     variants: &["default", "regions", "variants"],
     render,
 };
