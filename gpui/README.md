@@ -9,7 +9,7 @@ defaults, visuals and keyboard behaviour. The React source is the spec; differen
 can't express are listed in each module's docs.
 
 ```sh
-cargo add audiocn --git https://github.com/radiumcoders/audiocn-gpui
+cargo add audiocn --git https://github.com/audiocn/ui
 ```
 
 ```rust

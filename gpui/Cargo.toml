@@ -5,7 +5,7 @@ members = ["crates/audiocn", "crates/gallery"]
 [workspace.package]
 edition = "2024"
 license = "MIT"
-repository = "https://github.com/radiumcoders/audiocn-gpui"
+repository = "https://github.com/audiocn/ui"
 homepage = "https://audiocn.dev"
 
 [workspace.dependencies]
