@@ -28,6 +28,8 @@ for _ in $(seq 1 50); do
 done
 
 case $out in /*) ;; *) out=$PWD/$out ;; esac
+# Extra URL params, e.g. WEB_SHOT_PARAMS="playground=knob".
+[ -n "${WEB_SHOT_PARAMS:-}" ] && query="$query&$WEB_SHOT_PARAMS"
 node "$root/scripts/web-shot.mjs" "$chrome" "http://127.0.0.1:$port/index.html?$query" "$out" \
   "${size%x*}" "${size#*x}" "$wait"
 echo "$out"
