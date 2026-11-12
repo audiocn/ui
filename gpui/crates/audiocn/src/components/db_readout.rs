@@ -467,6 +467,8 @@ impl RenderOnce for DbReadout {
         let ch = window
             .text_system()
             .ch_width(font_id, font_size)
+            // Unrounded, like the text advances GPUI lays out: Chrome on Linux
+            // rounds both (8ch of 14px Geist Mono is 64px there, 67.2px here).
             .unwrap_or(font_size * 0.6);
 
         let mut el = div()

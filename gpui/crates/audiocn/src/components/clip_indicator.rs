@@ -22,13 +22,16 @@ use crate::audio::frame_source::FrameSource;
 use crate::audio::types::MeterFrame;
 use crate::audio::zones::{CLIP_HOLD_MS, CLIP_THRESHOLD_DB};
 use crate::components::db_scale::tabular_nums;
+use crate::motion::{Easing, Instant, Transition};
 use crate::signal::clip_hold::{ClipHold, ClipHoldOptions};
-use crate::theme::ActiveTheme;
+use crate::theme::{ActiveTheme, mix};
 use crate::ui::styles::ring_overlay;
 
 /// How often an attached source is checked for new frames while nothing else
 /// re-renders the indicator.
 const SOURCE_POLL_MS: u64 = 33;
+/// Tailwind's `transition-colors`: 150 ms on its default curve.
+const COLOR_TRANSITION: Duration = Duration::from_millis(150);
 
 type ClippingHandler = Rc<dyn Fn(bool, &mut Window, &mut App)>;
 
@@ -121,6 +124,9 @@ pub struct ClipIndicatorState {
     poll: Option<Task<()>>,
     release: Option<(f64, Task<()>)>,
     on_change: Option<ClippingHandler>,
+    /// The lit colours, 0 (off) to 1 (clipping), and the hover background.
+    lit: Option<Transition>,
+    hover: Transition,
 }
 
 impl ClipIndicatorState {
@@ -308,6 +314,8 @@ impl RenderOnce for ClipIndicator {
             poll: None,
             release: None,
             on_change: None,
+            lit: None,
+            hover: Transition::new(0.0),
         });
         if let Some(actions) = &self.actions {
             *actions.state.borrow_mut() = Some(state.downgrade());
@@ -344,14 +352,28 @@ impl RenderOnce for ClipIndicator {
         let clipping = self.clipping.unwrap_or(detected);
         let focus_visible = focus.is_focused(window) && window.last_input_was_keyboard();
 
+        // `transition-colors`: the light, the text and the hover background
+        // fade instead of switching.
+        let now = Instant::now();
+        let (lit, hovered, animating) = state.update(cx, |s, _| {
+            let target = if clipping { 1.0 } else { 0.0 };
+            let lit = s.lit.get_or_insert_with(|| Transition::new(target));
+            lit.animate_to(target, COLOR_TRANSITION, Easing::STANDARD);
+            (
+                lit.value(now),
+                s.hover.value(now),
+                lit.is_animating(now) || s.hover.is_animating(now),
+            )
+        });
+        if animating {
+            window.request_animation_frame();
+        }
+
         let theme = cx.theme();
         let radius = px(10.0);
-        let light = if clipping {
-            theme.meter_clip
-        } else {
-            theme.muted_foreground.opacity(0.3)
-        };
-        let hover_bg = theme.muted;
+        let light = mix(theme.muted_foreground.opacity(0.3), theme.meter_clip, lit);
+        let text_color = mix(theme.muted_foreground, theme.meter_clip_foreground, lit);
+        let hover_bg = theme.muted.opacity(hovered);
         let ring = theme.ring.opacity(0.3);
 
         let mut el = div()
@@ -369,13 +391,9 @@ impl RenderOnce for ClipIndicator {
             .line_height(px(16.0))
             .font_weight(FontWeight::MEDIUM)
             .whitespace_nowrap()
-            .text_color(if clipping {
-                theme.meter_clip_foreground
-            } else {
-                theme.muted_foreground
-            })
+            .text_color(text_color)
             .cursor_pointer()
-            .hover(move |s| s.bg(hover_bg))
+            .when(hovered > 0.0, |el| el.bg(hover_bg))
             .role(gpui::Role::Button)
             .aria_label(if clipping {
                 "Clipping. Reset clip indicator"
@@ -398,8 +416,17 @@ impl RenderOnce for ClipIndicator {
             });
         el.style().refine(&self.style);
 
+        let hover = state.clone();
         let click = state.clone();
-        el.on_click(move |_, window, cx| {
+        el.on_hover(move |&hovered, window, cx| {
+            hover.update(cx, |s, _| {
+                let target = if hovered { 1.0 } else { 0.0 };
+                s.hover
+                    .animate_to(target, COLOR_TRANSITION, Easing::STANDARD);
+            });
+            window.refresh();
+        })
+        .on_click(move |_, window, cx| {
             fire(reset(&click, cx), window, cx);
         })
     }

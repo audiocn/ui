@@ -257,15 +257,45 @@ fn dual(window: &mut Window, cx: &mut App) -> AnyElement {
         .into_any_element()
 }
 
-/// `level-meter-microphone.tsx`. The gallery has no microphone, so "using
-/// the microphone" feeds the meter the demo voice instead.
+/// `level-meter-microphone.tsx`: the real microphone with the `device`
+/// feature; elsewhere (the wasm gallery) "using the microphone" feeds the
+/// meter the demo voice instead.
 fn microphone(window: &mut Window, cx: &mut App) -> AnyElement {
-    let listening =
-        window.use_keyed_state(id("level-meter", "microphone/listening"), cx, |_, _| false);
-    let on = *listening.read(cx);
-    let (key, options) = signal("microphone", DemoSignalKind::Speech);
-    let signal = use_demo_signal(key, options.with_playing(on), window, cx);
-    let toggle = listening.clone();
+    #[cfg(all(feature = "device", not(target_family = "wasm")))]
+    let (listening, source, toggle) = {
+        use audiocn::io::{MicrophoneOptions, MicrophoneStatus, use_microphone};
+        let mic = use_microphone(
+            id("level-meter", "microphone/mic"),
+            MicrophoneOptions::default(),
+            window,
+            cx,
+        );
+        let listening = mic.status == MicrophoneStatus::Active;
+        let source = mic.meter.clone();
+        let toggle = move |cx: &mut App| {
+            if listening {
+                mic.stop(cx);
+            } else {
+                mic.start(cx);
+            }
+        };
+        (listening, Some(source), toggle)
+    };
+    #[cfg(not(all(feature = "device", not(target_family = "wasm"))))]
+    let (listening, source, toggle) = {
+        let state =
+            window.use_keyed_state(id("level-meter", "microphone/listening"), cx, |_, _| false);
+        let on = *state.read(cx);
+        let (key, options) = signal("microphone", DemoSignalKind::Speech);
+        let signal = use_demo_signal(key, options.with_playing(on), window, cx);
+        let toggle = move |cx: &mut App| {
+            state.update(cx, |on, cx| {
+                *on = !*on;
+                cx.notify();
+            })
+        };
+        (on, on.then_some(signal.meter), toggle)
+    };
     div()
         .flex()
         .flex_col()
@@ -275,7 +305,7 @@ fn microphone(window: &mut Window, cx: &mut App) -> AnyElement {
         .child(
             LevelMeter::new(id("level-meter", "microphone"))
                 .aria_label("Microphone level")
-                .source(on.then_some(signal.meter))
+                .source(source)
                 .child(LevelMeterChannels::new().child(track(0)))
                 .child(LevelMeterValue::new())
                 .child(LevelMeterClip::new()),
@@ -285,22 +315,17 @@ fn microphone(window: &mut Window, cx: &mut App) -> AnyElement {
                 Button::new(id("level-meter", "microphone/button"))
                     .size(ButtonSize::Sm)
                     .variant(ButtonVariant::Outline)
-                    .icon_start(if on {
+                    .icon_start(if listening {
                         IconName::MicrophoneSlash
                     } else {
                         IconName::Microphone
                     })
-                    .child(if on {
+                    .child(if listening {
                         "Stop microphone"
                     } else {
                         "Use my microphone"
                     })
-                    .on_click(move |_, _, cx| {
-                        toggle.update(cx, |on, cx| {
-                            *on = !*on;
-                            cx.notify();
-                        })
-                    }),
+                    .on_click(move |_, _, cx| toggle(cx)),
             ),
         )
         .into_any_element()

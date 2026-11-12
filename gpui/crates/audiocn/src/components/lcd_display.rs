@@ -2282,7 +2282,7 @@ impl RenderOnce for LcdDisplaySelect {
         let shown: SharedString = trigger
             .text
             .clone()
-            .or_else(|| value.as_ref().map(&label_for))
+            .or_else(|| value.as_ref().map(label_for))
             .or_else(|| trigger.placeholder.clone())
             .unwrap_or_default();
         let ms = now_ms();

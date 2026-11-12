@@ -178,19 +178,50 @@ fn inks(window: &mut Window, cx: &mut App) -> AnyElement {
 /// demo speech signal in its place.
 fn microphone(window: &mut Window, cx: &mut App) -> AnyElement {
     let base = id("lcd-meter", "microphone");
-    let listening = window.use_keyed_state(
-        SharedString::from(format!("{base}/listening")),
-        cx,
-        |_, _| false,
-    );
-    let on = *listening.read(cx);
-    let signal = use_demo_signal(
-        SharedString::from(format!("{base}/signal")),
-        DemoSignalOptions::kind(DemoSignalKind::Speech).with_playing(on),
-        window,
-        cx,
-    );
-    let toggle = listening.clone();
+    // The real microphone with the `device` feature; elsewhere (the wasm
+    // gallery) "using the microphone" feeds the meter the demo voice.
+    #[cfg(all(feature = "device", not(target_family = "wasm")))]
+    let (on, source, toggle) = {
+        use audiocn::io::{MicrophoneOptions, MicrophoneStatus, use_microphone};
+        let mic = use_microphone(
+            SharedString::from(format!("{base}/mic")),
+            MicrophoneOptions::default(),
+            window,
+            cx,
+        );
+        let listening = mic.status == MicrophoneStatus::Active;
+        let source = mic.meter.clone();
+        let toggle = move |cx: &mut App| {
+            if listening {
+                mic.stop(cx);
+            } else {
+                mic.start(cx);
+            }
+        };
+        (listening, Some(source), toggle)
+    };
+    #[cfg(not(all(feature = "device", not(target_family = "wasm"))))]
+    let (on, source, toggle) = {
+        let listening = window.use_keyed_state(
+            SharedString::from(format!("{base}/listening")),
+            cx,
+            |_, _| false,
+        );
+        let on = *listening.read(cx);
+        let signal = use_demo_signal(
+            SharedString::from(format!("{base}/signal")),
+            DemoSignalOptions::kind(DemoSignalKind::Speech).with_playing(on),
+            window,
+            cx,
+        );
+        let toggle = move |cx: &mut App| {
+            listening.update(cx, |on, cx| {
+                *on = !*on;
+                cx.notify();
+            })
+        };
+        (on, on.then_some(signal.meter), toggle)
+    };
     div()
         .flex()
         .flex_col()
@@ -202,7 +233,7 @@ fn microphone(window: &mut Window, cx: &mut App) -> AnyElement {
                 .child(
                     LcdMeter::new("meter")
                         .aria_label("Microphone level")
-                        .source(on.then_some(signal.meter))
+                        .source(source)
                         .child(
                             LcdMeterChannel::new()
                                 .child(LcdMeterLabel::new("Mic"))
@@ -237,12 +268,7 @@ fn microphone(window: &mut Window, cx: &mut App) -> AnyElement {
                     } else {
                         "Use my microphone"
                     })
-                    .on_click(move |_, _, cx| {
-                        toggle.update(cx, |on, cx| {
-                            *on = !*on;
-                            cx.notify();
-                        })
-                    }),
+                    .on_click(move |_, _, cx| toggle(cx)),
             ),
         )
         .into_any_element()

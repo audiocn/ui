@@ -22,8 +22,8 @@ use std::rc::Rc;
 use std::time::Duration;
 
 use gpui::{
-    AnyElement, App, Bounds, ColorSpace, ContentMask, Context, ElementId, Entity, Hsla,
-    InteractiveElement, IntoElement, ParentElement, Pixels, Refineable, RenderOnce, SharedString,
+    AnyElement, App, Bounds, ContentMask, Context, ElementId, Entity, Hsla, InteractiveElement,
+    IntoElement, ParentElement, Pixels, Refineable, RenderOnce, SharedString,
     StatefulInteractiveElement, StyleRefinement, Styled, Task, WeakEntity, Window, canvas, div,
     fill, linear_color_stop, linear_gradient, point, prelude::FluentBuilder, px, size,
 };
@@ -47,7 +47,7 @@ use crate::components::db_readout::{
 use crate::components::db_scale::{DbScale, DbScaleSide, DbScaleTick};
 use crate::config::{AudioConfig, AudioSize};
 use crate::signal::reduced_motion::prefers_reduced_motion;
-use crate::theme::ActiveTheme;
+use crate::theme::{ActiveTheme, oklch, oklcha, to_oklab};
 use crate::ui::styles::{provide, use_context};
 
 const ARIA_INTERVAL_MS: f64 = 250.0;
@@ -65,6 +65,8 @@ const METER_GAP: f32 = 4.0;
 const SCALE_SIZE: f32 = 16.0;
 /// The gap between a segment and the next (`calc(100% / n - 2px)`).
 const SEGMENT_GAP: f32 = 2.0;
+/// Length of one step of a blended (`Gradient`) zone fill, in pixels.
+const GRADIENT_STEP: f32 = 4.0;
 
 /// `variant`: `Segmented` is an LED ladder. Default `Solid`.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
@@ -217,6 +219,63 @@ fn axis_rect(bounds: Bounds<Pixels>, horizontal: bool, start: f32, end: f32) -> 
     }
 }
 
+/// The zone colours of the default themes as their CSS declares them
+/// (`--meter-ok`, `--meter-warn`, `--destructive`; light, then dark).
+const CSS_ZONE_TOKENS: [(f32, f32, f32); 6] = [
+    (0.696, 0.17, 162.48),
+    (0.795, 0.184, 86.047),
+    (0.577, 0.245, 27.325),
+    (0.765, 0.177, 163.223),
+    (0.852, 0.199, 91.936),
+    (0.704, 0.191, 22.216),
+];
+
+/// A colour in Oklab `(l, a, b, alpha)` for blending. The browser blends a
+/// gradient's `oklch` stops before fitting them into sRGB, so a theme token
+/// that sRGB had to clip (`--meter-ok` is just outside it) is blended from
+/// its unclipped value; anything else from its sRGB value.
+fn css_oklab(color: Hsla) -> (f32, f32, f32, f32) {
+    let opaque = Hsla { a: 1.0, ..color };
+    CSS_ZONE_TOKENS
+        .iter()
+        .find(|&&(l, c, h)| oklch(l, c, h) == opaque)
+        .map_or_else(
+            || to_oklab(color),
+            |&(l, c, h)| {
+                let h = h.to_radians();
+                (l, c * h.cos(), c * h.sin(), color.a)
+            },
+        )
+}
+
+/// CSS's default gradient blend: Oklab, premultiplied by alpha.
+fn blend_oklab(from: (f32, f32, f32, f32), to: (f32, f32, f32, f32), t: f32) -> Hsla {
+    let t = t.clamp(0.0, 1.0);
+    let alpha = from.3 * (1.0 - t) + to.3 * t;
+    if alpha <= 0.0 {
+        return gpui::transparent_black();
+    }
+    let (w1, w2) = (from.3 * (1.0 - t) / alpha, to.3 * t / alpha);
+    let (l, a, b) = (
+        from.0 * w1 + to.0 * w2,
+        from.1 * w1 + to.1 * w2,
+        from.2 * w1 + to.2 * w2,
+    );
+    oklcha(l, a.hypot(b), b.atan2(a).to_degrees(), alpha)
+}
+
+/// Rounds a distance along a track's axis (from its start: left, or bottom
+/// when vertical) so its window coordinate falls on a device pixel edge.
+fn snap_axis(bounds: Bounds<Pixels>, horizontal: bool, x: f32, scale: f32) -> f32 {
+    if horizontal {
+        let origin = f32::from(bounds.origin.x);
+        ((origin + x) * scale).round() / scale - origin
+    } else {
+        let bottom = f32::from(bounds.origin.y) + f32::from(bounds.size.height);
+        bottom - ((bottom - x) * scale).round() / scale
+    }
+}
+
 /// Paints the zone fill of a track from its start up to `level` (0..1),
 /// clipped to the pill shape of the track, under an optional segment mask.
 /// Used by bars and by the unlit segments of the `Segmented` variant.
@@ -253,25 +312,45 @@ pub fn paint_zone_fill(
             if end <= start {
                 continue;
             }
-            let mask = ContentMask {
-                bounds: axis_rect(bounds, horizontal, start, end),
-            };
-            window.with_content_mask(Some(mask), |window| {
-                let quad = if piece.from == piece.to {
-                    fill(bounds, from.opacity(opacity))
-                } else {
-                    fill(
-                        bounds,
-                        linear_gradient(
-                            angle,
-                            linear_color_stop(from.opacity(opacity), piece.start),
-                            linear_color_stop(to.opacity(opacity), piece.end),
-                        )
-                        .color_space(ColorSpace::Oklab),
-                    )
+            if piece.from == piece.to {
+                let mask = ContentMask {
+                    bounds: axis_rect(bounds, horizontal, start, end),
                 };
-                window.paint_quad(quad.corner_radii(radius));
-            });
+                window.with_content_mask(Some(mask), |window| {
+                    window.paint_quad(fill(bounds, from.opacity(opacity)).corner_radii(radius));
+                });
+                continue;
+            }
+            // CSS blends `oklch` stops in Oklab. GPUI's Oklab gradient treats
+            // the (sRGB) colours of a non-sRGB surface as linear and lands on
+            // other colours, so the blend is computed here at short steps and
+            // each step is a near-flat gradient between two exact colours.
+            let (p0, p1) = (piece.start * length, piece.end * length);
+            let (from_lab, to_lab) = (css_oklab(from), css_oklab(to));
+            let at = |x: f32| blend_oklab(from_lab, to_lab, (x - p0) / (p1 - p0)).opacity(opacity);
+            let scale = window.scale_factor();
+            let mut x0 = start;
+            while x0 < end {
+                // Step edges on whole device pixels, so no pixel is painted twice.
+                let x1 = snap_axis(bounds, horizontal, x0 + GRADIENT_STEP, scale)
+                    .max(x0 + 1.0 / scale)
+                    .min(end);
+                let mask = ContentMask {
+                    bounds: axis_rect(bounds, horizontal, x0, x1),
+                };
+                let quad = fill(
+                    bounds,
+                    linear_gradient(
+                        angle,
+                        linear_color_stop(at(x0), x0 / length),
+                        linear_color_stop(at(x1), x1 / length),
+                    ),
+                );
+                window.with_content_mask(Some(mask), |window| {
+                    window.paint_quad(quad.corner_radii(radius));
+                });
+                x0 = x1;
+            }
         }
     }
 }
@@ -867,14 +946,15 @@ impl RenderOnce for LevelMeterHold {
                 }
                 let (w, h) = (f32::from(bounds.size.width), f32::from(bounds.size.height));
                 let length = if horizontal { w } else { h };
-                let end = hold * length;
+                // Snapped to device pixels: a content mask at a fractional
+                // edge covers a whole extra pixel, so the 2px line read as 3.
+                let end = snap_axis(bounds, horizontal, hold * length, window.scale_factor());
                 let mask = ContentMask {
                     bounds: axis_rect(bounds, horizontal, end - 2.0, end),
                 };
                 window.with_content_mask(Some(mask), |window| {
                     window.paint_quad(
-                        fill(bounds, color.opacity(color.a * opacity))
-                            .corner_radii(px(w.min(h) / 2.0)),
+                        fill(bounds, color.opacity(opacity)).corner_radii(px(w.min(h) / 2.0)),
                     );
                 });
             },
