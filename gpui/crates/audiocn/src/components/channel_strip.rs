@@ -1364,7 +1364,7 @@ impl ChannelStripNotice {
             ChannelStripNoticeVariant::Destructive => (t.destructive.opacity(0.1), t.destructive),
             ChannelStripNoticeVariant::Warning => (t.meter_warn.opacity(0.15), t.foreground),
         };
-        let mut el = div()
+        let el = div()
             .flex()
             .w_full()
             .min_w_0()
@@ -1375,8 +1375,22 @@ impl ChannelStripNotice {
             .py(px(6.0))
             .text_xs_()
             .bg(bg)
-            .text_color(fg)
-            .children(self.children);
+            .text_color(fg);
+        // CSS lets a flex item's text shrink and wrap (`min-w-0`); GPUI
+        // measures text's min-content as the whole line. In a narrow console
+        // strip that would overflow into the neighbouring strips, so there each
+        // child gets a shrinkable wrapper and its text wraps inside it. Rows
+        // keep the children as they are (so an `ml_auto` action still works).
+        let el = if strip_orientation() == Orientation::Vertical {
+            el.children(
+                self.children
+                    .into_iter()
+                    .map(|child| div().min_w_0().child(child)),
+            )
+        } else {
+            el.children(self.children)
+        };
+        let mut el = el;
         el.style().refine(&self.style);
         el
     }
