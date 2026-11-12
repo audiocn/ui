@@ -63,6 +63,8 @@ impl ConfigSettings {
     }
 }
 
+type ExitHandler = Rc<dyn Fn(&mut Window, &mut App)>;
+
 /// The playground view.
 pub struct Playground {
     selected: &'static str,
@@ -73,7 +75,7 @@ pub struct Playground {
     preset: usize,
     stage_width: f32,
     stage_fill: bool,
-    on_exit: Option<Rc<dyn Fn(&mut Window, &mut App)>>,
+    on_exit: Option<ExitHandler>,
     list_scroll: ScrollHandle,
     panel_scroll: ScrollHandle,
 }
@@ -128,10 +130,8 @@ impl Playground {
             if let Some(block) = css_block(&format!("[data-theme=\"{preset}\"]")) {
                 theme.apply_css(block);
             }
-            if dark {
-                if let Some(block) = css_block(&format!(".dark[data-theme=\"{preset}\"]")) {
-                    theme.apply_css(block);
-                }
+            if dark && let Some(block) = css_block(&format!(".dark[data-theme=\"{preset}\"]")) {
+                theme.apply_css(block);
             }
         }
         audiocn::theme::set_theme(theme, cx);

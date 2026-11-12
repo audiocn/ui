@@ -35,7 +35,6 @@ pub mod source;
 pub use shell::Playground;
 
 use std::collections::HashMap;
-use std::rc::Rc;
 
 use audiocn::theme::ActiveTheme;
 use audiocn::{AudioConfig, FrameSource, MeterFrame, VisualFrame};
@@ -145,6 +144,7 @@ pub enum SourceUse {
     /// Takes `FrameSource<VisualFrame>` (visualizers, waveforms).
     Visual,
     /// Takes both.
+    #[allow(dead_code, reason = "part of the spec API")]
     Both,
     /// The component itself takes no frames, but optional parts on the page
     /// do (a meter inside a fader, a device preview): shows the source picker
@@ -256,7 +256,14 @@ impl Control {
     }
 
     /// A number in pixels (a slider; written as `px(v)` in generated code).
-    pub fn px(key: &'static str, label: &'static str, default: f32, min: f32, max: f32, step: f32) -> Self {
+    pub fn px(
+        key: &'static str,
+        label: &'static str,
+        default: f32,
+        min: f32,
+        max: f32,
+        step: f32,
+    ) -> Self {
         let mut c = Self::num(key, label, default, min, max, step);
         c.pixels = true;
         c
@@ -269,6 +276,7 @@ impl Control {
     }
 
     /// Writes a number as `px(v)` in generated code.
+    #[allow(dead_code, reason = "part of the spec API")]
     pub fn pixels(mut self) -> Self {
         self.pixels = true;
         self
@@ -573,6 +581,7 @@ impl Ctx {
     }
 
     /// A logging callback for `Fn(T, &mut Window, &mut App)` props.
+    #[allow(dead_code, reason = "part of the spec API")]
     pub fn logger<T: std::fmt::Debug>(
         &self,
         event: &'static str,
@@ -646,9 +655,6 @@ fn rust_f32(v: f32) -> String {
     }
 }
 
-/// A shared, cheap-to-clone render function used by the shell.
-pub(crate) type RenderFn = Rc<dyn Fn(&Props, &Ctx, &mut Window, &mut App) -> AnyElement>;
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -678,7 +684,10 @@ mod tests {
         props.set("ok", Value::Color(2));
         let code = generate_code(&spec, &controls, &props);
         assert!(code.contains(".gap(px(3.0))"), "{code}");
-        assert!(code.contains(".zone_color(MeterZoneName::Ok, cx.theme().primary)"), "{code}");
+        assert!(
+            code.contains(".zone_color(MeterZoneName::Ok, cx.theme().primary)"),
+            "{code}"
+        );
     }
 
     #[test]
