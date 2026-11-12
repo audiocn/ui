@@ -453,6 +453,28 @@ pub(crate) fn thumb_shadows(theme: &Theme, t: f32, focus_visible: bool) -> Vec<B
     ]
 }
 
+/// `data-disabled:opacity-50` composites the whole fader as one layer, so
+/// the opaque thumb hides the range and the range hides the track. GPUI
+/// fades each shape on its own instead, which would let them show through
+/// each other. The range and thumb therefore undo the root's opacity
+/// ([`DISABLED_UNFADE`]) and take these colours, flattened onto the page
+/// background as the layer would be.
+pub(crate) fn disabled_flatten(color: Hsla, background: Hsla) -> Hsla {
+    let (c, b) = (gpui::Rgba::from(color), gpui::Rgba::from(background));
+    let a = color.a * 0.5;
+    let lerp = |x: f32, y: f32| y + (x - y) * a;
+    Hsla::from(gpui::Rgba {
+        r: lerp(c.r, b.r),
+        g: lerp(c.g, b.g),
+        b: lerp(c.b, b.b),
+        a: 1.0,
+    })
+}
+
+/// Undoes the root's `opacity(0.5)` for a part drawn with
+/// [`disabled_flatten`] colours (GPUI multiplies nested opacities unclamped).
+pub(crate) const DISABLED_UNFADE: f32 = 2.0;
+
 /// Animated ring progress for a slider thumb.
 #[derive(Clone, Debug)]
 pub(crate) struct ThumbRing {
@@ -1339,10 +1361,17 @@ impl RenderOnce for FaderRange {
         let ctx = fader_ctx("FaderRange");
         let start = ctx.origin_position.min(ctx.position);
         let end = ctx.origin_position.max(ctx.position);
+        let theme = cx.theme();
+        let color = if ctx.disabled {
+            disabled_flatten(theme.primary, theme.background)
+        } else {
+            theme.primary
+        };
         let mut el = div()
             .absolute()
             .rounded_full()
-            .bg(cx.theme().primary)
+            .bg(color)
+            .when(ctx.disabled, |el| el.opacity(DISABLED_UNFADE))
             .map(|el| {
                 if ctx.horizontal() {
                     el.top_0()
@@ -1416,7 +1445,15 @@ impl RenderOnce for FaderThumb {
             px(height / 2.0)
         };
 
-        let line = div().absolute().bg(theme.foreground).map(|el| {
+        let disabled = ctx.disabled;
+        let flat = |color: Hsla| {
+            if disabled {
+                disabled_flatten(color, theme.background)
+            } else {
+                color
+            }
+        };
+        let line = div().absolute().bg(flat(theme.foreground)).map(|el| {
             if horizontal {
                 el.top(px(-1.0))
                     .bottom(px(-1.0))
@@ -1442,12 +1479,23 @@ impl RenderOnce for FaderThumb {
             .flex_none()
             .rounded(radius)
             .bg(theme.background)
-            .shadow(thumb_shadows(&theme, t, focus_visible))
+            .shadow(
+                thumb_shadows(&theme, t, focus_visible)
+                    .into_iter()
+                    .map(|mut shadow| {
+                        if disabled {
+                            shadow.color = shadow.color.opacity(0.5);
+                        }
+                        shadow
+                    })
+                    .collect(),
+            )
+            .when(disabled, |el| el.opacity(DISABLED_UNFADE))
             .role(gpui::Role::Slider)
             .aria_value(text)
             .when_some(label, |el, l| el.aria_label(l))
             .when(console, |el| {
-                el.border_1().border_color(theme.border).child(line)
+                el.border_1().border_color(flat(theme.border)).child(line)
             });
         thumb.style().refine(&self.style);
 

@@ -23,10 +23,92 @@ pub const DEMO: Demo = Demo {
 
 fn render(variant: &str, window: &mut Window, cx: &mut App) -> Option<AnyElement> {
     Some(match variant {
-        "default" => demo(window, cx),
+        "default" => {
+            #[cfg(all(feature = "device", not(target_family = "wasm")))]
+            {
+                demo_device(window, cx)
+            }
+            #[cfg(not(all(feature = "device", not(target_family = "wasm"))))]
+            {
+                demo(window, cx)
+            }
+        }
         "states" => states(),
         _ => return None,
     })
+}
+
+/// `audio-device-select-demo.tsx` with the real devices and microphone
+/// (`useAudioDevices`, `useMicrophone`, `useAudioAnalyser`).
+#[cfg(all(feature = "device", not(target_family = "wasm")))]
+fn demo_device(window: &mut Window, cx: &mut App) -> AnyElement {
+    use audiocn::AudioDeviceKind;
+    use audiocn::io::{
+        AnalyserTapOptions, MicrophoneOptions, MicrophoneStatus, use_audio_devices, use_microphone,
+    };
+
+    let base = id("audio-device-select", "default");
+    let devices = use_audio_devices(
+        format!("{base}/devices"),
+        AudioDeviceKind::AudioInput,
+        window,
+        cx,
+    );
+    let selected =
+        window.use_keyed_state(format!("{base}/device"), cx, |_, _| None::<SharedString>);
+    let device_id = selected.read(cx).clone();
+    let microphone = use_microphone(
+        format!("{base}/mic"),
+        MicrophoneOptions {
+            device_id: device_id.as_ref().map(|id| id.to_string()),
+            enabled: device_id.is_some(),
+            analyser: AnalyserTapOptions {
+                history_size: 120,
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+        window,
+        cx,
+    );
+    let refresh = devices.clone();
+    div()
+        .flex()
+        .flex_col()
+        .w_full()
+        .max_w(px(384.0))
+        .gap(px(8.0))
+        .child(
+            AudioDeviceSelect::new(format!("{base}/select"), devices.devices.clone())
+                .loading(devices.is_loading)
+                .permission(devices.permission)
+                .on_request_permission(move |_, _| {
+                    refresh.request_permission();
+                })
+                .on_value_change(move |id, _, cx| {
+                    selected.update(cx, |s, cx| {
+                        *s = id;
+                        cx.notify();
+                    })
+                })
+                .value(device_id)
+                .trigger(
+                    AudioDeviceSelectTrigger::new()
+                        .child(AudioDeviceSelectValue::new().placeholder("Select a microphone")),
+                )
+                .content(AudioDeviceSelectContent::new()),
+        )
+        .child(
+            AudioDeviceSelectPreview::new().child(
+                LiveWaveform::new(format!("{base}/preview"))
+                    .active(microphone.status == MicrophoneStatus::Active)
+                    .bar_width(2.0)
+                    .mode(LiveWaveformMode::Scrolling)
+                    .h(px(32.0))
+                    .source(microphone.visual.clone()),
+            ),
+        )
+        .into_any_element()
 }
 
 /// The gallery has no microphone access: "Allow access" grants a fixed list
@@ -45,7 +127,8 @@ fn granted_devices() -> Vec<AudioDevice> {
     ]
 }
 
-/// `audio-device-select-demo.tsx`.
+/// `audio-device-select-demo.tsx` without device access (the wasm build).
+#[cfg_attr(all(feature = "device", not(target_family = "wasm")), allow(dead_code))]
 fn demo(window: &mut Window, cx: &mut App) -> AnyElement {
     let base = id("audio-device-select", "default");
     let state = window.use_keyed_state(format!("{base}/state"), cx, |_, _| DemoState {

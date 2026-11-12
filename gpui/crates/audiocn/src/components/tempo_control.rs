@@ -24,7 +24,9 @@ use crate::config::{AudioConfig, AudioSize};
 use crate::motion::Instant;
 use crate::signal::tap_tempo::{TapTempo, TapTempoOptions, TempoChangeDetails, TempoChangeReason};
 use crate::theme::ActiveTheme;
-use crate::ui::styles::{TextSize, fit_radius, provide, radius_lg, ring_overlay, use_context};
+use crate::ui::styles::{
+    TextSize, fit_radius, provide, radius_lg, ring_overlay, ring_overlay_bordered, use_context,
+};
 
 // ---------------------------------------------------------------------------
 // Number field logic (Base UI `NumberField` + `TempoControl`), GPUI-free.
@@ -1270,7 +1272,9 @@ impl RenderOnce for TempoControlTap {
             .when(!disabled, |el| {
                 el.hover(move |s| s.bg(muted)).active(move |s| s.bg(muted))
             })
-            .when_some(ring, |el, ring| el.child(ring_overlay(radius, 3.0, ring)))
+            .when_some(ring, |el, ring| {
+                el.child(ring_overlay_bordered(radius, 3.0, 1.0, ring))
+            })
             .children(children);
         el.style().refine(&self.style);
         if disabled {

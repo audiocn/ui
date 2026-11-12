@@ -23,8 +23,8 @@ use gpui::{
 use crate::audio::decibels::clamp;
 use crate::audio::taper::{AnyTaper, Taper, linear_taper, log_taper};
 use crate::components::fader::{
-    TextDraft, ThumbRing, ch_width, decimal, js_number, js_round, js_string, reset_button,
-    round_value, snap_position, thumb_shadows,
+    DISABLED_UNFADE, TextDraft, ThumbRing, ch_width, decimal, disabled_flatten, js_number,
+    js_round, js_string, reset_button, round_value, snap_position, thumb_shadows,
 };
 use crate::config::AudioConfig;
 use crate::theme::ActiveTheme;
@@ -1150,7 +1150,15 @@ impl RenderOnce for ParameterSliderControl {
             .left(relative(start))
             .w(relative(end - start))
             .rounded_full()
-            .bg(theme.primary);
+            // Faded as one layer with the thumb (see `disabled_flatten`).
+            .map(|el| {
+                if ctx.disabled {
+                    el.bg(disabled_flatten(theme.primary, theme.background))
+                        .opacity(DISABLED_UNFADE)
+                } else {
+                    el.bg(theme.primary)
+                }
+            });
 
         let label = self
             .aria_label
@@ -1164,7 +1172,18 @@ impl RenderOnce for ParameterSliderControl {
             .size(px(16.0))
             .rounded_full()
             .bg(theme.background)
-            .shadow(thumb_shadows(&theme, t, focus_visible))
+            .shadow(
+                thumb_shadows(&theme, t, focus_visible)
+                    .into_iter()
+                    .map(|mut shadow| {
+                        if ctx.disabled {
+                            shadow.color = shadow.color.opacity(0.5);
+                        }
+                        shadow
+                    })
+                    .collect(),
+            )
+            .when(ctx.disabled, |el| el.opacity(DISABLED_UNFADE))
             .role(gpui::Role::Slider)
             .aria_value((ctx.format)(ctx.value))
             .when_some(label, |el, l| el.aria_label(l));

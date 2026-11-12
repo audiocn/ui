@@ -13,7 +13,7 @@ use gpui::{
 use crate::config::AudioConfig;
 use crate::theme::{ActiveTheme, Theme};
 use crate::ui::icons::Icon;
-use crate::ui::styles::{TextSize, fit_radius, radius_lg, ring_overlay};
+use crate::ui::styles::{TextSize, fit_radius, radius_lg, ring_overlay, ring_overlay_bordered};
 
 /// `tone` of a [`ChannelToggle`]: which colour it takes when pressed.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
@@ -364,7 +364,13 @@ impl RenderOnce for ChannelToggle {
                 gpui::Toggled::False
             })
             .when_some(self.aria_label, |el, l| el.aria_label(l))
-            .when_some(ring, |el, ring| el.child(ring_overlay(s.radius, 3.0, ring)))
+            .when_some(ring, |el, ring| {
+                el.child(if s.border.is_some() {
+                    ring_overlay_bordered(s.radius, 3.0, 1.0, ring)
+                } else {
+                    ring_overlay(s.radius, 3.0, ring)
+                })
+            })
             .children(self.children);
         el.style().refine(&self.style);
         if disabled {
