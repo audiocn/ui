@@ -42,6 +42,14 @@ Copy, paste, make them yours.</p>
 - **Real units.** Mixer components speak decibels, the way audio engineers do.
 - **Accessible.** Keyboard control on every fader, knob and strip, real ARIA roles and reduced-motion support.
 
+## GPUI (Rust)
+
+Every component and block is also available for [GPUI](https://gpui.rs), Zed's Rust UI framework, in [`gpui/`](./gpui): the same names, props, visuals and keyboard behaviour, with a native and in-browser gallery of every docs example. See [`gpui/README.md`](./gpui/README.md).
+
+```sh
+cargo add audiocn --git https://github.com/audiocn/ui
+```
+
 ## Components
 
 <table>

@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>audiocn GPUI gallery</title>
+    <style>
+      html, body { margin: 0; height: 100%; overflow: hidden; background: #ffffff; }
+      body.dark { background: #0c0a09; }
+      canvas { display: block; outline: none; }
+      #fallback { position: fixed; inset: 0; display: none; align-items: center; justify-content: center;
+        font: 13px/1.4 ui-sans-serif, system-ui, sans-serif; color: #888; text-align: center; padding: 16px; }
+    </style>
+  </head>
+  <body>
+    <div id="fallback">This live demo needs WebGPU or WebGL2.</div>
+    <script type="module">
+      // ?demo=<slug>&variant=<name>&theme=light|dark (see crates/gallery/src/main.rs).
+      const theme = new URLSearchParams(location.search).get("theme") === "dark" ? "dark" : "light";
+      document.body.className = theme;
+      import("./gallery.js")
+        .then((m) => m.default())
+        .then(() => {
+          // scripts/web-shot.mjs waits for this before taking the screenshot.
+          window.__galleryReady = true;
+          parent.postMessage({ type: "audiocn-gpui:ready" }, "*");
+        })
+        .catch((error) => {
+          console.error(error);
+          window.__galleryError = String(error);
+          document.getElementById("fallback").style.display = "flex";
+        });
+    </script>
+  </body>
+</html>
