@@ -2,9 +2,7 @@
 //! variant is one example from the docs page (`components/examples/<slug>-<variant>.tsx`,
 //! with `<slug>-demo.tsx` as `default`, the hero preview).
 
-use gpui::{AnyElement, App, IntoElement, ParentElement, SharedString, Styled, Window, div};
-
-use audiocn::theme::ActiveTheme;
+use gpui::{AnyElement, App, SharedString, Window};
 
 mod audio_device_select;
 mod audio_player;
@@ -112,13 +110,4 @@ pub const ALL: &[Demo] = &[
 
 pub fn find(slug: &str) -> Option<&'static Demo> {
     ALL.iter().find(|demo| demo.slug == slug)
-}
-
-/// Placeholder for an example that has not been ported yet.
-pub fn pending(slug: &str, variant: &str, cx: &App) -> AnyElement {
-    div()
-        .text_sm()
-        .text_color(cx.theme().muted_foreground)
-        .child(format!("{slug} / {variant}: not ported yet"))
-        .into_any_element()
 }

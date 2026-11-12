@@ -1749,7 +1749,7 @@ impl RenderOnce for SystemAudioMixer {
             master = master.meter(source);
         }
 
-        let mut mixer = Mixer::new(SharedString::from(root))
+        let mut mixer = Mixer::new(root)
             .orientation(orientation)
             .child(
                 MixerHeader::new()
