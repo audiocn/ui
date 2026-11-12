@@ -25,7 +25,7 @@
 //!
 //! div()
 //!     .child(LevelMeter::new("master").source(meter_source.clone()))
-//!     .child(Fader::new("gain").value(db).on_change(|db, _, _| println!("{db} dB")))
+//!     .child(Fader::new("gain").value(db).on_value_change(|db, _, _| println!("{db} dB")))
 //! ```
 
 pub mod audio;
