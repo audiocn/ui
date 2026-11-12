@@ -284,6 +284,39 @@ pub enum SystemAudioStatus {
     Unsupported,
 }
 
+/// `useMicrophone().status` from the native [`crate::io`] microphone.
+#[cfg(all(feature = "device", not(target_family = "wasm")))]
+impl From<crate::io::MicrophoneStatus> for MicrophoneStatus {
+    fn from(status: crate::io::MicrophoneStatus) -> Self {
+        use crate::io::MicrophoneStatus as Io;
+        match status {
+            Io::Idle => Self::Idle,
+            Io::Acquiring => Self::Acquiring,
+            Io::Active => Self::Active,
+            Io::Denied => Self::Denied,
+            Io::Unavailable => Self::Unavailable,
+            Io::Error => Self::Error,
+        }
+    }
+}
+
+/// `useSystemAudio().status` from the native [`crate::io`] capture.
+#[cfg(all(feature = "device", not(target_family = "wasm")))]
+impl From<crate::io::SystemAudioStatus> for SystemAudioStatus {
+    fn from(status: crate::io::SystemAudioStatus) -> Self {
+        use crate::io::SystemAudioStatus as Io;
+        match status {
+            Io::Idle => Self::Idle,
+            Io::Prompting => Self::Prompting,
+            Io::Active => Self::Active,
+            Io::NoAudio => Self::NoAudio,
+            Io::Denied => Self::Denied,
+            Io::Ended => Self::Ended,
+            Io::Unsupported => Self::Unsupported,
+        }
+    }
+}
+
 /// Which inputs are open. The payload of [`SystemAudioMixer::on_output_change`],
 /// standing in for React's `MediaStream | null`.
 ///
@@ -364,7 +397,13 @@ fn orientation_from_value(value: &str) -> Orientation {
     }
 }
 
-/// The React `CHANNELS` list.
+/// The React `CHANNELS` list: the channels [`SystemAudioMixer`] creates when
+/// it is not given a [`SystemAudioMixer::mixer`]. Pass them to
+/// [`use_mixer`] to own the mixer state (to apply its gains to real inputs).
+pub fn system_audio_mixer_channels() -> Vec<MixerChannelInit> {
+    default_channels()
+}
+
 fn default_channels() -> Vec<MixerChannelInit> {
     vec![
         MixerChannelInit::new("microphone"),
@@ -1340,6 +1379,7 @@ impl RenderOnce for SystemAudioMixer {
             });
         let state = ui.read(cx).clone();
         let orientation = state.orientation;
+        let console = orientation == Orientation::Vertical;
         let track_index = self.track_index.unwrap_or(state.track_index);
         let device_controlled = self.device_id.is_some();
         let device_id = match &self.device_id {
@@ -1756,10 +1796,20 @@ impl RenderOnce for SystemAudioMixer {
                     .child(MixerTitle::new("Audio mixer"))
                     .child(MixerActions::new().child(tabs).child(reset)),
             )
-            .child(MixerChannels::new().children(channels))
+            // In the console the CSS grid stretches both areas to the row's
+            // height; here they sit in flex columns, so they grow instead.
+            .child(
+                MixerChannels::new()
+                    .children(channels)
+                    .when(console, |el| el.flex_1()),
+            )
             .child(MixerEmpty::new().child("No audio sources."))
             .child(MixerSeparator::new())
-            .child(MixerMaster::new().child(master));
+            .child(
+                MixerMaster::new()
+                    .child(master)
+                    .when(console, |el| el.flex_1()),
+            );
         mixer.style().refine(&self.style);
         mixer
     }

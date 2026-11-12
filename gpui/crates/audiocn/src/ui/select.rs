@@ -14,7 +14,7 @@ use super::overlay::{
 };
 use super::styles::{
     TextSize, by_mode, fit_radius, focus_ring_color, parent_styled, provide, radius_2xl, radius_xl,
-    ring_overlay, ring_shadow, shadow_lg, use_context,
+    ring_overlay_bordered, ring_shadow, shadow_lg, use_context,
 };
 use crate::theme::ActiveTheme;
 
@@ -287,7 +287,9 @@ impl RenderOnce for Select {
             .text_sm_()
             .whitespace_nowrap()
             .when(disabled, |el| el.opacity(0.5).cursor_not_allowed())
-            .when_some(ring, |el, ring| el.child(ring_overlay(radius, 3.0, ring)))
+            .when_some(ring, |el, ring| {
+                el.child(ring_overlay_bordered(radius, 3.0, 1.0, ring))
+            })
             .child(
                 div()
                     .flex()
@@ -569,7 +571,7 @@ fn select_popup(
                                 .child(Icon::new(IconName::Check).size(px(16.0))),
                         )
                         .when_some(content_top, |el, top| {
-                            el.child(measure_bounds(move |b, cx| {
+                            el.child(measure_bounds(move |b, _, cx| {
                                 measure_state.update(cx, |s, _| {
                                     s.selected_item_offset = Some(b.top() - top);
                                 });

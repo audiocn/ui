@@ -9,7 +9,9 @@ use gpui::{
 };
 
 use super::icons::Icon;
-use super::styles::{TextSize, by_mode, fit_radius, focus_ring_color, radius_2xl, ring_overlay};
+use super::styles::{
+    TextSize, by_mode, fit_radius, focus_ring_color, radius_2xl, ring_overlay_bordered,
+};
 use crate::theme::{ActiveTheme, mix};
 
 /// `variant` of [`Button`] (`buttonVariants`).
@@ -413,7 +415,9 @@ impl RenderOnce for Button {
                         el.group_hover("audiocn-button", move |s| s.bg(c))
                     }),
             )
-            .when_some(ring, |el, ring| el.child(ring_overlay(radius, 3.0, ring)))
+            .when_some(ring, |el, ring| {
+                el.child(ring_overlay_bordered(radius, 3.0, 1.0, ring))
+            })
             .when_some(self.icon_start, |el, icon| el.child(icon.size(icon_size)))
             .children(self.children)
             .when_some(self.icon_end, |el, icon| el.child(icon.size(icon_size)));

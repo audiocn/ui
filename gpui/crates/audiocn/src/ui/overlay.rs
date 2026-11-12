@@ -306,9 +306,7 @@ pub(crate) fn trigger(
         .relative()
         .flex()
         .child(provide(OverlayTrigger { expanded, focus }, child))
-        .child(measure_bounds(move |bounds, cx| {
-            measure.update(cx, |s, _| s.trigger_bounds = Some(bounds));
-        }))
+        .child(measure_trigger(measure))
         .on_click(move |e, window, cx| {
             if e.is_keyboard() {
                 return;
@@ -330,12 +328,56 @@ pub(crate) fn trigger(
 
 /// An absolutely positioned, full-size, non-interactive child that reports
 /// its parent's window bounds during prepaint.
-pub(crate) fn measure_bounds(f: impl Fn(Bounds<Pixels>, &mut App) + 'static) -> impl IntoElement {
-    canvas(move |bounds, _, cx| f(bounds, cx), |_, _, _, _| {})
-        .absolute()
-        .top_0()
-        .left_0()
-        .size_full()
+pub(crate) fn measure_bounds(
+    f: impl Fn(Bounds<Pixels>, &mut Window, &mut App) + 'static,
+) -> impl IntoElement {
+    canvas(
+        move |bounds, window, cx| f(bounds, window, cx),
+        |_, _, _, _| {},
+    )
+    .absolute()
+    .top_0()
+    .left_0()
+    .size_full()
+}
+
+/// Redraws the window on the next frame. The popup is positioned from bounds
+/// measured during prepaint, so when they change (the first frame of a
+/// `default_open` popup, a trigger that moved, a popup that needs flipping)
+/// nothing else would draw the popup in its place until some unrelated
+/// change redraws the window.
+pub(crate) fn redraw_next_frame(window: &mut Window) {
+    window.on_next_frame(|window, _| window.refresh());
+}
+
+/// [`measure_bounds`] for the trigger: stores its bounds in `state` and, while
+/// the popup is open, redraws when they changed.
+pub(crate) fn measure_trigger(state: Entity<OverlayState>) -> impl IntoElement {
+    measure_bounds(move |bounds, window, cx| {
+        let redraw = state.update(cx, |s, _| {
+            let changed = s.trigger_bounds != Some(bounds);
+            s.trigger_bounds = Some(bounds);
+            changed && s.last_open
+        });
+        if redraw {
+            redraw_next_frame(window);
+        }
+    })
+}
+
+/// [`measure_bounds`] for the popup surface: stores its bounds in `state` and
+/// redraws when its size changed (placement flips on the size).
+pub(crate) fn measure_content(state: Entity<OverlayState>) -> impl IntoElement {
+    measure_bounds(move |bounds, window, cx| {
+        let redraw = state.update(cx, |s, _| {
+            let changed = s.content_bounds.map(|b| b.size) != Some(bounds.size);
+            s.content_bounds = Some(bounds);
+            changed
+        });
+        if redraw {
+            redraw_next_frame(window);
+        }
+    })
 }
 
 /// Renders `content` in a deferred, anchored layer next to `anchor`, with
@@ -371,9 +413,7 @@ pub(crate) fn popup(
                     .id("popup")
                     .occlude()
                     .track_focus(&focus)
-                    .child(measure_bounds(move |bounds, cx| {
-                        size_state.update(cx, |s, _| s.content_bounds = Some(bounds));
-                    }))
+                    .child(measure_content(size_state))
                     .on_mouse_down_out(move |e, window, cx| {
                         if ignore.is_some_and(|b| b.contains(&e.position)) {
                             return;

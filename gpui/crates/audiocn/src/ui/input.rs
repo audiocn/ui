@@ -13,7 +13,7 @@ use gpui::{
     actions, div, fill, point, prelude::FluentBuilder, px, relative, size,
 };
 
-use super::styles::{by_mode, fit_radius, focus_ring_color, radius_2xl, ring_overlay};
+use super::styles::{by_mode, fit_radius, focus_ring_color, radius_2xl, ring_overlay_bordered};
 use crate::theme::ActiveTheme;
 
 actions!(
@@ -825,7 +825,9 @@ impl RenderOnce for Input {
             .bg(t.input.opacity(0.5))
             .text_size(px(14.0))
             .line_height(px(20.0))
-            .when_some(ring, |el, ring| el.child(ring_overlay(radius, 3.0, ring)))
+            .when_some(ring, |el, ring| {
+                el.child(ring_overlay_bordered(radius, 3.0, 1.0, ring))
+            })
             .child(div().flex_1().min_w_0().overflow_hidden().child(text_el));
         el.style().refine(&self.style);
         if self.disabled {

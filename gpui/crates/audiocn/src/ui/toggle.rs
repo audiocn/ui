@@ -9,7 +9,7 @@ use gpui::{
 };
 
 use super::icons::Icon;
-use super::styles::{TextSize, fit_radius, focus_ring_color, radius_2xl, ring_overlay};
+use super::styles::{TextSize, fit_radius, focus_ring_color, radius_2xl, ring_overlay_bordered};
 use crate::theme::ActiveTheme;
 
 /// `variant` of [`Toggle`].
@@ -234,7 +234,9 @@ impl RenderOnce for Toggle {
             } else {
                 gpui::Toggled::False
             })
-            .when_some(ring, |el, ring| el.child(ring_overlay(radius, 3.0, ring)))
+            .when_some(ring, |el, ring| {
+                el.child(ring_overlay_bordered(radius, 3.0, 1.0, ring))
+            })
             .when_some(self.icon_start, |el, i| el.child(i.size(px(16.0))))
             .children(self.children)
             .when_some(self.icon_end, |el, i| el.child(i.size(px(16.0))));

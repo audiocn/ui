@@ -10,7 +10,7 @@ use gpui::{
 };
 
 use super::styles::{
-    TextSize, by_mode, parent_styled, provide, radius_2xl, ring_overlay, use_context,
+    TextSize, by_mode, parent_styled, provide, radius_2xl, ring_overlay_bordered, use_context,
 };
 use crate::Orientation;
 use crate::theme::ActiveTheme;
@@ -297,7 +297,7 @@ impl RenderOnce for TabsTrigger {
             .role(gpui::Role::Tab)
             .aria_selected(active)
             .when(focus_visible, |el| {
-                el.child(ring_overlay(radius, 3.0, ring.opacity(0.5)))
+                el.child(ring_overlay_bordered(radius, 3.0, 1.0, ring.opacity(0.5)))
             })
             .when(line && active, |el| {
                 let fg = t.foreground;

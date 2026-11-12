@@ -22,7 +22,7 @@ use gpui::prelude::FluentBuilder as _;
 use gpui::{
     App, Bounds, Context, FontWeight, IntoElement, ParentElement, Render, ScrollHandle,
     StatefulInteractiveElement, Styled, TitlebarOptions, Window, WindowBounds, WindowOptions, div,
-    point, px, size,
+    point, px, relative, size,
 };
 use gpui::{AppContext, InteractiveElement, KeyBinding, actions};
 
@@ -31,8 +31,6 @@ actions!(gallery, [FocusNext, FocusPrev]);
 mod fonts {
     include!(concat!(env!("OUT_DIR"), "/fonts.rs"));
 }
-
-const HEADING: &str = "Outfit";
 
 struct Gallery {
     selected: usize,
@@ -60,146 +58,170 @@ impl Gallery {
         audiocn::theme::set_theme(theme, cx);
     }
 
+    /// The fumadocs sidebar of audiocn.dev: `bg-sidebar border-e w-[268px]`,
+    /// a `p-4 pb-2` header, then `text-sm` groups of `rounded-lg p-2` links.
     fn sidebar(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let theme = cx.theme().clone();
-        let mut list = div()
-            .id("sidebar")
+        let header = div()
             .flex()
-            .flex_col()
-            .w(px(232.))
-            .h_full()
-            .flex_none()
-            .overflow_y_scroll()
-            .border_r_1()
-            .border_color(theme.sidebar_border)
-            .bg(theme.sidebar)
-            .text_color(theme.sidebar_foreground)
-            .p_3()
-            .gap_0p5()
+            .items_center()
+            .justify_between()
+            .p_4()
+            .pb_2()
             .child(
                 div()
-                    .flex()
-                    .items_center()
-                    .justify_between()
+                    .text_size(px(15.))
+                    .line_height(px(21.43))
+                    .font_weight(FontWeight::MEDIUM)
+                    .child("audiocn"),
+            )
+            .child(
+                div()
+                    .id("theme-toggle")
                     .px_2()
-                    .py_2()
-                    .child(
-                        div()
-                            .font_family(HEADING)
-                            .font_weight(FontWeight::SEMIBOLD)
-                            .text_lg()
-                            .child("audiocn"),
-                    )
-                    .child(
-                        div()
-                            .id("theme-toggle")
-                            .px_2()
-                            .py_1()
-                            .rounded(theme.radius_md())
-                            .text_xs()
-                            .cursor_pointer()
-                            .hover(|s| s.bg(theme.sidebar_accent))
-                            .child(if theme.is_dark { "Light" } else { "Dark" })
-                            .on_click(cx.listener(|this, _, _, cx| this.toggle_theme(cx))),
-                    ),
+                    .py_1()
+                    .rounded(theme.radius_lg())
+                    .text_xs()
+                    .text_color(theme.muted_foreground)
+                    .cursor_pointer()
+                    .hover(|s| {
+                        s.bg(theme.accent.opacity(0.5))
+                            .text_color(theme.accent_foreground)
+                    })
+                    .child(if theme.is_dark { "Light" } else { "Dark" })
+                    .on_click(cx.listener(|this, _, _, cx| this.toggle_theme(cx))),
             );
 
+        let mut list = div()
+            .id("sidebar-list")
+            .flex()
+            .flex_col()
+            .flex_1()
+            .min_h_0()
+            .overflow_y_scroll()
+            .gap_0p5()
+            .px_4()
+            .pt_4()
+            .pb_4();
         let mut last = None;
         for (index, demo) in demos::ALL.iter().enumerate() {
-            if last != Some(demos::group(demo.slug)) {
+            let group = demos::group(demo.slug);
+            if last != Some(group) {
+                // `mt-6 mb-1 px-2 first:mt-0` (the list's `gap-0.5` adds 2px).
                 list = list.child(
                     div()
+                        .when(last.is_some(), |d| d.mt(px(22.)))
+                        .mb(px(2.))
                         .px_2()
-                        .pt_4()
-                        .pb_1()
-                        .text_xs()
-                        .font_weight(FontWeight::MEDIUM)
-                        .text_color(theme.muted_foreground)
-                        .child(demos::group(demo.slug)),
+                        .text_color(theme.foreground)
+                        .child(group),
                 );
-                last = Some(demos::group(demo.slug));
+                last = Some(group);
             }
             let active = index == self.selected;
             list = list.child(
                 div()
                     .id(demo.slug)
-                    .px_2()
-                    .py_1()
-                    .rounded(theme.radius_md())
-                    .text_sm()
+                    .flex_none()
+                    .p_2()
+                    .rounded(theme.radius_lg())
                     .cursor_pointer()
                     .when(active, |d| {
-                        d.bg(theme.sidebar_accent)
-                            .text_color(theme.sidebar_accent_foreground)
-                            .font_weight(FontWeight::MEDIUM)
+                        d.bg(theme.primary.opacity(0.1)).text_color(theme.primary)
                     })
-                    .when(!active, |d| d.hover(|s| s.bg(theme.sidebar_accent)))
-                    .child(demo.title)
+                    .when(!active, |d| {
+                        d.text_color(theme.muted_foreground).hover(|s| {
+                            s.bg(theme.accent.opacity(0.5))
+                                .text_color(theme.accent_foreground)
+                        })
+                    })
+                    .child(docs::title(demo.slug).unwrap_or(demo.title))
                     .on_click(cx.listener(move |this, _, _, cx| this.select(index, cx))),
             );
         }
-        list
+
+        div()
+            .flex()
+            .flex_col()
+            .w(px(268.))
+            .h_full()
+            .flex_none()
+            .border_r_1()
+            .border_color(theme.border)
+            .bg(theme.sidebar)
+            .text_color(theme.foreground)
+            .text_size(px(14.))
+            .line_height(relative(20. / 14.))
+            .child(header)
+            .child(list)
     }
 
-    /// One docs page: title, description, then every example in a preview box.
+    /// One docs page, laid out like audiocn.dev's fumadocs article
+    /// (`max-w-[900px] px-6 pt-8 gap-4`): the title, the description, then
+    /// every example under its docs heading in a preview box.
     fn page(&self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let demo = &demos::ALL[self.selected];
         let theme = cx.theme().clone();
         let mut page = div()
             .flex()
             .flex_col()
-            .gap_10()
-            .px_12()
-            .py_10()
-            .max_w(px(920.))
+            .px_6()
+            .pt_8()
+            .pb_6()
+            .max_w(px(900.))
             .w_full()
+            // `text-[1.75em] font-semibold`
             .child(
                 div()
-                    .flex()
-                    .flex_col()
-                    .gap_2()
-                    .child(
-                        div()
-                            .font_family(HEADING)
-                            .text_3xl()
-                            .font_weight(FontWeight::SEMIBOLD)
-                            .child(demo.title),
-                    )
-                    .child(
-                        div()
-                            .text_color(theme.muted_foreground)
-                            .child(demo.description),
-                    ),
-            );
-        for variant in demo.variants {
-            let element = (demo.render)(variant, window, cx);
-            page = page.child(
+                    .text_size(px(28.))
+                    .line_height(px(42.))
+                    .font_weight(FontWeight::SEMIBOLD)
+                    .child(docs::title(demo.slug).unwrap_or(demo.title)),
+            )
+            // `mb-8 text-lg text-fd-muted-foreground`, after the article's `gap-4`.
+            .child(
                 div()
+                    .mt_4()
+                    .text_lg()
+                    .line_height(px(28.))
+                    .text_color(theme.muted_foreground)
+                    .child(docs::description(demo.slug).unwrap_or(demo.description)),
+            );
+        let padding = preview_padding(demo.slug);
+        for (index, variant) in demo.variants.iter().enumerate() {
+            let element = (demo.render)(variant, window, cx);
+            let heading = docs::heading(demo.slug, variant);
+            // The hero sits `mb-8` + `gap-4` under the description; later
+            // examples follow their heading (`mt-8 mb-3`, preview `my-6`).
+            let top = if index == 0 { px(48.) } else { px(24.) };
+            page = page.when_some(heading.filter(|_| index > 0), |page, heading| {
+                page.child(
+                    div()
+                        .mt(px(56.))
+                        .text_xl()
+                        .line_height(px(32.))
+                        .font_weight(FontWeight::SEMIBOLD)
+                        .child(heading),
+                )
+            });
+            page = page.child(
+                // `bg-background flex min-h-72 w-full justify-center
+                // items-center rounded-xl border p-4 sm:p-10`
+                div()
+                    .mt(top)
                     .flex()
-                    .flex_col()
-                    .gap_3()
-                    .when(*variant != "default", |d| {
-                        d.child(
-                            div()
-                                .font_family(HEADING)
-                                .text_xl()
-                                .font_weight(FontWeight::SEMIBOLD)
-                                .child(variant_title(variant)),
-                        )
-                    })
-                    .child(
-                        div()
-                            .flex()
-                            .items_center()
-                            .justify_center()
-                            .min_h(px(350.))
-                            .p_10()
-                            .border_1()
-                            .border_color(theme.border)
-                            .rounded(theme.radius_xl())
-                            .bg(theme.background)
-                            .children(element),
-                    ),
+                    .items_center()
+                    .justify_center()
+                    .w_full()
+                    .min_h(px(288.))
+                    .p(padding)
+                    .border_1()
+                    .border_color(theme.border)
+                    .rounded(theme.radius_xl())
+                    .bg(theme.background)
+                    .text_size(px(14.))
+                    .line_height(relative(20. / 14.))
+                    .children(element),
             );
         }
         page
@@ -223,6 +245,103 @@ fn variant_title(variant: &str) -> String {
     }
 }
 
+/// `p-10`, or the `className` a docs page gives its previews
+/// (`system-audio-mixer`: `p-4 sm:p-6`).
+fn preview_padding(slug: &str) -> gpui::Pixels {
+    match slug {
+        "system-audio-mixer" => px(24.),
+        _ => px(40.),
+    }
+}
+
+/// Example headings, read from the docs pages (`content/docs/**/<slug>.mdx`).
+mod docs {
+    macro_rules! pages {
+        ($($dir:literal / $slug:literal),* $(,)?) => {
+            &[$(($slug, include_str!(concat!(
+                env!("CARGO_MANIFEST_DIR"), "/../../../content/docs/", $dir, "/", $slug, ".mdx"
+            )))),*]
+        };
+    }
+
+    const PAGES: &[(&str, &str)] = pages![
+        "components" / "audio-device-select",
+        "components" / "audio-player",
+        "components" / "bar-visualizer",
+        "components" / "channel-strip",
+        "components" / "channel-toggle",
+        "components" / "clip-indicator",
+        "components" / "db-readout",
+        "components" / "db-scale",
+        "components" / "electric-bar-visualizer",
+        "components" / "electric-waveform",
+        "components" / "fader",
+        "components" / "knob",
+        "components" / "lcd-display",
+        "components" / "lcd-meter",
+        "components" / "level-meter",
+        "components" / "live-waveform",
+        "components" / "mixer",
+        "components" / "pan-control",
+        "components" / "parameter-slider",
+        "components" / "smooth-waveform",
+        "components" / "sound-pad",
+        "components" / "spectrum",
+        "components" / "tempo-control",
+        "components" / "track-list",
+        "components" / "volume-control",
+        "components" / "waveform",
+        "blocks" / "mic-setup",
+        "blocks" / "music-player",
+        "blocks" / "quick-audio-popover",
+        "blocks" / "soundboard",
+        "blocks" / "system-audio-mixer",
+        "blocks" / "system-audio-settings",
+    ];
+
+    fn frontmatter(slug: &str, key: &str) -> Option<&'static str> {
+        let (_, page) = PAGES.iter().find(|(s, _)| *s == slug)?;
+        let body = page.strip_prefix("---")?;
+        let end = body.find("\n---")?;
+        body[..end].lines().find_map(|line| {
+            let value = line.strip_prefix(key)?.strip_prefix(':')?.trim();
+            Some(value.trim_matches('"'))
+        })
+    }
+
+    /// The docs page title (`title:` in the front matter).
+    pub fn title(slug: &str) -> Option<&'static str> {
+        frontmatter(slug, "title")
+    }
+
+    /// The docs page description (`description:` in the front matter).
+    pub fn description(slug: &str) -> Option<&'static str> {
+        frontmatter(slug, "description")
+    }
+
+    /// The heading above `<ComponentPreview name="<slug>-<variant>">` on the
+    /// docs page (`default` is `<slug>-demo`).
+    pub fn heading(slug: &str, variant: &str) -> Option<String> {
+        let (_, page) = PAGES.iter().find(|(s, _)| *s == slug)?;
+        let example = if variant == "default" {
+            format!("{slug}-demo")
+        } else {
+            format!("{slug}-{variant}")
+        };
+        let needle = format!("name=\"{example}\"");
+        let mut heading = None;
+        for line in page.lines() {
+            let line = line.trim();
+            if line.starts_with('#') {
+                heading = Some(line.trim_start_matches('#').trim().to_string());
+            } else if line.starts_with("<ComponentPreview") && line.contains(&needle) {
+                return heading.or_else(|| Some(super::variant_title(variant)));
+            }
+        }
+        Some(super::variant_title(variant))
+    }
+}
+
 impl Render for Gallery {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let theme = cx.theme().clone();
@@ -242,7 +361,9 @@ impl Render for Gallery {
                 .flex()
                 .items_center()
                 .justify_center()
-                .p_10()
+                .p(preview_padding(demo.slug))
+                .text_size(px(14.))
+                .line_height(relative(20. / 14.))
                 .children(element)
                 .into_any_element();
         }
@@ -256,7 +377,14 @@ impl Render for Gallery {
                     .h_full()
                     .overflow_y_scroll()
                     .track_scroll(&self.scroll)
-                    .child(self.page(window, cx)),
+                    // `justify-items-center`: the article is centred in `main`.
+                    .child(
+                        div()
+                            .flex()
+                            .justify_center()
+                            .w_full()
+                            .child(self.page(window, cx)),
+                    ),
             )
             .into_any_element()
     }

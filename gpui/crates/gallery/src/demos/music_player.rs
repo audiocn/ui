@@ -4,14 +4,15 @@
 //! The docs synthesise `DEMO_TRACKS` in an `OfflineAudioContext`
 //! (`lib/docs/demo-audio.ts`). There is no decoder here, so the seek bars use
 //! the same arrangements rendered to peaks (`useWaveformData` asks for 400).
-//! The ducking example's microphone is a speech [`DemoSignal`]: the gallery
-//! has no mic, and the button still says "Use my microphone to duck".
+//! The ducking example opens the real microphone with the `device` feature
+//! (native); without it (the wasm build) a speech demo signal stands in.
 
 use std::f64::consts::TAU;
 use std::sync::{Arc, OnceLock};
 
 use gpui::{AnyElement, App, IntoElement, ParentElement, Styled, Window, div, px};
 
+#[cfg(not(all(feature = "device", not(target_family = "wasm"))))]
 use audiocn::signal::demo_signal::{DemoSignalKind, DemoSignalOptions, use_demo_signal};
 use audiocn::signal::waveform_data::compute_peaks;
 use audiocn::ui::{Button, ButtonSize, ButtonVariant};
@@ -48,20 +49,15 @@ struct MicToggle {
     listening: bool,
 }
 
-/// `music-player-ducking.tsx`. The button arms a speech demo signal in place
-/// of `useMicrophone` (no permission prompt in the gallery).
+/// `music-player-ducking.tsx`: a button that starts and stops the microphone,
+/// whose analyser meter ducks the player.
 fn ducking(window: &mut Window, cx: &mut App) -> AnyElement {
     let base = id("music-player", "ducking");
     let toggle = window.use_keyed_state(format!("{base}/mic"), cx, |_, _| MicToggle {
         listening: false,
     });
-    let listening = toggle.read(cx).listening;
-    let signal = use_demo_signal(
-        format!("{base}/voice"),
-        DemoSignalOptions::kind(DemoSignalKind::Speech).with_playing(listening),
-        window,
-        cx,
-    );
+    let wanted = toggle.read(cx).listening;
+    let (listening, meter) = microphone(&base, wanted, window, cx);
     div()
         .flex()
         .w_full()
@@ -91,9 +87,52 @@ fn ducking(window: &mut Window, cx: &mut App) -> AnyElement {
         .child(
             MusicPlayer::new(base)
                 .tracks(demo_tracks())
-                .ducking_source(signal.meter),
+                .ducking_source(meter),
         )
         .into_any_element()
+}
+
+/// `useMicrophone()` + `useAudioAnalyser(stream).meter`, open while `wanted`.
+/// Returns whether it is listening (`status === "active"`) and the meter.
+#[cfg(all(feature = "device", not(target_family = "wasm")))]
+fn microphone(
+    base: &str,
+    wanted: bool,
+    window: &mut Window,
+    cx: &mut App,
+) -> (bool, audiocn::FrameSource<audiocn::MeterFrame>) {
+    use audiocn::io::{MicrophoneOptions, MicrophoneStatus, use_microphone};
+    let microphone = use_microphone(
+        format!("{base}/microphone"),
+        MicrophoneOptions {
+            enabled: wanted,
+            ..Default::default()
+        },
+        window,
+        cx,
+    );
+    (
+        microphone.status == MicrophoneStatus::Active,
+        microphone.meter,
+    )
+}
+
+/// No microphone: a speech [`DemoSignal`](audiocn::signal::demo_signal::DemoSignal)
+/// stands in, "listening" as soon as it is asked to.
+#[cfg(not(all(feature = "device", not(target_family = "wasm"))))]
+fn microphone(
+    base: &str,
+    wanted: bool,
+    window: &mut Window,
+    cx: &mut App,
+) -> (bool, audiocn::FrameSource<audiocn::MeterFrame>) {
+    let signal = use_demo_signal(
+        format!("{base}/voice"),
+        DemoSignalOptions::kind(DemoSignalKind::Speech).with_playing(wanted),
+        window,
+        cx,
+    );
+    (wanted, signal.meter)
 }
 
 fn demo_tracks() -> Vec<MusicTrack> {

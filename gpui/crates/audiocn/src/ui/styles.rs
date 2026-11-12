@@ -107,6 +107,28 @@ pub(crate) fn ring_shadow(width: f32, color: Hsla) -> BoxShadow {
     css_shadow(0.0, 0.0, 0.0, width, color)
 }
 
+/// [`ring_overlay`] for a host with a `border_width` border. Absolute
+/// children are placed from the padding box, so the plain overlay would cover
+/// the border; a CSS ring (a box shadow) sits outside the border box.
+pub(crate) fn ring_overlay_bordered(
+    radius: Pixels,
+    width: f32,
+    border_width: f32,
+    color: Hsla,
+) -> Div {
+    let w = px(width);
+    let inset = -px(width + border_width);
+    div()
+        .absolute()
+        .top(inset)
+        .left(inset)
+        .right(inset)
+        .bottom(inset)
+        .rounded(radius + w)
+        .border(w)
+        .border_color(color)
+}
+
 /// `ring-N ring-color` drawn as an absolutely positioned border around the
 /// parent (which must not clip its overflow). `radius` is the parent's.
 pub(crate) fn ring_overlay(radius: Pixels, width: f32, color: Hsla) -> Div {

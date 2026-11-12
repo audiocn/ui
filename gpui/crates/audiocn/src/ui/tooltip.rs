@@ -11,7 +11,8 @@ use gpui::{
 
 use super::kbd::InTooltip;
 use super::overlay::{
-    Align, OpenHandler, OverlayCtl, Placement, Side, enter_animation, measure_bounds, use_overlay,
+    Align, OpenHandler, OverlayCtl, Placement, Side, enter_animation, measure_content,
+    measure_trigger, use_overlay,
 };
 use super::styles::{parent_styled, provide, radius_xl};
 use crate::theme::ActiveTheme;
@@ -140,9 +141,7 @@ impl RenderOnce for Tooltip {
             .relative()
             .flex()
             .child(self.trigger.unwrap_or_else(|| div().into_any_element()))
-            .child(measure_bounds(move |b, cx| {
-                measure.update(cx, |s, _| s.trigger_bounds = Some(b));
-            }))
+            .child(measure_trigger(measure))
             .when(!disabled, |el| {
                 el.on_hover(move |hovered, window, cx| {
                     if *hovered {
@@ -197,9 +196,7 @@ impl RenderOnce for Tooltip {
             .text_color(t.background)
             .font_family(t.font_sans.clone())
             .children(content.children)
-            .child(measure_bounds(move |b, cx| {
-                size_state.update(cx, |s, _| s.content_bounds = Some(b));
-            }))
+            .child(measure_content(size_state))
             .child(arrow(side, bg));
         surface.style().refine(&content.style);
         root.child(

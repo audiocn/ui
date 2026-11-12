@@ -784,7 +784,6 @@ fn toolbar(
                 .mr_auto()
                 .font_family(HEADING_FONT)
                 .font_weight(gpui::FontWeight::MEDIUM)
-                .text_base_()
                 .child("Soundboard"),
         )
         .child(
@@ -916,12 +915,15 @@ fn add_pad(
                 .flex()
                 .flex_col()
                 .items_center()
-                .justify_center()
                 .gap(px(8.0))
                 .text_color(muted_fg)
                 .child(Icon::new(IconName::Plus).size(px(20.0)))
+                // `justify-center` does nothing here: `SoundPadLabel`'s
+                // `mt-auto` takes the free space and pushes it to the bottom.
+                // (Taffy would apply both, so the stack is not centred.)
                 .child(
                     div()
+                        .mt_auto()
                         .text_sm_()
                         .font_weight(gpui::FontWeight::MEDIUM)
                         .child("Add"),

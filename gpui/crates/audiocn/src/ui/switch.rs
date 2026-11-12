@@ -8,7 +8,7 @@ use gpui::{
     prelude::FluentBuilder, px,
 };
 
-use super::styles::{by_mode, focus_ring_color, ring_overlay, shadow_sm};
+use super::styles::{by_mode, focus_ring_color, ring_overlay_bordered, shadow_sm};
 use crate::motion::{Duration, Easing, Instant, Transition};
 use crate::theme::ActiveTheme;
 
@@ -219,7 +219,9 @@ impl RenderOnce for Switch {
                 gpui::Toggled::False
             })
             .when(disabled, |el| el.opacity(0.5).cursor_not_allowed())
-            .when_some(ring, |el, ring| el.child(ring_overlay(radius, 3.0, ring)))
+            .when_some(ring, |el, ring| {
+                el.child(ring_overlay_bordered(radius, 3.0, 2.0, ring))
+            })
             // `after:absolute after:-inset-x-3 after:-inset-y-2`: larger hit area.
             .when(!disabled, |el| {
                 let toggle = toggle.clone();
