@@ -15,7 +15,7 @@ set -euo pipefail
 path=$1; out=$2; mode=${3:-light}; index=${4:-0}; wait=${5:-4000}
 chrome=${CHROME:-$(ls -d "$HOME"/.cache/ms-playwright/chromium_headless_shell-*/chrome-headless-shell-linux64/chrome-headless-shell 2>/dev/null | sort -V | tail -1)}
 [ -x "$chrome" ] || { echo "no chrome-headless-shell found; set CHROME=/path/to/chrome" >&2; exit 1; }
-selector=${SELECTOR:-[data-slot=component-preview], .not-prose [data-rehype-pretty-code-figure] ~ div, figure}
+selector=${SELECTOR:-[data-slot=component-preview]}
 dark=""; [ "$mode" = dark ] && dark=dark
 if [ "$index" = "-" ]; then
   node "$(dirname "$0")/site-shot.mjs" "$chrome" "https://audiocn.dev/docs/$path" "$out" 1100 2000 "${DPR:-1}" "$wait" "$dark"
