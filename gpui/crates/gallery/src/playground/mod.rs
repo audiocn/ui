@@ -237,6 +237,9 @@ pub struct Control {
     pub code: Option<&'static str>,
     /// Number written as `px(v)` in generated code.
     pub pixels: bool,
+    /// Always written in generated code, even at its default (for data the
+    /// page starts with, like a track list).
+    pub always: bool,
 }
 
 impl Control {
@@ -252,6 +255,7 @@ impl Control {
             help: None,
             code: None,
             pixels: false,
+            always: false,
         }
     }
 
@@ -267,6 +271,13 @@ impl Control {
         let mut c = Self::num(key, label, default, min, max, step);
         c.pixels = true;
         c
+    }
+
+    /// Writes this prop in generated code even when it's at its default.
+    #[allow(dead_code, reason = "part of the spec API")]
+    pub fn always(mut self) -> Self {
+        self.always = true;
+        self
     }
 
     /// Generated code for this prop from a template, `{}` replaced by the value.
@@ -609,7 +620,7 @@ pub fn generate_code(spec: &Spec, controls: &[Control], props: &Props) -> String
         let Some(value) = props.get(c.key) else {
             continue;
         };
-        if *value == c.default {
+        if *value == c.default && !c.always {
             continue;
         }
         let arg = match (&c.kind, value) {
