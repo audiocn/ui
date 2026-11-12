@@ -228,6 +228,11 @@ pub struct Control {
     pub remount: bool,
     /// One-line help shown under the label.
     pub help: Option<&'static str>,
+    /// Generated-code template, `{}` replaced by the value, e.g.
+    /// `".zone_color(MeterZoneName::Ok, {})"`. Overrides `.method(value)`.
+    pub code: Option<&'static str>,
+    /// Number written as `px(v)` in generated code.
+    pub pixels: bool,
 }
 
 impl Control {
@@ -241,7 +246,28 @@ impl Control {
             method: Some(key),
             remount: false,
             help: None,
+            code: None,
+            pixels: false,
         }
+    }
+
+    /// A number in pixels (a slider; written as `px(v)` in generated code).
+    pub fn px(key: &'static str, label: &'static str, default: f32, min: f32, max: f32, step: f32) -> Self {
+        let mut c = Self::num(key, label, default, min, max, step);
+        c.pixels = true;
+        c
+    }
+
+    /// Generated code for this prop from a template, `{}` replaced by the value.
+    pub fn code(mut self, template: &'static str) -> Self {
+        self.code = Some(template);
+        self
+    }
+
+    /// Writes a number as `px(v)` in generated code.
+    pub fn pixels(mut self) -> Self {
+        self.pixels = true;
+        self
     }
 
     pub fn num(
@@ -563,7 +589,9 @@ pub fn generate_code(spec: &Spec, controls: &[Control], props: &Props) -> String
         SourceUse::Both => out.push_str("\n    .source(signal.visual.clone())"),
     }
     for c in controls {
-        let Some(method) = c.method else { continue };
+        if c.method.is_none() && c.code.is_none() {
+            continue;
+        }
         let Some(value) = props.get(c.key) else {
             continue;
         };
@@ -571,6 +599,7 @@ pub fn generate_code(spec: &Spec, controls: &[Control], props: &Props) -> String
             continue;
         }
         let arg = match (&c.kind, value) {
+            (_, Value::Num(v)) if c.pixels => format!("px({})", rust_f32(*v)),
             (_, Value::Num(v)) => rust_f32(*v),
             (_, Value::Bool(b)) => b.to_string(),
             (ControlKind::Choice(options), Value::Choice(i)) => {
@@ -583,7 +612,15 @@ pub fn generate_code(spec: &Spec, controls: &[Control], props: &Props) -> String
             },
             _ => continue,
         };
-        out.push_str(&format!("\n    .{method}({arg})"));
+        match (c.code, c.method) {
+            (Some(template), _) => {
+                let call = template.replace("{}", &arg);
+                let call = call.trim_start_matches('.');
+                out.push_str(&format!("\n    .{call}"));
+            }
+            (None, Some(method)) => out.push_str(&format!("\n    .{method}({arg})")),
+            (None, None) => {}
+        }
     }
     out
 }
@@ -616,6 +653,27 @@ mod tests {
         assert_eq!(rust_f32(24.0), "24.0");
         assert_eq!(rust_f32(-0.5), "-0.5");
         assert_eq!(rust_f32(f32::NEG_INFINITY), "f32::NEG_INFINITY");
+    }
+
+    #[test]
+    fn code_templates_and_pixels() {
+        let spec = Spec {
+            slug: "x",
+            component: "X",
+            source: SourceUse::None,
+            controls: Vec::new,
+            render: |_, _, _, _| unreachable!(),
+        };
+        let controls = vec![
+            Control::px("gap", "Gap", 2.0, 0.0, 8.0, 1.0),
+            Control::color("ok", "Ok colour").code(".zone_color(MeterZoneName::Ok, {})"),
+        ];
+        let mut props = Props::from_controls(&controls);
+        props.set("gap", Value::Num(3.0));
+        props.set("ok", Value::Color(2));
+        let code = generate_code(&spec, &controls, &props);
+        assert!(code.contains(".gap(px(3.0))"), "{code}");
+        assert!(code.contains(".zone_color(MeterZoneName::Ok, cx.theme().primary)"), "{code}");
     }
 
     #[test]
