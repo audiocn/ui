@@ -11,9 +11,9 @@ use std::sync::Arc;
 
 use gpui::{
     AnyElement, App, Bounds, ElementId, FontFeatures, Hsla, InteractiveElement, IntoElement,
-    ParentElement, PathBuilder, Pixels, Refineable, RenderOnce, SharedString,
-    StatefulInteractiveElement, StyleRefinement, Styled, Window, canvas, div, fill, point,
-    prelude::FluentBuilder, px, relative, size,
+    ParentElement, PathBuilder, PathStyle, Pixels, Refineable, RenderOnce, SharedString,
+    StatefulInteractiveElement, StrokeOptions, StyleRefinement, Styled, Window, canvas, div, fill,
+    point, prelude::FluentBuilder, px, relative, size,
 };
 
 use crate::audio::decibels::clamp;
@@ -314,7 +314,12 @@ fn paint_curve(
             window.paint_path(path, color.opacity(0.3));
         }
     }
-    let mut line = PathBuilder::stroke(px(1.5));
+    // Canvas `lineJoin = "round"`; caps stay the default butt.
+    let curve = StrokeOptions::default()
+        .with_line_width(1.5)
+        .with_line_join(lyon::tessellation::LineJoin::Round)
+        .with_line_cap(lyon::tessellation::LineCap::Butt);
+    let mut line = PathBuilder::stroke(px(1.5)).with_style(PathStyle::Stroke(curve));
     line.move_to(points[0]);
     for &p in &points[1..] {
         line.line_to(p);

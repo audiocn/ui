@@ -4,21 +4,25 @@
 //! fed from a timer task (standing in for an audio thread or a socket), read
 //! with `use_level` exactly like the demo signal row.
 
+#[cfg(not(all(feature = "device", not(target_family = "wasm"))))]
 use std::time::Duration;
 
 use audiocn::audio::decibels::{FormatDbOptions, format_db};
+#[cfg(not(all(feature = "device", not(target_family = "wasm"))))]
 use audiocn::audio::frame_loop::now_ms;
-use audiocn::audio::frame_source::{FrameEmitter, FrameSource, create_frame_emitter};
+use audiocn::audio::frame_source::FrameSource;
+#[cfg(not(all(feature = "device", not(target_family = "wasm"))))]
+use audiocn::audio::frame_source::{FrameEmitter, create_frame_emitter};
 use audiocn::audio::types::{MeterFrame, MeterZoneName};
-use audiocn::signal::demo_signal::{
-    DemoSignal, DemoSignalKind, DemoSignalOptions, use_demo_signal,
-};
+#[cfg(not(all(feature = "device", not(target_family = "wasm"))))]
+use audiocn::signal::demo_signal::DemoSignal;
+use audiocn::signal::demo_signal::{DemoSignalKind, DemoSignalOptions, use_demo_signal};
 use audiocn::signal::level::{LevelOptions, LevelState, use_level};
 use audiocn::theme::ActiveTheme;
 use audiocn::ui::{Button, ButtonSize, ButtonVariant};
-use gpui::{
-    AnyElement, App, IntoElement, ParentElement, SharedString, Styled, Task, Window, div, px,
-};
+#[cfg(not(all(feature = "device", not(target_family = "wasm"))))]
+use gpui::Task;
+use gpui::{AnyElement, App, IntoElement, ParentElement, SharedString, Styled, Window, div, px};
 
 use super::{Demo, id};
 
@@ -31,11 +35,21 @@ pub const DEMO: Demo = Demo {
 };
 
 /// How often the stand-in engine pushes a frame.
+#[cfg(not(all(feature = "device", not(target_family = "wasm"))))]
 const FRAME_INTERVAL: Duration = Duration::from_millis(16);
 
 fn render(variant: &str, window: &mut Window, cx: &mut App) -> Option<AnyElement> {
     Some(match variant {
-        "default" => demo(window, cx),
+        "default" => {
+            #[cfg(all(feature = "device", not(target_family = "wasm")))]
+            {
+                demo_device(window, cx)
+            }
+            #[cfg(not(all(feature = "device", not(target_family = "wasm"))))]
+            {
+                demo(window, cx)
+            }
+        }
         _ => return None,
     })
 }
@@ -119,11 +133,13 @@ fn level_row(
 
 /// The microphone stand-in: an engine that pushes meter frames into an
 /// emitter from a timer while "active".
+#[cfg(not(all(feature = "device", not(target_family = "wasm"))))]
 struct Microphone {
     meter: FrameEmitter<MeterFrame>,
     task: Option<Task<()>>,
 }
 
+#[cfg(not(all(feature = "device", not(target_family = "wasm"))))]
 impl Microphone {
     fn status(&self) -> &'static str {
         if self.task.is_some() {
@@ -156,7 +172,90 @@ impl Microphone {
     }
 }
 
-/// `frame-source-demo.tsx`.
+/// `frame-source-demo.tsx` with a real microphone.
+#[cfg(all(feature = "device", not(target_family = "wasm")))]
+fn demo_device(window: &mut Window, cx: &mut App) -> AnyElement {
+    use audiocn::io::{MicrophoneOptions, MicrophoneStatus, use_microphone};
+
+    let base = id("frame-source", "default");
+    let demo = use_demo_signal(
+        format!("{base}/signal"),
+        DemoSignalOptions::kind(DemoSignalKind::Speech),
+        window,
+        cx,
+    );
+    let mic = use_microphone(
+        format!("{base}/mic"),
+        MicrophoneOptions::default(),
+        window,
+        cx,
+    );
+    let listening = mic.status == MicrophoneStatus::Active;
+    let status = match mic.status {
+        MicrophoneStatus::Idle => "idle",
+        MicrophoneStatus::Acquiring => "acquiring",
+        MicrophoneStatus::Active => "active",
+        MicrophoneStatus::Denied => "denied",
+        MicrophoneStatus::Unavailable => "unavailable",
+        MicrophoneStatus::Error => "error",
+    };
+    let status_text: SharedString = format!("Microphone: {status}").into();
+    div()
+        .flex()
+        .flex_col()
+        .w_full()
+        .max_w(px(576.0))
+        .gap(px(16.0))
+        .child(level_row(
+            format!("{base}/demo-level"),
+            "Demo signal",
+            demo.meter,
+            window,
+            cx,
+        ))
+        .child(level_row(
+            format!("{base}/mic-level"),
+            "Microphone",
+            mic.meter.clone(),
+            window,
+            cx,
+        ))
+        .child(
+            div()
+                .flex()
+                .flex_wrap()
+                .items_center()
+                .gap(px(12.0))
+                .child(
+                    Button::new(format!("{base}/toggle"))
+                        .variant(ButtonVariant::Outline)
+                        .size(ButtonSize::Sm)
+                        .child(if listening {
+                            "Stop microphone"
+                        } else {
+                            "Use my microphone"
+                        })
+                        .on_click(move |_, _, cx| {
+                            if listening {
+                                mic.stop(cx);
+                            } else {
+                                mic.start(cx);
+                            }
+                        }),
+                )
+                .child(
+                    div()
+                        .text_color(cx.theme().muted_foreground)
+                        .text_size(px(12.0))
+                        .line_height(px(16.0))
+                        .child(status_text),
+                ),
+        )
+        .into_any_element()
+}
+
+/// `frame-source-demo.tsx`. The microphone row is a demo-signal engine.
+#[cfg(not(all(feature = "device", not(target_family = "wasm"))))]
 fn demo(window: &mut Window, cx: &mut App) -> AnyElement {
     let base = id("frame-source", "default");
     let demo = use_demo_signal(

@@ -17,7 +17,7 @@ use gpui::{
     prelude::FluentBuilder, px, relative,
 };
 
-use super::live_waveform::{CanvasShape, paint_canvas_shapes};
+use super::live_waveform::{CanvasLineStyle, CanvasShape, paint_canvas_shapes};
 use crate::audio::bands::resample_levels;
 use crate::audio::decibels::clamp64;
 use crate::audio::frame_source::FrameSource;
@@ -126,6 +126,7 @@ fn waveform_shapes(
             closed: true,
             fill_alpha: Some(1.0),
             stroke: None,
+            line: CanvasLineStyle::Miter,
         }];
     }
     levels

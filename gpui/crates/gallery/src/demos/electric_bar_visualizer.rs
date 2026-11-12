@@ -1,7 +1,9 @@
 //! Gallery page for `electric-bar-visualizer`. One variant per docs example: `components/examples/electric-bar-visualizer-demo.tsx`, `components/examples/electric-bar-visualizer-colors.tsx`, `components/examples/electric-bar-visualizer-intensity.tsx`, `components/examples/electric-bar-visualizer-microphone.tsx`, `components/examples/electric-bar-visualizer-mirrored.tsx`, `components/examples/electric-bar-visualizer-states.tsx`.
 
 use audiocn::audio::bar_levels::BarIdle;
+#[cfg(not(all(feature = "device", not(target_family = "wasm"))))]
 use audiocn::audio::frame_source::{FrameEmitter, create_frame_emitter};
+#[cfg(not(all(feature = "device", not(target_family = "wasm"))))]
 use audiocn::audio::types::VisualFrame;
 use audiocn::signal::demo_signal::{DemoSignalKind, DemoSignalOptions, use_demo_signal};
 use audiocn::theme::ActiveTheme;
@@ -50,7 +52,8 @@ fn caption(text: &'static str, mono: bool, cx: &App) -> gpui::Div {
     let label = div()
         .text_color(theme.muted_foreground)
         .text_center()
-        .text_xs();
+        .text_xs()
+        .line_height(px(16.0));
     if mono {
         label.font_family(theme.font_mono.clone()).child(text)
     } else {
@@ -166,6 +169,7 @@ fn intensity(window: &mut Window, cx: &mut App) -> AnyElement {
 
 /// The "microphone": no device access in the gallery, so while listening a
 /// demo signal is relayed into the analyser's visual source.
+#[cfg(not(all(feature = "device", not(target_family = "wasm"))))]
 struct Microphone {
     listening: bool,
     visual: FrameEmitter<VisualFrame>,
@@ -173,6 +177,68 @@ struct Microphone {
 
 /// `electric-bar-visualizer-microphone.tsx`.
 fn microphone(window: &mut Window, cx: &mut App) -> AnyElement {
+    #[cfg(all(feature = "device", not(target_family = "wasm")))]
+    {
+        microphone_device(window, cx)
+    }
+    #[cfg(not(all(feature = "device", not(target_family = "wasm"))))]
+    {
+        microphone_demo(window, cx)
+    }
+}
+
+#[cfg(all(feature = "device", not(target_family = "wasm")))]
+fn microphone_device(window: &mut Window, cx: &mut App) -> AnyElement {
+    use audiocn::io::{MicrophoneOptions, MicrophoneStatus, use_microphone};
+
+    let base = base("microphone");
+    let mic = use_microphone(
+        format!("{base}/mic"),
+        MicrophoneOptions::default(),
+        window,
+        cx,
+    );
+    let listening = mic.status == MicrophoneStatus::Active;
+    div()
+        .flex()
+        .flex_col()
+        .w_full()
+        .max_w(px(384.0))
+        .gap(px(16.0))
+        .child(
+            ElectricBarVisualizer::new(base.clone())
+                .align(ElectricBarAlign::End)
+                .aria_label("Microphone")
+                .text_color(cx.theme().primary)
+                .h(px(96.0))
+                .idle(BarIdle::Wave)
+                .source(mic.visual.clone()),
+        )
+        .child(
+            div().flex().child(
+                Button::new(format!("{base}/toggle"))
+                    .variant(ButtonVariant::Outline)
+                    .size(ButtonSize::Sm)
+                    .child(if listening {
+                        "Stop microphone"
+                    } else {
+                        "Use my microphone"
+                    })
+                    .on_click(move |_, _, cx| {
+                        if listening {
+                            mic.stop(cx);
+                        } else {
+                            mic.start(cx);
+                        }
+                    }),
+            ),
+        )
+        .into_any_element()
+}
+
+/// Demo-signal stand-in for the wasm gallery (no device access).
+#[cfg(not(all(feature = "device", not(target_family = "wasm"))))]
+fn microphone_demo(window: &mut Window, cx: &mut App) -> AnyElement {
     let base = base("microphone");
     let state = window.use_keyed_state(format!("{base}/microphone"), cx, |_, _| Microphone {
         listening: false,

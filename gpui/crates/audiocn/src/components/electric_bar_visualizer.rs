@@ -22,8 +22,8 @@ use gpui::{
 };
 
 use super::electric_waveform::{
-    EdgeFade, GlowLayer, MITER_JOIN, REDUCED_MOTION_INTERVAL_MS, ROUND_JOIN, fill_polygon,
-    glow_box, glow_opacity, glow_polyline, paint_sparks, paint_stroke, resolve_colors,
+    EdgeFade, GlowLayer, REDUCED_MOTION_INTERVAL_MS, StrokeStyle, fill_polygon, glow_box,
+    glow_opacity, glow_polyline, paint_sparks, paint_stroke, resolve_colors,
 };
 use crate::audio::bar_levels::{BarIdle, BarLevels, BarLevelsOptions, create_bar_levels};
 use crate::audio::decibels::clamp;
@@ -574,14 +574,14 @@ struct FilamentPass {
     min_width: f32,
     /// Share of the jitter the pass follows: the sheath stays close to a bar while the core crackles.
     bend: f32,
-    miter_limit: f32,
+    stroke: StrokeStyle,
     alpha: fn(f32) -> f32,
 }
 
 const GLOW_PASS: FilamentPass = FilamentPass {
     alpha: |level| 0.1 + 0.35 * level,
     bend: 0.35,
-    miter_limit: ROUND_JOIN,
+    stroke: StrokeStyle::round(),
     min_width: 2.0,
     width: 1.6,
 };
@@ -589,7 +589,7 @@ const GLOW_PASS: FilamentPass = FilamentPass {
 const SHEATH_PASS: FilamentPass = FilamentPass {
     alpha: |level| 0.35 + 0.35 * level,
     bend: 0.35,
-    miter_limit: ROUND_JOIN,
+    stroke: StrokeStyle::round(),
     min_width: 1.0,
     width: 1.0,
 };
@@ -597,7 +597,7 @@ const SHEATH_PASS: FilamentPass = FilamentPass {
 const CORE_PASS: FilamentPass = FilamentPass {
     alpha: |level| 0.8 + 0.2 * level,
     bend: 1.0,
-    miter_limit: MITER_JOIN,
+    stroke: StrokeStyle::miter(),
     min_width: 1.25,
     width: 0.3,
 };
@@ -634,7 +634,7 @@ fn stroke_filaments(window: &mut Window, input: &PaintInput, pass: &FilamentPass
             window,
             &points,
             width,
-            pass.miter_limit,
+            pass.stroke,
             color.opacity(alpha),
             None,
         );
@@ -780,19 +780,12 @@ fn stroke_arcs(
     width: f32,
     alpha: f32,
     color: Hsla,
-    miter_limit: f32,
+    style: StrokeStyle,
 ) {
     for arc in input.scene.arcs.iter().filter(|arc| arc.life_ms > 0.0) {
         let points = trace_arc(input, arc);
         let alpha = arc_alpha(input, arc, alpha);
-        paint_stroke(
-            window,
-            &points,
-            width,
-            miter_limit,
-            color.opacity(alpha),
-            None,
-        );
+        paint_stroke(window, &points, width, style, color.opacity(alpha), None);
     }
 }
 
@@ -818,10 +811,10 @@ fn paint_main(window: &mut Window, input: &PaintInput) {
         (bar_width * 0.45).max(1.5),
         0.6,
         body,
-        MITER_JOIN,
+        StrokeStyle::miter(),
     );
     stroke_filaments(window, input, &CORE_PASS, core);
-    stroke_arcs(window, input, 1.0, 1.0, core, MITER_JOIN);
+    stroke_arcs(window, input, 1.0, 1.0, core, StrokeStyle::miter());
     fill_tips(window, input, (bar_width * 0.35).max(1.0), core);
     paint_sparks(
         window,

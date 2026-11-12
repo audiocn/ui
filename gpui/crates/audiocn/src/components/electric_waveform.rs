@@ -9,7 +9,7 @@
 //! has neither filters nor composite modes, so:
 //!
 //! - The sharp layer is stroked with `PathBuilder` exactly as the canvas
-//!   strokes it (same widths, alphas, joins; round caps added as half discs).
+//!   strokes it (same widths, alphas, round or miter joins, round caps).
 //! - The blurred layer is rebuilt from Gaussian-blurred boxes
 //!   (`paint_drop_shadows`, whose blur *is* a Gaussian of the given sigma): the
 //!   glow ribbons become one blurred column per point, clipped to the box like
@@ -24,7 +24,6 @@
 //! The moving parts ([`ElectricTrace`]) are a straight port and are unit-tested.
 
 use std::cell::RefCell;
-use std::f32::consts::PI;
 use std::rc::Rc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -504,11 +503,34 @@ impl ElectricTrace {
 // Drawing helpers shared with the electric bar visualizer.
 // ---------------------------------------------------------------------------
 
-/// The canvas `lineJoin = "round"`: lyon has no round join without naming its
-/// types, so the miter limit of 1 turns every corner into a bevel.
-pub(crate) const ROUND_JOIN: f32 = 1.0;
-/// The canvas `lineJoin = "miter"` with its default `miterLimit` of 10.
-pub(crate) const MITER_JOIN: f32 = 10.0;
+/// Canvas stroke joins and caps. `clearElectricCanvas` sets both to `"round"`;
+/// later passes switch the join to `"miter"` and leave the round caps.
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct StrokeStyle {
+    pub join: lyon::tessellation::LineJoin,
+    pub cap: lyon::tessellation::LineCap,
+    pub miter_limit: f32,
+}
+
+impl StrokeStyle {
+    /// `lineJoin = "round"` and `lineCap = "round"`.
+    pub(crate) const fn round() -> Self {
+        Self {
+            join: lyon::tessellation::LineJoin::Round,
+            cap: lyon::tessellation::LineCap::Round,
+            miter_limit: 10.0,
+        }
+    }
+
+    /// `lineJoin = "miter"` at the canvas default `miterLimit` of 10, round caps.
+    pub(crate) const fn miter() -> Self {
+        Self {
+            join: lyon::tessellation::LineJoin::Miter,
+            cap: lyon::tessellation::LineCap::Round,
+            miter_limit: 10.0,
+        }
+    }
+}
 
 /// The blurred layer: colour, blur sigma (CSS `blur()` radius) and opacity.
 #[derive(Clone, Copy, Debug)]
@@ -597,62 +619,26 @@ pub(crate) fn glow_polyline(
     }
 }
 
-/// A stroke along `points` (no caps).
+/// A stroke along `points`, with the canvas join and cap.
 pub(crate) fn stroke_path(
     points: &[Point<Pixels>],
     width: f32,
-    miter_limit: f32,
+    style: StrokeStyle,
 ) -> Option<Path<Pixels>> {
     if points.len() < 2 || width <= 0.0 {
         return None;
     }
     let options = StrokeOptions::default()
         .with_line_width(width)
-        .with_miter_limit(miter_limit.max(1.0));
+        .with_line_join(style.join)
+        .with_line_cap(style.cap)
+        .with_miter_limit(style.miter_limit.max(1.0));
     let mut builder = PathBuilder::stroke(px(width)).with_style(PathStyle::Stroke(options));
     builder.move_to(points[0]);
     for p in &points[1..] {
         builder.line_to(*p);
     }
     builder.build().ok()
-}
-
-/// The canvas `lineCap = "round"`: a half disc past each end of the polyline.
-pub(crate) fn round_caps(points: &[Point<Pixels>], width: f32) -> Option<Path<Pixels>> {
-    const STEPS: usize = 8;
-    if points.len() < 2 || width < 1.0 {
-        return None;
-    }
-    let radius = width / 2.0;
-    let mut builder = PathBuilder::fill();
-    let mut any = false;
-    let ends = [
-        (points[0], points[1]),
-        (points[points.len() - 1], points[points.len() - 2]),
-    ];
-    for (end, before) in ends {
-        let (ex, ey) = (end.x.as_f32(), end.y.as_f32());
-        let (dx, dy) = (ex - before.x.as_f32(), ey - before.y.as_f32());
-        let length = dx.hypot(dy);
-        if length < 0.01 {
-            continue;
-        }
-        let (ux, uy) = (dx / length, dy / length);
-        let (nx, ny) = (-uy, ux);
-        let cap: Vec<Point<Pixels>> = (0..=STEPS)
-            .map(|step| {
-                let angle = PI * step as f32 / STEPS as f32;
-                let (c, s) = (angle.cos(), angle.sin());
-                point(
-                    px(ex + radius * (nx * c + ux * s)),
-                    px(ey + radius * (ny * c + uy * s)),
-                )
-            })
-            .collect();
-        builder.add_polygon(&cap, true);
-        any = true;
-    }
-    if any { builder.build().ok() } else { None }
 }
 
 /// A filled polygon.
@@ -740,23 +726,20 @@ pub(crate) fn paint_faded(
     }
 }
 
-/// Strokes a polyline with round caps, faded toward the ends when asked.
+/// Strokes a polyline, faded toward the ends when asked.
 pub(crate) fn paint_stroke(
     window: &mut Window,
     points: &[Point<Pixels>],
     width: f32,
-    miter_limit: f32,
+    style: StrokeStyle,
     color: Hsla,
     fade: Option<&EdgeFade>,
 ) {
     if color.a <= 0.002 {
         return;
     }
-    if let Some(path) = stroke_path(points, width, miter_limit) {
+    if let Some(path) = stroke_path(points, width, style) {
         paint_faded(window, path, color, fade);
-    }
-    if let Some(caps) = round_caps(points, width) {
-        paint_faded(window, caps, color, fade);
     }
 }
 
@@ -777,7 +760,7 @@ pub(crate) fn paint_sparks(
         if alpha <= 0.002 {
             continue;
         }
-        if let Some(path) = stroke_path(&[from, to], width, MITER_JOIN) {
+        if let Some(path) = stroke_path(&[from, to], width, StrokeStyle::miter()) {
             window.paint_path(path, color.opacity(alpha));
         }
     }
@@ -913,7 +896,7 @@ fn stroke_branches(window: &mut Window, input: &PaintInput, color: Hsla, width: 
             window,
             &points,
             width,
-            MITER_JOIN,
+            StrokeStyle::miter(),
             color.opacity(input.branch_alpha(branch, alpha)),
             input.fade.as_ref(),
         );
@@ -929,7 +912,7 @@ fn paint_main(window: &mut Window, input: &PaintInput) {
         window,
         &body,
         geometry.line_width,
-        ROUND_JOIN,
+        StrokeStyle::round(),
         input.colors.body.opacity(0.9 * trace.flicker),
         fade,
     );
@@ -940,7 +923,7 @@ fn paint_main(window: &mut Window, input: &PaintInput) {
         window,
         &core,
         thin,
-        MITER_JOIN,
+        StrokeStyle::miter(),
         input.colors.core.opacity(trace.flicker),
         fade,
     );

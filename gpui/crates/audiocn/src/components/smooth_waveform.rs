@@ -5,7 +5,9 @@ use gpui::{
     Window, canvas, div, px,
 };
 
-use super::live_waveform::{ActionOp, ActionQueue, CanvasShape, SourceCursor, paint_canvas_shapes};
+use super::live_waveform::{
+    ActionOp, ActionQueue, CanvasLineStyle, CanvasShape, SourceCursor, paint_canvas_shapes,
+};
 use crate::audio::decibels::clamp;
 use crate::audio::frame_loop::now_ms;
 use crate::audio::frame_source::FrameSource;
@@ -123,6 +125,7 @@ impl SmoothWaveformPainter {
             closed: false,
             fill_alpha: None,
             stroke: Some(line_width),
+            line: CanvasLineStyle::Round,
         });
         self.paints += 1;
         true

@@ -52,8 +52,68 @@ fn demo(window: &mut Window, cx: &mut App) -> AnyElement {
         .into_any_element()
 }
 
-/// `smooth-waveform-microphone.tsx`, fed by the demo signal.
+/// `smooth-waveform-microphone.tsx`.
 fn microphone(window: &mut Window, cx: &mut App) -> AnyElement {
+    #[cfg(all(feature = "device", not(target_family = "wasm")))]
+    {
+        microphone_device(window, cx)
+    }
+    #[cfg(not(all(feature = "device", not(target_family = "wasm"))))]
+    {
+        microphone_demo(window, cx)
+    }
+}
+
+#[cfg(all(feature = "device", not(target_family = "wasm")))]
+fn microphone_device(window: &mut Window, cx: &mut App) -> AnyElement {
+    use audiocn::io::{MicrophoneOptions, MicrophoneStatus, use_microphone};
+
+    let base = id("smooth-waveform", "microphone");
+    let mic = use_microphone(
+        format!("{base}/mic"),
+        MicrophoneOptions::default(),
+        window,
+        cx,
+    );
+    let listening = mic.status == MicrophoneStatus::Active;
+    let primary = cx.theme().primary;
+    div()
+        .flex()
+        .flex_col()
+        .gap(px(16.0))
+        .w_full()
+        .max_w(px(512.0))
+        .child(
+            SmoothWaveform::new(format!("{base}/waveform"))
+                .text_color(primary)
+                .h(px(112.0))
+                .mode(SmoothWaveformMode::Scope)
+                .source(mic.visual.clone()),
+        )
+        .child(
+            Button::new(format!("{base}/toggle"))
+                .self_start()
+                .size(ButtonSize::Sm)
+                .variant(ButtonVariant::Outline)
+                .on_click(move |_, _, cx| {
+                    if listening {
+                        mic.stop(cx);
+                    } else {
+                        mic.start(cx);
+                    }
+                })
+                .child(if listening {
+                    "Stop microphone"
+                } else {
+                    "Use my microphone"
+                }),
+        )
+        .into_any_element()
+}
+
+/// Demo-signal stand-in for the wasm gallery (no device access).
+#[cfg(not(all(feature = "device", not(target_family = "wasm"))))]
+fn microphone_demo(window: &mut Window, cx: &mut App) -> AnyElement {
     let base = id("smooth-waveform", "microphone");
     let listening = window.use_keyed_state(format!("{base}/listening"), cx, |_, _| false);
     let is_listening = *listening.read(cx);

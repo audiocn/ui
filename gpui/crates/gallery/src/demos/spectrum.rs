@@ -1,6 +1,8 @@
 //! Gallery page for `spectrum`. One variant per docs example: `components/examples/spectrum-demo.tsx`, `components/examples/spectrum-microphone.tsx`, `components/examples/spectrum-variants.tsx`.
 
+#[cfg(not(all(feature = "device", not(target_family = "wasm"))))]
 use audiocn::audio::frame_source::{FrameEmitter, create_frame_emitter};
+#[cfg(not(all(feature = "device", not(target_family = "wasm"))))]
 use audiocn::audio::types::VisualFrame;
 use audiocn::signal::demo_signal::{DemoSignalKind, DemoSignalOptions, use_demo_signal};
 use audiocn::theme::ActiveTheme;
@@ -51,6 +53,7 @@ fn demo(window: &mut Window, cx: &mut App) -> AnyElement {
 /// The "microphone": no device access in the gallery, so while listening a
 /// demo signal is relayed into the analyser's visual source. Stopping leaves
 /// the last frame drawn, like the analyser's relay.
+#[cfg(not(all(feature = "device", not(target_family = "wasm"))))]
 struct Microphone {
     listening: bool,
     visual: FrameEmitter<VisualFrame>,
@@ -58,6 +61,68 @@ struct Microphone {
 
 /// `spectrum-microphone.tsx`.
 fn microphone(window: &mut Window, cx: &mut App) -> AnyElement {
+    #[cfg(all(feature = "device", not(target_family = "wasm")))]
+    {
+        microphone_device(window, cx)
+    }
+    #[cfg(not(all(feature = "device", not(target_family = "wasm"))))]
+    {
+        microphone_demo(window, cx)
+    }
+}
+
+#[cfg(all(feature = "device", not(target_family = "wasm")))]
+fn microphone_device(window: &mut Window, cx: &mut App) -> AnyElement {
+    use audiocn::io::{AnalyserTapOptions, MicrophoneOptions, MicrophoneStatus, use_microphone};
+
+    let base = id("spectrum", "microphone");
+    let mic = use_microphone(
+        format!("{base}/mic"),
+        MicrophoneOptions {
+            analyser: AnalyserTapOptions {
+                bands: 64,
+                fft_size: 4096,
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+        window,
+        cx,
+    );
+    let listening = mic.status == MicrophoneStatus::Active;
+    let visual = mic.visual.clone();
+    div()
+        .flex()
+        .flex_col()
+        .w_full()
+        .max_w(px(512.0))
+        .gap(px(16.0))
+        .child(Spectrum::new(base.clone()).peak_hold(true).source(visual))
+        .child(
+            div().flex().child(
+                Button::new(format!("{base}/toggle"))
+                    .variant(ButtonVariant::Outline)
+                    .size(ButtonSize::Sm)
+                    .child(if listening {
+                        "Stop microphone"
+                    } else {
+                        "Use my microphone"
+                    })
+                    .on_click(move |_, _, cx| {
+                        if listening {
+                            mic.stop(cx);
+                        } else {
+                            mic.start(cx);
+                        }
+                    }),
+            ),
+        )
+        .into_any_element()
+}
+
+/// Demo-signal stand-in for the wasm gallery (no device access).
+#[cfg(not(all(feature = "device", not(target_family = "wasm"))))]
+fn microphone_demo(window: &mut Window, cx: &mut App) -> AnyElement {
     let base = id("spectrum", "microphone");
     let state = window.use_keyed_state(format!("{base}/microphone"), cx, |_, _| Microphone {
         listening: false,

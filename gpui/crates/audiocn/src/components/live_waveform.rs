@@ -10,8 +10,8 @@ use std::sync::Arc;
 
 use gpui::{
     App, Background, Bounds, ContentMask, ElementId, Hsla, IntoElement, ParentElement, Path,
-    PathBuilder, PathStyle, Pixels, Refineable, RenderOnce, StyleRefinement, Styled, Window,
-    canvas, div, fill, linear_color_stop, linear_gradient, point, px, size,
+    PathBuilder, PathStyle, Pixels, Refineable, RenderOnce, StrokeOptions, StyleRefinement, Styled,
+    Window, canvas, div, fill, linear_color_stop, linear_gradient, point, px, size,
 };
 use parking_lot::Mutex;
 
@@ -30,6 +30,17 @@ const IDLE_ALPHA: f32 = 0.35;
 // Shared canvas shapes (used by the three waveform components)
 // ---------------------------------------------------------------------------
 
+/// Canvas `lineJoin` / `lineCap` for a stroked polyline.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum CanvasLineStyle {
+    /// Canvas defaults: miter join (limit 10) and butt caps.
+    Miter,
+    /// `lineJoin = "round"`, butt caps.
+    RoundJoin,
+    /// `lineJoin = "round"` and `lineCap = "round"`.
+    Round,
+}
+
 /// One shape of a waveform canvas, in pixels from the canvas's top-left.
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) enum CanvasShape {
@@ -46,13 +57,30 @@ pub(crate) enum CanvasShape {
     },
     /// A polyline. When `fill_alpha` is set it is closed and filled at that
     /// alpha first; when `stroke` is set it is then stroked at full alpha with
-    /// that width (closed if `closed`).
+    /// that width (closed if `closed`) and `line` joins/caps.
     Line {
         points: Vec<(f32, f32)>,
         closed: bool,
         fill_alpha: Option<f32>,
         stroke: Option<f32>,
+        line: CanvasLineStyle,
     },
+}
+
+fn canvas_stroke(width: f32, line: CanvasLineStyle) -> StrokeOptions {
+    let options = StrokeOptions::default().with_line_width(width);
+    match line {
+        CanvasLineStyle::Miter => options
+            .with_line_join(lyon::tessellation::LineJoin::Miter)
+            .with_line_cap(lyon::tessellation::LineCap::Butt)
+            .with_miter_limit(10.0),
+        CanvasLineStyle::RoundJoin => options
+            .with_line_join(lyon::tessellation::LineJoin::Round)
+            .with_line_cap(lyon::tessellation::LineCap::Butt),
+        CanvasLineStyle::Round => options
+            .with_line_join(lyon::tessellation::LineJoin::Round)
+            .with_line_cap(lyon::tessellation::LineCap::Round),
+    }
 }
 
 /// Canvas `destination-out` edge fades: the left `edge` pixels fade in from
@@ -166,8 +194,7 @@ fn build_line(
 /// Paints canvas shapes in `color`, clipped to the canvas (and to the x range
 /// `clip`, local px, when given), with the ends faded over `fade_px`.
 ///
-/// Canvas line joins/caps are approximated: GPUI does not expose lyon's
-/// round joins, so strokes use its default miter joins and butt caps.
+/// Strokes use the shape's canvas `lineJoin` / `lineCap`.
 pub(crate) fn paint_canvas_shapes(
     bounds: Bounds<Pixels>,
     shapes: &[CanvasShape],
@@ -227,6 +254,7 @@ pub(crate) fn paint_canvas_shapes(
                     closed,
                     fill_alpha,
                     stroke,
+                    line,
                 } => {
                     if let Some(alpha) = fill_alpha {
                         let builder = PathBuilder::fill().with_style(PathStyle::Fill(
@@ -242,7 +270,8 @@ pub(crate) fn paint_canvas_shapes(
                             bounds,
                             points,
                             *closed,
-                            PathBuilder::stroke(px(*line_width)),
+                            PathBuilder::stroke(px(*line_width))
+                                .with_style(PathStyle::Stroke(canvas_stroke(*line_width, *line))),
                         )
                     {
                         fade.paint_path(path, color, bounds, window);
@@ -498,6 +527,7 @@ fn draw_line(
             closed: false,
             fill_alpha: None,
             stroke: Some(options.line_width),
+            line: CanvasLineStyle::RoundJoin,
         });
         return;
     }
@@ -525,6 +555,7 @@ fn draw_line(
         closed: true,
         fill_alpha: Some(0.25),
         stroke: Some(options.line_width),
+        line: CanvasLineStyle::RoundJoin,
     });
 }
 
