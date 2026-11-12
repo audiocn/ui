@@ -530,7 +530,7 @@ impl AudioDeviceSelectItem {
         self
     }
 
-    fn into_select_item(self, cx: &App) -> SelectItem {
+    fn into_select_item(self) -> SelectItem {
         let label = self
             .device
             .as_ref()
@@ -544,34 +544,54 @@ impl AudioDeviceSelectItem {
         if !self.children.is_empty() {
             return item.children(self.children);
         }
+        item.child(DeviceItemBody {
+            device: self.device.unwrap_or_default(),
+        })
+    }
+}
+
+/// Custom popup content takes device rows like any other select node.
+impl From<AudioDeviceSelectItem> for SelectNode {
+    fn from(item: AudioDeviceSelectItem) -> Self {
+        item.into_select_item().into()
+    }
+}
+
+/// The default row layout: label, a "Default" hint and the description line.
+/// An element (not built up front) so it reads the theme when it renders.
+#[derive(IntoElement)]
+struct DeviceItemBody {
+    device: AudioDevice,
+}
+
+impl RenderOnce for DeviceItemBody {
+    fn render(self, _: &mut Window, cx: &mut App) -> impl IntoElement {
         let muted = cx.theme().muted_foreground;
-        let device = self.device.unwrap_or_default();
+        let device = self.device;
         let show_default = device.is_default && !device.label.starts_with("Default");
-        item.child(
-            div()
-                .flex()
-                .flex_col()
-                .min_w_0()
-                .child(
-                    div()
-                        .flex()
-                        .items_center()
-                        .gap(px(8.0))
-                        .child(
-                            div()
-                                .overflow_hidden()
-                                .text_ellipsis()
-                                .whitespace_nowrap()
-                                .child(device.label.clone()),
-                        )
-                        .when(show_default, |el| {
-                            el.child(div().text_xs_().text_color(muted).child("Default"))
-                        }),
-                )
-                .when_some(device.description, |el, d| {
-                    el.child(div().text_xs_().text_color(muted).child(d))
-                }),
-        )
+        div()
+            .flex()
+            .flex_col()
+            .min_w_0()
+            .child(
+                div()
+                    .flex()
+                    .items_center()
+                    .gap(px(8.0))
+                    .child(
+                        div()
+                            .overflow_hidden()
+                            .text_ellipsis()
+                            .whitespace_nowrap()
+                            .child(device.label.clone()),
+                    )
+                    .when(show_default, |el| {
+                        el.child(div().text_xs_().text_color(muted).child("Default"))
+                    }),
+            )
+            .when_some(device.description, |el, d| {
+                el.child(div().text_xs_().text_color(muted).child(d))
+            })
     }
 }
 
@@ -743,7 +763,7 @@ impl AudioDeviceSelectContent {
             let mut row = AudioDeviceSelectItem::new(item.value.clone())
                 .disabled(status != AudioDeviceStatus::Available);
             row.device = item.device.clone();
-            group = group.child(row.into_select_item(cx));
+            group = group.child(row.into_select_item());
         }
         if !ctx.loading && ctx.items.is_empty() && !needs_permission {
             group = group.child(

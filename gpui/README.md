@@ -82,6 +82,18 @@ cargo run -p audiocn-gallery -- --demo knob --variant metal    # one example, ce
 cargo run -p audiocn-gallery --features device                 # real microphone in the "microphone" examples
 ```
 
+### Playground
+
+`--playground [slug]` (or the **Playground** button in the gallery) opens a test bench for every
+component and block: a control for every prop and sub-part, controlled and uncontrolled modes, a
+signal source picker (demo speech, music, tone, noise, a static level, or the real microphone with
+`--features device`), the shared `AudioConfig`, audiocn.dev's theme presets in light and dark, reduced
+motion, an event log of every callback, and the Rust for the current props.
+
+```sh
+cargo run -p audiocn-gallery --features device -- --playground level-meter
+```
+
 It also builds for the browser (GPUI's web platform):
 
 ```sh

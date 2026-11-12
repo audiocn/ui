@@ -14,6 +14,7 @@
 #![cfg_attr(target_family = "wasm", no_main)]
 
 mod demos;
+mod playground;
 
 use std::collections::HashSet;
 
@@ -24,7 +25,7 @@ use gpui::{
     StatefulInteractiveElement, Styled, TitlebarOptions, Window, WindowBounds, WindowOptions, div,
     point, px, relative, size,
 };
-use gpui::{AppContext, InteractiveElement, KeyBinding, actions};
+use gpui::{AppContext, Entity, InteractiveElement, KeyBinding, actions};
 
 actions!(gallery, [FocusNext, FocusPrev]);
 
@@ -40,9 +41,30 @@ struct Gallery {
     sidebar: bool,
     scroll: ScrollHandle,
     focus: gpui::FocusHandle,
+    /// Set while the playground (props panel for every component) is shown.
+    playground: Option<Entity<playground::Playground>>,
 }
 
 impl Gallery {
+    /// Opens the playground on `slug` (or the current page's component).
+    fn open_playground(&mut self, slug: Option<&str>, cx: &mut Context<Self>) {
+        let slug = slug
+            .map(str::to_string)
+            .unwrap_or_else(|| demos::ALL[self.selected].slug.to_string());
+        let gallery = cx.entity().downgrade();
+        self.playground = Some(cx.new(|_| {
+            playground::Playground::new(Some(&slug)).on_exit(move |_, cx| {
+                gallery
+                    .update(cx, |g, cx| {
+                        g.playground = None;
+                        cx.notify();
+                    })
+                    .ok();
+            })
+        }));
+        cx.notify();
+    }
+
     fn select(&mut self, index: usize, cx: &mut Context<Self>) {
         self.selected = index;
         self.scroll.set_offset(point(px(0.), px(0.)));
@@ -90,6 +112,22 @@ impl Gallery {
                     })
                     .child(if theme.is_dark { "Light" } else { "Dark" })
                     .on_click(cx.listener(|this, _, _, cx| this.toggle_theme(cx))),
+            )
+            .child(
+                div()
+                    .id("playground-toggle")
+                    .px_2()
+                    .py_1()
+                    .rounded(theme.radius_lg())
+                    .text_xs()
+                    .text_color(theme.muted_foreground)
+                    .cursor_pointer()
+                    .hover(|s| {
+                        s.bg(theme.accent.opacity(0.5))
+                            .text_color(theme.accent_foreground)
+                    })
+                    .child("Playground")
+                    .on_click(cx.listener(|this, _, _, cx| this.open_playground(None, cx))),
             );
 
         let mut list = div()
@@ -347,6 +385,15 @@ mod docs {
 
 impl Render for Gallery {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        if let Some(playground) = self.playground.clone() {
+            return div()
+                .track_focus(&self.focus)
+                .size_full()
+                .on_action(|_: &FocusNext, window, cx| window.focus_next(cx))
+                .on_action(|_: &FocusPrev, window, cx| window.focus_prev(cx))
+                .child(playground)
+                .into_any_element();
+        }
         let theme = cx.theme().clone();
         let root = div()
             .track_focus(&self.focus)
@@ -410,6 +457,8 @@ struct Options {
     variant: Option<String>,
     dark: bool,
     sidebar: bool,
+    /// `--playground [slug]` / `?playground=slug`: open the playground.
+    playground: Option<String>,
     /// Used by scripts/shot.sh to find the window.
     title: String,
 }
@@ -430,6 +479,12 @@ fn main() {
             variant: flag("--variant"),
             dark: flag("--theme").as_deref() == Some("dark"),
             sidebar: true,
+            playground: args.iter().position(|a| a == "--playground").map(|i| {
+                args.get(i + 1)
+                    .filter(|v| !v.starts_with("--"))
+                    .cloned()
+                    .unwrap_or_default()
+            }),
             title: std::env::var("AUDIOCN_GALLERY_TITLE")
                 .unwrap_or_else(|_| "audiocn · GPUI".into()),
         },
@@ -461,6 +516,10 @@ pub fn start() {
             slug,
             variant: get("variant"),
             dark: get("theme").as_deref() == Some("dark"),
+            playground: params
+                .as_ref()
+                .and_then(|p| p.get("playground"))
+                .map(|v| if v == "-" { String::new() } else { v }),
             title: "audiocn · GPUI".into(),
         },
     );
@@ -472,6 +531,7 @@ fn run(app: gpui::Application, options: Options) {
         variant,
         dark,
         sidebar,
+        playground,
         title,
     } = options;
     let selected = slug
@@ -518,7 +578,13 @@ fn run(app: gpui::Application, options: Options) {
                     sidebar,
                     scroll: ScrollHandle::new(),
                     focus: cx.focus_handle(),
+                    playground: None,
                 });
+                if let Some(slug) = playground {
+                    view.update(cx, |g, cx| {
+                        g.open_playground(Some(slug.as_str()).filter(|s| !s.is_empty()), cx)
+                    });
+                }
                 window.focus(&view.read(cx).focus.clone(), cx);
                 view
             },
