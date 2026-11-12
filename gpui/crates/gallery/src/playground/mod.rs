@@ -146,6 +146,10 @@ pub enum SourceUse {
     Visual,
     /// Takes both.
     Both,
+    /// The component itself takes no frames, but optional parts on the page
+    /// do (a meter inside a fader, a device preview): shows the source picker
+    /// without adding `.source(..)` to the generated code.
+    Parts,
 }
 
 /// One playground page.
@@ -587,6 +591,7 @@ pub fn generate_code(spec: &Spec, controls: &[Control], props: &Props) -> String
         SourceUse::Meter => out.push_str("\n    .source(signal.meter.clone())"),
         SourceUse::Visual => out.push_str("\n    .source(signal.visual.clone())"),
         SourceUse::Both => out.push_str("\n    .source(signal.visual.clone())"),
+        SourceUse::Parts => {}
     }
     for c in controls {
         if c.method.is_none() && c.code.is_none() {
