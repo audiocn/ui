@@ -663,18 +663,35 @@ impl RenderOnce for SoundPad {
             has_ring,
         };
         let group: SharedString = format!("sound-pad-{}", self.id).into();
+        // `active:scale-[0.98]`. GPUI cannot scale a div, so the press frame
+        // insets the painted pad by 1% on each side (the layout box stays).
+        let press_inset = if pressed {
+            bounds_cell.get().map(|bounds| {
+                (
+                    px(bounds.size.width.as_f32() * 0.01),
+                    px(bounds.size.height.as_f32() * 0.01),
+                )
+            })
+        } else {
+            None
+        };
+        let drawn_radius = match press_inset {
+            Some(_) => px(radius.as_f32() * 0.98),
+            None => radius,
+        };
 
         let inner = div()
             .relative()
             .flex()
             .flex_1()
-            .w_full()
+            .when(press_inset.is_none(), |el| el.w_full())
+            .when_some(press_inset, |el, (x, y)| el.mx(x).my(y))
             .flex_col()
             .items_start()
             .justify_between()
             .gap(px(8.0))
             .overflow_hidden()
-            .rounded(radius)
+            .rounded(drawn_radius)
             .p(px(padding))
             .text_left()
             .when_some(bg, |el, bg| el.bg(bg))
@@ -715,7 +732,12 @@ impl RenderOnce for SoundPad {
             )
             .child(inner)
             .when_some(ring, |el, (width, color)| {
-                el.child(ring_overlay(radius, width, color))
+                let mut overlay = ring_overlay(drawn_radius, width, color);
+                if let Some((x, y)) = press_inset {
+                    let w = px(width);
+                    overlay = overlay.top(y - w).left(x - w).right(x - w).bottom(y - w);
+                }
+                el.child(overlay)
             });
         el.style().refine(&self.style);
         if inactive {

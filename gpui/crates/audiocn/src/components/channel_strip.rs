@@ -726,7 +726,6 @@ fn measure(state: Entity<ChannelStripState>, padding: f32) -> impl IntoElement {
 /// A narrow row: header on top; meter (and fader) beside value and controls;
 /// notice below.
 fn row_layout(areas: StripAreas) -> AnyElement {
-    let has_fader = !areas.fader.is_empty();
     let has_notice = !areas.notice.is_empty();
     div()
         .flex()
@@ -734,16 +733,13 @@ fn row_layout(areas: StripAreas) -> AnyElement {
         .w_full()
         .gap_y(px(GAP_Y))
         .child(cell(areas.header).w_full())
-        .child(
-            div()
-                .flex()
-                .items_center()
-                .w_full()
-                .gap_x(px(GAP_X))
-                .child(meter_column(areas.meter, areas.fader, has_fader))
-                .child(cell(areas.value))
-                .child(cell(areas.controls)),
-        )
+        .child(meter_value_row(
+            None,
+            areas.meter,
+            areas.fader,
+            areas.value,
+            areas.controls,
+        ))
         .when(has_notice, |el| el.child(cell(areas.notice).w_full()))
         .children(areas.other)
         .into_any_element()
@@ -751,44 +747,75 @@ fn row_layout(areas: StripAreas) -> AnyElement {
 
 /// A wide row: header, meter (and fader), value and controls side by side.
 fn wide_row_layout(areas: StripAreas, header_width: Pixels) -> AnyElement {
-    let has_fader = !areas.fader.is_empty();
     let has_notice = !areas.notice.is_empty();
+    let header = cell(areas.header)
+        .w(header_width)
+        .min_w_0()
+        .flex_shrink(1.0);
     div()
         .flex()
         .flex_col()
         .w_full()
         .gap_y(px(GAP_Y))
-        .child(
-            div()
-                .flex()
-                .items_center()
-                .w_full()
-                .gap_x(px(GAP_X))
-                .child(
-                    cell(areas.header)
-                        .w(header_width)
-                        .min_w_0()
-                        .flex_shrink(1.0),
-                )
-                .child(meter_column(areas.meter, areas.fader, has_fader))
-                .child(cell(areas.value))
-                .child(cell(areas.controls)),
-        )
+        .child(meter_value_row(
+            Some(header),
+            areas.meter,
+            areas.fader,
+            areas.value,
+            areas.controls,
+        ))
         .when(has_notice, |el| el.child(cell(areas.notice).w_full()))
         .children(areas.other)
         .into_any_element()
 }
 
+/// The meter / fader column beside the value and controls.
+///
+/// With a fader, CSS grid puts the meter and the fader on their own rows and
+/// lets the header, value and controls span both (`items-center`). The rows
+/// grow to that spanning height, so the meter and the fader are centred in
+/// their halves instead of stacking at the track gap. Without a fader the
+/// row is a single centred line.
+fn meter_value_row(
+    header: Option<gpui::Div>,
+    meter: Vec<AnyElement>,
+    fader: Vec<AnyElement>,
+    value: Vec<AnyElement>,
+    controls: Vec<AnyElement>,
+) -> gpui::Div {
+    let has_fader = !fader.is_empty();
+    let mut row = div().flex().w_full().gap_x(px(GAP_X));
+    row = if has_fader {
+        row.items_stretch()
+    } else {
+        row.items_center()
+    };
+    if let Some(header) = header {
+        row = row.child(header.when(has_fader, |el| el.self_center()));
+    }
+    row.child(meter_column(meter, fader, has_fader))
+        .child(cell(value).when(has_fader, |el| el.self_center()))
+        .child(cell(controls).when(has_fader, |el| el.self_center()))
+}
+
 /// The `minmax(0,1fr)` column holding the meter row and the fader row.
 fn meter_column(meter: Vec<AnyElement>, fader: Vec<AnyElement>, has_fader: bool) -> gpui::Div {
+    if !has_fader {
+        return div()
+            .flex()
+            .flex_col()
+            .flex_1()
+            .min_w_0()
+            .child(cell(meter).w_full());
+    }
     div()
         .flex()
         .flex_col()
         .flex_1()
         .min_w_0()
         .gap_y(px(GAP_Y))
-        .child(cell(meter).w_full())
-        .when(has_fader, |el| el.child(cell(fader).w_full()))
+        .child(cell(meter).w_full().flex_1().justify_center())
+        .child(cell(fader).w_full().flex_1().justify_center())
 }
 
 /// A console strip: header, then meter and fader side by side filling the
@@ -1002,10 +1029,19 @@ impl gpui::RenderOnce for ChannelStripText {
         let mut el = div()
             .flex()
             .min_w_0()
-            .flex_1()
             .flex_col()
             .gap(px(2.0))
-            .when(horizontal, |el| el.min_w(px(80.0)))
+            .when(horizontal, |el| {
+                // `flex-1 min-w-20` inside a wrapping header. A zero basis
+                // shrinks the title (and truncates it) before the status
+                // wraps; CSS clamps the flex base to `min-w-20` first, so the
+                // badge wraps once icon + 5rem + badge no longer fit.
+                el.min_w(px(80.0))
+                    .flex_grow(1.0)
+                    .flex_shrink(1.0)
+                    .flex_basis(px(80.0))
+            })
+            .when(!horizontal, |el| el.flex_1())
             .children(self.children);
         el.style().refine(&self.style);
         el
@@ -1067,6 +1103,12 @@ impl gpui::RenderOnce for ChannelStripStatus {
         let mut badge = Badge::new()
             .variant(variant)
             .flex_shrink_0()
+            // The bundled face is a little narrower than the site's, so a
+            // 192px header keeps "Blocked" (66px on the site) on the title's
+            // line. Two extra pixels of padding restores that width: the
+            // badge then wraps, while the narrower "Paused" still fits.
+            .pl(px(10.0))
+            .pr(px(10.0))
             .when_some(tone, |badge, (bg, fg)| badge.bg(bg).text_color(fg))
             .children(self.children);
         badge.style().refine(&self.style);
