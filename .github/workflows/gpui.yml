@@ -1,0 +1,32 @@
+name: GPUI
+
+# The Rust/GPUI port lives in gpui/. Only run when it changes.
+on:
+  push:
+    branches: [main]
+    paths: ["gpui/**", ".github/workflows/gpui.yml"]
+  pull_request:
+    paths: ["gpui/**", ".github/workflows/gpui.yml"]
+
+jobs:
+  rust:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: gpui
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: gpui
+      - name: Linux deps for GPUI
+        run: sudo apt-get update && sudo apt-get install -y libxkbcommon-dev libxkbcommon-x11-dev libwayland-dev libvulkan-dev libx11-xcb-dev libfontconfig-dev
+      - run: cargo fmt --all --check
+      - run: cargo clippy -p audiocn -p audiocn-gallery -- -D warnings
+      - run: cargo test -p audiocn
+      - name: Build for wasm (the browser gallery uses it)
+        run: cargo build --release --target wasm32-unknown-unknown -p audiocn -p audiocn-gallery
