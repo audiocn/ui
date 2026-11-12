@@ -219,6 +219,9 @@ impl Gallery {
                     .border_color(theme.border)
                     .rounded(theme.radius_xl())
                     .bg(theme.background)
+                    // Inherited from the docs `.prose` wrapper: `--tw-prose-body`
+                    // is `foreground` at 90%.
+                    .text_color(theme.foreground.opacity(0.9))
                     .text_size(px(14.))
                     .line_height(relative(20. / 14.))
                     .children(element),
@@ -362,6 +365,7 @@ impl Render for Gallery {
                 .items_center()
                 .justify_center()
                 .p(preview_padding(demo.slug))
+                .text_color(cx.theme().foreground.opacity(0.9))
                 .text_size(px(14.))
                 .line_height(relative(20. / 14.))
                 .children(element)

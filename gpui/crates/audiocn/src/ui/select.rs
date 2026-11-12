@@ -218,7 +218,14 @@ impl RenderOnce for Select {
         let open = ctl.is_open(cx);
         // Highlight the selected item when the popup opens.
         if open && ctl.state.read(cx).highlighted.is_none() {
-            let start = selected_index.or_else(|| item_values.iter().position(|(_, d)| !d));
+            // Base UI highlights the selected item; with nothing selected it only
+            // highlights the first item when the popup was opened from the keyboard.
+            let keyboard = window.last_input_was_keyboard();
+            let start = selected_index.or_else(|| {
+                keyboard
+                    .then(|| item_values.iter().position(|(_, d)| !d))
+                    .flatten()
+            });
             ctl.state.update(cx, |s, _| s.highlighted = start);
             if let Some(i) = start {
                 ctl.state
@@ -518,6 +525,7 @@ fn select_popup(
                 let is_highlighted = highlighted == Some(ix);
                 let is_selected = value.as_ref() == Some(&item.value);
                 let disabled = item.disabled;
+                let top_aligned = item.style.align_items == Some(gpui::AlignItems::FlexStart);
                 let hover_state = ctl.state.clone();
                 let click_commit = commit.clone();
                 let v = item.value.clone();
@@ -560,12 +568,15 @@ fn select_popup(
                             }),
                     )
                     .when(is_selected, |el| {
+                        // `absolute right-2 flex size-4 items-center`: an absolute child
+                        // follows the row's align-items, so a top-aligned (multi-line)
+                        // item gets its check on the first line, at the top padding.
                         el.child(
                             div()
                                 .absolute()
                                 .right(px(8.0))
-                                .top_0()
-                                .bottom_0()
+                                .when(top_aligned, |el| el.top(px(6.0)).h(px(16.0)))
+                                .when(!top_aligned, |el| el.top_0().bottom_0())
                                 .flex()
                                 .items_center()
                                 .child(Icon::new(IconName::Check).size(px(16.0))),
