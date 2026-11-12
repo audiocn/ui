@@ -1,4 +1,4 @@
-//! The audiocn GPUI gallery: every docs page and example, running natively.
+//! The audiocn GPUI gallery: every docs page and example, natively and in the browser.
 //!
 //! ```sh
 //! cargo run -p audiocn-gallery                          # docs-style browser with a sidebar
@@ -6,6 +6,12 @@
 //! cargo run -p audiocn-gallery -- --demo knob --variant metal   # just one example, centred
 //! cargo run -p audiocn-gallery -- --theme dark
 //! ```
+//!
+//! On the web (`scripts/build-wasm.sh`), `index.html?demo=<slug>&variant=<name>&theme=light|dark`
+//! renders one example centred; without `variant` it renders that slug's whole docs page
+//! (no sidebar); without `demo` it shows the sidebar browser.
+
+#![cfg_attr(target_family = "wasm", no_main)]
 
 mod demos;
 
@@ -32,6 +38,8 @@ struct Gallery {
     selected: usize,
     /// Set by `--variant`: render only that example, centred, without chrome.
     only_variant: Option<String>,
+    /// Show the sidebar (off on the web when a `demo` is given).
+    sidebar: bool,
     scroll: ScrollHandle,
     focus: gpui::FocusHandle,
 }
@@ -199,7 +207,15 @@ impl Gallery {
 }
 
 fn variant_title(variant: &str) -> String {
-    let words = variant.replace('-', " ");
+    // Acronyms the docs headings keep upper-case ("CSS level").
+    let words = variant
+        .split('-')
+        .map(|word| match word {
+            "css" | "rms" | "lcd" | "db" => word.to_uppercase(),
+            _ => word.to_string(),
+        })
+        .collect::<Vec<_>>()
+        .join(" ");
     let mut chars = words.chars();
     match chars.next() {
         Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
@@ -232,7 +248,7 @@ impl Render for Gallery {
         }
 
         root.flex()
-            .child(self.sidebar(cx))
+            .when(self.sidebar, |d| d.child(self.sidebar(cx)))
             .child(
                 div()
                     .id("content")
@@ -256,6 +272,17 @@ fn load_fonts(cx: &App) {
     }
 }
 
+/// What to show, from `--demo/--variant/--theme` natively or `?demo=&variant=&theme=` on the web.
+struct Options {
+    slug: Option<String>,
+    variant: Option<String>,
+    dark: bool,
+    sidebar: bool,
+    /// Used by scripts/shot.sh to find the window.
+    title: String,
+}
+
+#[cfg(not(target_family = "wasm"))]
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let flag = |name: &str| {
@@ -264,22 +291,69 @@ fn main() {
             .and_then(|i| args.get(i + 1))
             .cloned()
     };
-    let slug = flag("--demo");
-    let variant = flag("--variant");
-    let dark = flag("--theme").as_deref() == Some("dark");
-    // Used by scripts/shot.sh to find the window.
-    let title = std::env::var("AUDIOCN_GALLERY_TITLE").unwrap_or_else(|_| "audiocn · GPUI".into());
+    run(
+        gpui_platform::application(),
+        Options {
+            slug: flag("--demo"),
+            variant: flag("--variant"),
+            dark: flag("--theme").as_deref() == Some("dark"),
+            sidebar: true,
+            title: std::env::var("AUDIOCN_GALLERY_TITLE")
+                .unwrap_or_else(|_| "audiocn · GPUI".into()),
+        },
+    );
+}
 
+#[cfg(target_family = "wasm")]
+#[wasm_bindgen::prelude::wasm_bindgen(start)]
+pub fn start() {
+    console_error_panic_hook::set_once();
+    gpui_web::init_logging();
+
+    let params = web_sys::window()
+        .and_then(|w| w.location().search().ok())
+        .and_then(|search| web_sys::UrlSearchParams::new_with_str(&search).ok());
+    let get = |key: &str| {
+        params
+            .as_ref()
+            .and_then(|p| p.get(key))
+            .filter(|v| !v.is_empty() && v != "-")
+    };
+    let slug = get("demo");
+    // Single-threaded: no SharedArrayBuffer / COOP+COEP headers needed.
+    let platform = std::rc::Rc::new(gpui_web::WebPlatform::new(false));
+    run(
+        gpui::Application::with_platform(platform),
+        Options {
+            sidebar: slug.is_none(),
+            slug,
+            variant: get("variant"),
+            dark: get("theme").as_deref() == Some("dark"),
+            title: "audiocn · GPUI".into(),
+        },
+    );
+}
+
+fn run(app: gpui::Application, options: Options) {
+    let Options {
+        slug,
+        variant,
+        dark,
+        sidebar,
+        title,
+    } = options;
     let selected = slug
         .as_deref()
         .and_then(|s| demos::ALL.iter().position(|d| d.slug == s))
         .unwrap_or(0);
     let unknown: HashSet<_> = slug.iter().filter(|s| demos::find(s).is_none()).collect();
     if !unknown.is_empty() {
+        log::error!("unknown demo: {unknown:?}");
+        #[cfg(not(target_family = "wasm"))]
         eprintln!("unknown demo: {unknown:?}");
     }
 
-    gpui_platform::application().run(move |cx: &mut App| {
+    app.run(move |cx: &mut App| {
         load_fonts(cx);
         audiocn::init(cx);
         audiocn::theme::set_theme(if dark { Theme::dark() } else { Theme::light() }, cx);
@@ -306,6 +380,7 @@ fn main() {
                 let view = cx.new(|cx| Gallery {
                     selected,
                     only_variant: variant,
+                    sidebar,
                     scroll: ScrollHandle::new(),
                     focus: cx.focus_handle(),
                 });

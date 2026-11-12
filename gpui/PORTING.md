@@ -117,6 +117,27 @@ files you don't own, ignore those errors (filter `cargo check` output by your
 paths) and keep going; never "fix" someone else's file. Don't run `cargo clean`.
 Never commit or push; the coordinator does that.
 
-Screenshots: `scripts/shot.sh` is being fixed (GPUI windows from agent shells
-currently don't appear). Until it works, verify by reading the React source
-carefully, not by eye.
+## Screenshots
+
+Look at what you built. The headless web path works anytime, with no display (the
+user's session may be locked):
+
+```sh
+scripts/build-wasm.sh                     # wasm gallery -> target/web/ (~1-2 min, ~9.5 MB)
+scripts/web-shot.sh <slug> <out.png> [variant|-] [light|dark] [wait-ms]
+scripts/web-shot.sh fader /tmp/fader.png                   # whole docs page, 1100x2000
+scripts/web-shot.sh knob /tmp/knob.png default dark        # one example, centred, 760x520
+```
+
+Rebuild with `scripts/build-wasm.sh` after every change before shooting. It renders the
+same GPUI code through WebGPU (SwiftShader) in headless Chromium, prints the browser
+console (panics included) and takes ~2 s. Only fonts in `crates/gallery/assets/fonts`
+exist on the web: a family name that isn't bundled panics there. Animated demos are
+captured after `wait-ms` (default 1500).
+
+`scripts/shot.sh <slug> <out.png> [variant|-] [light|dark]` screenshots the native build
+(`cargo build -p audiocn-gallery` first) on the top monitor only; it needs an unlocked
+session, so prefer `web-shot.sh`.
+
+Compare your screenshot with the React reference images in `.github/readme/*.png` and,
+above all, with the React code: the images don't cover every variant.
