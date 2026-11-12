@@ -22,6 +22,8 @@ hyprctl eval 'hl.window_rule({ name = "audiocn-shot", enabled = true, match = { 
 hyprctl eval 'hl.window_rule({ name = "audiocn-shot-page", enabled = true, match = { title = "^audiocn-shot-.*" }, size = "1280 860" })' >/dev/null
 hyprctl eval 'hl.window_rule({ name = "audiocn-shot-variant", enabled = true, match = { title = "^audiocn-shotv-.*" }, size = "760 520" })' >/dev/null
 args=(--demo "$slug" --theme "$mode")
+# Extra gallery flags, e.g. GALLERY_ARGS="--playground knob".
+if [ -n "${GALLERY_ARGS:-}" ]; then read -r -a extra <<<"$GALLERY_ARGS"; args+=("${extra[@]}"); fi
 tag="audiocn-shot-$$"
 if [ "$variant" != "-" ]; then args+=(--variant "$variant"); tag="audiocn-shotv-$$"; fi
 AUDIOCN_GALLERY_TITLE=$tag setsid env -u LD_LIBRARY_PATH "$bin" "${args[@]}" >/dev/null 2>&1 &
