@@ -43,5 +43,14 @@ pub use toggle::*;
 mod tooltip;
 pub use tooltip::*;
 
+pub mod icons;
+mod menu;
+pub use menu::*;
+mod overlay;
+pub use overlay::{Align, Side};
+pub(crate) mod styles;
+
 /// Registers key bindings for the primitives (menus, selects, popovers).
-pub(crate) fn init(_cx: &mut gpui::App) {}
+pub(crate) fn init(cx: &mut gpui::App) {
+    input::init(cx);
+}
