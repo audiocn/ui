@@ -12,6 +12,11 @@ bin=$root/target/debug/gallery
 [ -x "$bin" ] || { echo "build first: cargo build -p audiocn-gallery" >&2; exit 1; }
 exec 9>/tmp/audiocn-gpui-shot.lock
 flock 9
+# Remember which monitor has focus, and give it back afterwards (the gallery
+# activates itself on start, which would otherwise pull focus to DP-1).
+focused=$(hyprctl monitors -j | python3 -c "import json,sys; print(next(m['name'] for m in json.load(sys.stdin) if m['focused']))")
+restore_focus() { hyprctl dispatch "hl.dsp.focus({ monitor = \"$focused\" })" >/dev/null 2>&1 || true; }
+trap restore_focus EXIT
 # Window rules (Hyprland Lua config): float on workspace 1 (top monitor), never take focus.
 hyprctl eval 'hl.window_rule({ name = "audiocn-shot", enabled = true, match = { title = "^audiocn-shot.*" }, float = true, workspace = "1 silent", no_initial_focus = true, move = "20 60" })' >/dev/null
 hyprctl eval 'hl.window_rule({ name = "audiocn-shot-page", enabled = true, match = { title = "^audiocn-shot-.*" }, size = "1280 860" })' >/dev/null
@@ -32,6 +37,7 @@ for c in json.load(sys.stdin):
   sleep 0.2
 done
 [ -n "$addr" ] || { echo "window did not appear" >&2; exit 1; }
+restore_focus
 # The compositor only renders (and grim only captures) while the monitor is awake.
 # Wake the top monitor (DP-1) if it's asleep; put it back to sleep afterwards.
 asleep=$(hyprctl monitors -j | python3 -c "import json,sys; print(next((not m['dpmsStatus']) for m in json.load(sys.stdin) if m['name']=='DP-1'))")
