@@ -1,9 +1,10 @@
 //! Gallery page for `system-audio-settings`. One variant per docs example: `components/examples/system-audio-settings-demo.tsx`.
-//! (pending: replace `pending(...)` with the real port of each example.)
 
-use gpui::{AnyElement, App, Window};
+use gpui::{AnyElement, App, IntoElement, Styled, Window, px};
 
-use super::{Demo, Section, pending};
+use audiocn::SystemAudioSettings;
+
+use super::{Demo, Section, id};
 
 pub const DEMO: Demo = Demo {
     slug: "system-audio-settings",
@@ -14,9 +15,15 @@ pub const DEMO: Demo = Demo {
     render,
 };
 
-fn render(variant: &str, _window: &mut Window, cx: &mut App) -> Option<AnyElement> {
+fn render(variant: &str, _window: &mut Window, _cx: &mut App) -> Option<AnyElement> {
     Some(match variant {
-        "default" => pending("system-audio-settings", "default", cx),
+        // `system-audio-settings-demo.tsx`: `<SystemAudioSettings className="w-full max-w-md" />`.
+        // Capture stays off until the switch; a stereo demo signal then stands
+        // in for the shared screen.
+        "default" => SystemAudioSettings::new(id("system-audio-settings", "default"))
+            .w_full()
+            .max_w(px(448.0))
+            .into_any_element(),
         _ => return None,
     })
 }

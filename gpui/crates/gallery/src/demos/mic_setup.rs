@@ -1,9 +1,10 @@
 //! Gallery page for `mic-setup`. One variant per docs example: `components/examples/mic-setup-demo.tsx`.
-//! (pending: replace `pending(...)` with the real port of each example.)
 
-use gpui::{AnyElement, App, Window};
+use gpui::{AnyElement, App, IntoElement, Styled, Window, px};
 
-use super::{Demo, Section, pending};
+use audiocn::MicSetup;
+
+use super::{Demo, Section, id};
 
 pub const DEMO: Demo = Demo {
     slug: "mic-setup",
@@ -14,9 +15,15 @@ pub const DEMO: Demo = Demo {
     render,
 };
 
-fn render(variant: &str, _window: &mut Window, cx: &mut App) -> Option<AnyElement> {
+fn render(variant: &str, _window: &mut Window, _cx: &mut App) -> Option<AnyElement> {
     Some(match variant {
-        "default" => pending("mic-setup", "default", cx),
+        // `mic-setup-demo.tsx`: `<MicSetup className="w-full max-w-md" />`.
+        // No microphone here: the block's demo signal starts when the preview
+        // button is pressed. The idle card is what the docs show.
+        "default" => MicSetup::new(id("mic-setup", "default"))
+            .w_full()
+            .max_w(px(448.0))
+            .into_any_element(),
         _ => return None,
     })
 }
