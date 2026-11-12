@@ -14,8 +14,12 @@ description = "Audio UI components for GPUI: meters, visualizers, faders, knobs,
 gpui.workspace = true
 parking_lot = "0.12"
 web-time = "1"
+# Native audio I/O (`device` feature): streams + devices, FFT, file decoding.
+cpal = { version = "0.18.2", optional = true, features = ["pulseaudio"] }
+rustfft = { version = "6.4", optional = true }
+symphonia = { version = "0.5.5", optional = true, default-features = false, features = ["wav", "pcm", "mp3", "ogg", "vorbis", "flac"] }
 
 [features]
 default = []
 # Native audio I/O (microphone, devices, playback, analyser). Not available on wasm.
-device = []
+device = ["dep:cpal", "dep:rustfft", "dep:symphonia"]
